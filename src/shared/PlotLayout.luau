@@ -20,8 +20,8 @@ PlotLayout.WIDTH = 160 -- across
 PlotLayout.DEPTH = 240 -- front boundary to back fence
 PlotLayout.FRONT_RADIUS = 240 -- from the town square to a plot's front boundary
 PlotLayout.ZONE_HEIGHT = 60
-PlotLayout.FENCE_HEIGHT = 5 -- what you see
-PlotLayout.FENCE_BLOCK = 11 -- an invisible wall this high over every fence: a Roblox jump (about 7.2 studs) can't clear it, so the only ways over are the climb (back fence, locked gate) and the open gate
+PlotLayout.FENCE_HEIGHT = 8 -- what you see: taller than a Roblox jump (about 7.2 studs), so a jump hits the fence you see, not thin air (docs/ArtDirection.md §7)
+PlotLayout.FENCE_BLOCK = 11 -- an invisible wall this high over every fence is what really stops you (a character climbs horizontal rails like a ladder): the only ways over are the climb (back fence, locked gate) and the open gate
 PlotLayout.HEDGE_HEIGHT = 12
 
 PlotLayout.TOWN = {

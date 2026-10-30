@@ -59,12 +59,12 @@ There's no sprint key yet. To sprint, switch Studio's command bar to the **clien
 
 | # | Case | Steps | Measure | Pass |
 |---|---|---|---|---|
-| A1 | Town to a farm | Spawn → walk to Farm 1's gate, then Farm 5's | seconds, 3 runs each | 13–17 s (layout says 205–265 studs) |
+| A1 | Town to a farm | Spawn → walk to Farm 1's gate, then Farm 5's | seconds, 3 runs each | 12.5–17 s (layout says 205–265 studs) |
 | A2 | Back row to the fence | Stand on a back-row tile (furthest from the farmhouse) → walk straight to the back fence | seconds | about 1.5 s walking (24 studs); about 1.8 s at sack speed (13.6) |
 | A3 | Owner's sprint | From the yellow Door pad, sprint (24) to the back fence behind the middle of the field | seconds | 6–7 s (`tools/raidrace`: 160 studs; ±0.7 s is fine) |
 | A4 | Fences | Try to jump the back fence, each front fence stretch, the hedges | did you get over? | **never** (only the open gate lets you in) |
 | A5 | Sightlines | From the farmhouse door and from the warehouse, look at the back row | can you see a player standing there? | yes from both (raid detection needs it) |
-| A6 | Arrest walk | `/tp porch` → walk to the back of the farthest farm | seconds | 24–36 s; if it feels too long or short, note it (it's the arrest penalty) |
+| A6 | Arrest walk | `/tp porch` → walk to the back of the farthest farm; then Visit a farm and walk round its hedge to the back fence | seconds | on foot 37–49 s (round the plots); Visit + walk about 30 s. Note if either feels too long or short |
 | A7 | Getting lost | A new tester: "go to Barley's Seeds, then back to Farm 3" | time; wrong turns | finds both in under 60 s without help |
 
 If A3 is off by more than 0.7 s, or A4 fails, fix `PlotLayout` before week 1 and re-run `tools/raidrace`.

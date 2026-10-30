@@ -127,11 +127,49 @@ return function(spec, harness)
 				expect(distance >= 205 and distance <= 265).toBe(true)
 			end
 		end)
-		it("police porch to the back of a farm: 385–580 studs, 24–36 s", function()
+		-- Walking routes, not straight lines: the plots are in the way, so you
+		-- go out through the gap on either side of the farm, along the back
+		-- trail and in to the fence (play-test 2026-10-30 walked 785 studs to
+		-- Farm 1, where a straight line says 570).
+		local function length(points: { Vector3 }): number
+			local total = 0
+			for i = 2, #points do
+				total += (points[i] - points[i - 1]).Magnitude
+			end
+			return total
+		end
+		local function behind(index: number): Vector3
+			return PlotLayout.toWorld(index, Vector3.new(0, 0, D + 6))
+		end
+		it("police porch to the back of a farm on foot: 590–790 studs, 37–49 s", function()
 			local porch = PlotLayout.policePorchWorld()
 			for index = 1, PlotLayout.COUNT do
-				local distance = (PlotLayout.toWorld(index, Vector3.new(0, 0, D)) - porch).Magnitude
-				expect(distance >= 385 and distance <= 580).toBe(true)
+				local best = math.huge
+				for _, side in { -1, 1 } do
+					local gap = PlotLayout.angle(index) + side * 22.5
+					best = math.min(best, length({
+						porch,
+						PlotLayout.polar(gap, PlotLayout.RING_ROAD.radius + 10),
+						PlotLayout.polar(gap, PlotLayout.BACK_TRAIL.radius),
+						PlotLayout.polar(gap - side * 11.25, PlotLayout.BACK_TRAIL.radius),
+						behind(index),
+					}))
+				end
+				expect(best >= 590 and best <= 790).toBe(true)
+			end
+		end)
+		it("a farm's Visit point round the hedge to its back fence: 400–450 studs, about 27 s", function()
+			for index = 1, PlotLayout.COUNT do
+				for _, side in { -1, 1 } do
+					local x = side * (PlotLayout.WIDTH / 2 + 8)
+					local distance = length({
+						PlotLayout.visitWorld(index),
+						PlotLayout.toWorld(index, Vector3.new(x, 0, -5)),
+						PlotLayout.toWorld(index, Vector3.new(x, 0, D + 6)),
+						behind(index),
+					})
+					expect(distance >= 400 and distance <= 450).toBe(true)
+				end
 			end
 		end)
 	end)

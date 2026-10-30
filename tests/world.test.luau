@@ -68,6 +68,12 @@ return function(spec, harness)
 			end
 			expect(blockers).toBe(4) -- the back fence and three front stretches; the gate stays open
 			expect(plot.HedgeLeft.Size.Y).toBeGreaterThan(7.2 + 1)
+			-- a jump hits the fence you see, not the invisible wall above it
+			local top = 0
+			for _, rail in plot.BackFence:GetChildren() do
+				top = math.max(top, rail.CFrame.Position.Y + rail.Size.Y / 2)
+			end
+			expect(top).toBeGreaterThan(7.2 + 0.5)
 		end)
 		it("anchors everything (nothing falls when Play starts)", function()
 			for _, descendant in world:GetDescendants() do

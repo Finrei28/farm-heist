@@ -62,7 +62,7 @@ A round green valley with hills all round and a tunnel in the north cliff where 
 4. **Back Trail.** A dirt path circling behind every plot's back fence, with bushes and hay bales to hide behind (the sneaky way in).
 5. **Highway** north from the ring road to the **tunnel**. Trucks drive out of sight and come back empty.
 
-**Distances** (all in `shared/PlotLayout`, checked by `tests/layout.test.luau`): the town square is 160 studs across the radius, the ring road runs at 222, plot fronts start at 240 and backs end at 480, the back trail is at 500 and the hills begin at 530. From the town spawn to a farm's gate is 205–265 studs (about 15 s on foot). From the police porch to the back of a farm is 385–580 studs (24–36 s, depending on which farm). That walk is part of the arrest penalty.
+**Distances** (all in `shared/PlotLayout`, checked by `tests/layout.test.luau`): the town square is 160 studs across the radius, the ring road runs at 222, plot fronts start at 240 and backs end at 480, the back trail is at 500 and the hills begin at 530. From the town spawn to a farm's gate is 205–265 studs (about 15 s on foot). From the police porch to the back of a farm is 590–790 studs on foot (37–49 s, depending on which farm), because you have to go round the plots. Most thieves will use **Visit** instead: 3 s to the gate, then about 420 studs round the hedge to the back fence (about 30 s in all). So the walk only slows a thief down a little. The real arrest penalty is the fine and the 3-minute wait before they can steal from that farm again (§4.10). (Play-tested in Studio on 2026-10-30: 785 studs and 49.2 s to the back of the farthest farm.)
 
 ### Plot layout (160 × 240 studs, front to back)
 
@@ -275,7 +275,7 @@ Hired at the **Hiring Hall** in town or from the Workers window (from Farm Level
 - **Getting away:** leave the plot (through the gate, or over the back fence: 1.5 s) and the owner's bat can't reach you. Walk home and empty the sack at your barn.
 - **Limits that keep it fair** (`Config/Crime.luau`):
   - **Sprout Shield** (first 45 min of play, §4.0) and **arrival grace** (2 min after joining).
-  - **Same-farm cooldown:** after leaving a farm with loot you can't steal from that farm for 3 minutes.
+  - **Same-farm cooldown:** after leaving a farm with loot, or being arrested there, you can't steal from that farm for 3 minutes.
   - **Raid cap:** a farm loses at most **10 sack weight per 10 minutes** to all thieves together. After that it gets a *Neighbourhood Watch* dome for the rest of the window.
   - Sprout Shield and arrival grace work both ways: while you're protected you can't steal.
   - **Offline players can't be robbed:** their plot isn't in the server.
@@ -752,6 +752,18 @@ Not done here: walking the race in Studio with real movement (README, "Walking t
 
 **Found while writing the play-test plan:** the fences were 5 studs tall, but a Roblox character jumps about 7.2. So anyone could hop the back fence without the climb, and the front fence was a third way in. Every fence now has an invisible wall up to 11 studs; the open gate is the only gap, and climbing (week 4) is the only other way over. `tests/world.test.luau` checks it.
 
+### Play-test 1: walking the greybox in Studio (Stage A)
+
+The first time anyone played Cloverdale: walks timed in Studio with real movement, plus a look round every part of the world for the art (results in [PlaytestLog.md](PlaytestLog.md), 2026-10-30). The town-to-farm walk, the back row to the fence, the owner's sprint and the fences all passed. Found:
+
+| # | Found | Fix |
+|---|---|---|
+| 1 | The walk from the police porch to the back of a farm is 590–790 studs (49.2 s to the farthest farm). §3 said 385–580, because it measured straight lines through the plots | §3 corrected. `tests/layout.test.luau` now measures walking routes round the plots (and the Visit-then-walk route, about 30 s) |
+| 2 | With Visit, an arrested thief is back at the same farm in about 30 s. Nothing stopped them stealing there again at once | §4.10: the same-farm cooldown (3 min) now also starts after an arrest |
+| 3 | 5-stud fences under an 11-stud invisible wall: you jump, clear the fence you see, and bump into thin air | Fences are 8 studs, posts and rails you can see through. The invisible wall stays: without it, a character climbs the rails like a ladder |
+| 4 | Every farm's labels piled up through the walls | Labels sized in studs and hidden beyond 45–260 studs |
+| 5 | As a picture, the greybox is the Baseplate's lighting (its Depth of Field blurs the back row, where thieves stand), a hill wall, an empty town and 8 identical farms | [ArtDirection.md](ArtDirection.md): the world's look, written from the play-test screenshots |
+
 ### Checklist against the original brief
 
 | Requirement | Where |
@@ -779,7 +791,7 @@ In order. Each one makes the next one cheaper. Every step ends with a review aga
 1. ✅ **Set up the project.** Rojo + Rokit, ProfileStore, `DataService` (with a hook that runs automatic arrests before a save closes), `MovementService` / `MoveRules`, Analytics, the Lune test harness and `tools/check`, all from Tide Market. Still to port: the UI helpers (`UI.compact`, `UI.touch`, panels, item cards) re-skinned to Kraft & Crate, and the dev-command service; both come with week 1.
 2. ✅ **Write the shared rules with Lune tests.** `GrowthRules`, `SeedStock`, `MarketPrice`, `DemandModel`, `LandRules`, `CrimeRules` (every bypass in the §4.12 table), `FineRules`, `TravelRules`, `ZoneRules`, `AuctionRules`, `WorkerRules`, `PipelineRules.simulate`, plus config checks: 155 tests, all passing (`lune run tools/check`).
 3. ✅ **Build a progression sim.** `lune run tools/progression`: the XP curve is tuned so every permit target is met, and wages stay at 5–8% of income. It also showed that coins pile up late (see step 6).
-4. ✅ **Greybox Cloverdale and time the raid race.** The layout, the greybox and the race from real distances are done and tested (5.8 s without defences, 11.4 s with them; the tall fence went to 3.5 s). Still to do by hand: press Play and walk it (README, "Walking the greybox") to confirm the distances feel right.
-5. **MVP weeks 1–4 (§9)**, play-tested as they land (PlaytestPlan Stages A–D). First: Stage A (walk the greybox), then week 1, which needs the Stage B dev commands (`/coins`, `/level`, `/grow`, `/restock`, `/tp`, `/wipe`) built with it. The raid stage measures the arrest rate (target 35–50%) and whether raids feel fun from both sides before defences are built in week 5.
+4. ✅ **Greybox Cloverdale and time the raid race.** The layout, the greybox and the race from real distances are done and tested (5.8 s without defences, 11.4 s with them; the tall fence went to 3.5 s). Walked in Studio on 2026-10-30 (play-test Stage A, §10): the distances hold. Still open from Stage A: A7 (finding your way) needs a new tester.
+5. **MVP weeks 1–4 (§9)**, play-tested as they land (PlaytestPlan Stages A–D). Week 1 needs the Stage B dev commands (`/coins`, `/level`, `/grow`, `/restock`, `/tp`, `/wipe`) built with it. The look pass ([ArtDirection.md](ArtDirection.md) §11) runs alongside: light, fences and the field with week 1's crops first, so the farming loop has something to look at. The raid stage measures the arrest rate (target 35–50%) and whether raids feel fun from both sides before defences are built in week 5.
 6. **Late-game coin sinks** (found by the sim). Ideas to choose from: bigger auction lots and a weekly "Grand Auction", worker training past level 5, farm decorations that raise the Shop Rating cap, a coin-bought prestige ("Harvest Festival") that resets land for a permanent bonus, and costly seasonal seeds. Re-run the sim to see coins level off.
 7. **Content and policy checks before launch.** Run the maturity questionnaire with the bonk and arrest content (aim for *Mild*), name the crops and NPCs, and plan the low-poly crop mesh pipeline (like Tide Market's `tools/plant_art`).

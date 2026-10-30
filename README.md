@@ -3,12 +3,13 @@
 A farming game for Roblox. Grow crops on your own plot (which gets bigger as you level up), pack them in your warehouse and truck them out at the global market price or sell them in your own shop at yours, hire workers, bid at the auction, trade, and defend your ripe crops with a bat. Bonk a thief, arrest them, get paid.
 
 - Design doc: [docs/GameDesign.md](docs/GameDesign.md). §10 is the review log, §11 the build steps.
-- Play-test plan: [docs/PlaytestPlan.md](docs/PlaytestPlan.md), with results in [docs/PlaytestLog.md](docs/PlaytestLog.md)
+- Play-test plan: [docs/PlaytestPlan.md](docs/PlaytestPlan.md), with results in [docs/PlaytestLog.md](docs/PlaytestLog.md) and screenshots in `docs/playtest/<date>/`
+- Art direction (how the world should look): [docs/ArtDirection.md](docs/ArtDirection.md)
 - Design map (system diagram, game flow, world map, UI mockups): [docs/DesignMap.html](docs/DesignMap.html), open it in a browser. Its source is `docs/DesignMap.source.html`, published at https://claude.ai/artifact/5zbB8YiWAd4i67Rs4g2eU2 (private). After editing the source, run `lune run tools/designmap` to rebuild the browser copy.
 
 ## Status
 
-The project is set up, the game's rules are written and tested, the XP curve is tuned with a progression sim, and Cloverdale exists as a greybox (blocks and labels) built from one layout file. There's no HUD or gameplay service yet: week 1 of the MVP plan (design doc §9) is next.
+The project is set up, the game's rules are written and tested, the XP curve is tuned with a progression sim, and Cloverdale exists as a greybox (blocks and labels) built from one layout file. The greybox was walked in Studio on 2026-10-30 (play-test Stage A, see the log), and the world's look is planned in the art direction. There's no HUD or gameplay service yet: week 1 of the MVP plan (design doc §9) and the look pass are next.
 
 ## One-time setup (Windows)
 
@@ -87,7 +88,8 @@ src/server/   Services/ DataService · MovementService     World/ WorldBuilder (
 src/client/   init.client (placeholder until the HUD)
 tests/        *.test.luau, lib/ (harness, spec, raidrace)
 tools/        check.luau · progression.luau · raidrace.luau · designmap.luau
-docs/         GameDesign.md · PlaytestPlan.md · PlaytestLog.md · DesignMap.source.html → DesignMap.html
+docs/         GameDesign.md · ArtDirection.md · PlaytestPlan.md · PlaytestLog.md (+ playtest/ screenshots)
+              DesignMap.source.html → DesignMap.html
 ```
 
 Balancing is mostly editing `src/shared/Config/*.luau`; the config tests flag numbers that break the design (for example a crop that pays less per minute than one of a lower rarity).

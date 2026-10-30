@@ -15,7 +15,7 @@ local LandRules = require(ReplicatedStorage.Shared.LandRules)
 
 local WorldBuilder = {}
 
-WorldBuilder.VERSION = 1
+WorldBuilder.VERSION = 2
 
 local COLORS = {
 	grass = Color3.fromRGB(150, 196, 104),
@@ -81,13 +81,15 @@ local function ring(name: string, radius: number, width: number, segments: numbe
 	end
 end
 
--- A floating name over something (greybox only).
-local function label(text: string, adornee: BasePart, height: number)
+-- A floating name over something (greybox only). Sized in studs (`studs` is
+-- the text height) so it shrinks with distance like a real sign, and hidden
+-- beyond `maxDistance`, so far-off farms' labels don't pile up on screen.
+local function label(text: string, adornee: BasePart, height: number, studs: number, maxDistance: number)
 	local gui = Instance.new("BillboardGui")
-	gui.Size = UDim2.fromOffset(220, 40)
+	gui.Size = UDim2.fromScale(studs * 8, studs)
 	gui.StudsOffsetWorldSpace = Vector3.new(0, height, 0)
 	gui.AlwaysOnTop = false
-	gui.MaxDistance = 300
+	gui.MaxDistance = maxDistance
 	gui.Adornee = adornee
 	local textLabel = Instance.new("TextLabel")
 	textLabel.Size = UDim2.fromScale(1, 1)
@@ -148,7 +150,7 @@ local function buildValley(world: Instance)
 		Color = COLORS.dark,
 		CanCollide = false,
 	}, world)
-	label("To the City", tunnel, 14)
+	label("To the City", tunnel, 14, 5, 400)
 end
 
 local function buildTown(world: Instance)
@@ -166,7 +168,7 @@ local function buildTown(world: Instance)
 			CFrame = CFrame.lookAt(position, Vector3.new(0, position.Y, 0)),
 			Color = if building.id == "Police" then COLORS.slate else COLORS.cream,
 		}, town)
-		label(building.name, block, building.size.Y / 2 + 4)
+		label(building.name, block, building.size.Y / 2 + 4, 4, 260)
 	end
 	local porch = part({
 		Name = "PolicePorch",
@@ -174,7 +176,7 @@ local function buildTown(world: Instance)
 		CFrame = CFrame.lookAt(PlotLayout.policePorchWorld() + Vector3.new(0, 0.3, 0), Vector3.new(0, 0.3, 0)),
 		Color = COLORS.slate,
 	}, town)
-	label("Police porch", porch, 4)
+	label("Police porch", porch, 4, 2, 80)
 
 	local spawn = Instance.new("SpawnLocation")
 	spawn.Name = "TownSpawn"
@@ -215,10 +217,24 @@ local function buildPlot(index: number, world: Instance)
 	plotBox("Yard", frame, Vector3.new(-W / 2, 0, 0), Vector3.new(W / 2, 0.2, D), { Color = COLORS.yard, Material = Enum.Material.Grass }, model)
 
 	-- Hedges can't be climbed; the back fence can (slowly); the front has the
-	-- gate. Fences are low to look at, with an invisible wall above them that
-	-- a jump can't clear (climbing comes with week 4: §4.10).
+	-- gate. Fences are posts and three rails you can see through, as tall as
+	-- PlotLayout.FENCE_HEIGHT, so a jump hits the fence you see. An invisible
+	-- wall up to FENCE_BLOCK is what really stops you: without it a character
+	-- climbs the rails like a ladder (play-test 2026-10-30). Climbing comes
+	-- with week 4 (§4.10). A fence runs across the plot (along X).
 	local function fence(name: string, min: Vector3, max: Vector3)
-		plotBox(name, frame, min, Vector3.new(max.X, PlotLayout.FENCE_HEIGHT, max.Z), { Color = COLORS.fence }, model)
+		local rails = Instance.new("Model")
+		rails.Name = name
+		rails.Parent = model
+		local height = PlotLayout.FENCE_HEIGHT
+		for _, y in { 1, height / 2, height - 1 } do
+			plotBox("Rail", frame, Vector3.new(min.X, y, min.Z), Vector3.new(max.X, y + 1, max.Z), { Color = COLORS.fence }, rails)
+		end
+		local gaps = math.max(1, math.round((max.X - min.X) / 12))
+		for i = 0, gaps do
+			local x = min.X + (max.X - min.X) * i / gaps
+			plotBox("Post", frame, Vector3.new(x - 0.5, 0, min.Z - 0.25), Vector3.new(x + 0.5, height, max.Z + 0.25), { Color = COLORS.fence }, rails)
+		end
 		plotBox(`{name}Blocker`, frame, min, Vector3.new(max.X, PlotLayout.FENCE_BLOCK, max.Z),
 			{ Transparency = 1, CanQuery = false, CanTouch = false }, model)
 	end
@@ -232,10 +248,10 @@ local function buildPlot(index: number, world: Instance)
 	fence("FrontFenceByGate", Vector3.new(P.shop.max.X, 0, -1), Vector3.new(gateLeft, 0, 0))
 	fence("FrontFence", Vector3.new(gateRight, 0, -1), Vector3.new(W / 2, 0, 0)) -- (with the trucks-only gate across the driveway)
 	local gatePost = plotBox("Gate", frame, Vector3.new(gateLeft, 0, -1.5), Vector3.new(gateRight, 0.4, 0.5), { Color = COLORS.hay }, model)
-	label(`Farm {index}: for rent`, gatePost, 8)
+	label(`Farm {index}: for rent`, gatePost, 8, 3, 200)
 
 	-- Buildings.
-	label("Shop", plotBox("Shop", frame, P.shop.min, P.shop.max, { Color = COLORS.barnRed }, model), 10)
+	label("Shop", plotBox("Shop", frame, P.shop.min, P.shop.max, { Color = COLORS.barnRed }, model), 10, 3, 120)
 	plotBox("Gatehouse", frame, P.gatehouse.min, P.gatehouse.max, { Color = COLORS.cream }, model)
 	plotBox("Driveway", frame, P.driveway.min, P.driveway.max, { Color = COLORS.road }, model)
 	plotBox("Path", frame, P.path.min, P.path.max, { Color = COLORS.trail }, model)
@@ -243,15 +259,15 @@ local function buildPlot(index: number, world: Instance)
 	local wh = P.warehouse
 	plotBox("WarehouseFloor", frame, wh.min, Vector3.new(wh.max.X, 0.4, wh.max.Z), { Color = COLORS.slate }, model)
 	local roof = plotBox("WarehouseRoof", frame, Vector3.new(wh.min.X, wh.max.Y - 1, wh.min.Z), wh.max, { Color = COLORS.slate }, model)
-	label("Warehouse", roof, 4)
+	label("Warehouse", roof, 4, 3, 120)
 	for _, corner in { { wh.min.X, wh.min.Z }, { wh.max.X - 2, wh.min.Z }, { wh.min.X, wh.max.Z - 2 }, { wh.max.X - 2, wh.max.Z - 2 } } do
 		plotBox("Post", frame, Vector3.new(corner[1], 0, corner[2]), Vector3.new(corner[1] + 2, wh.max.Y - 1, corner[2] + 2), { Color = COLORS.slate }, model)
 	end
 	for _, station in P.stations do
 		local pad = plotBox(station.id, frame, Vector3.new(P.stationAcross - 6, 0, station.z - 5), Vector3.new(P.stationAcross + 6, 3, station.z + 5), { Color = COLORS.cream }, model)
-		label(station.id, pad, 4)
+		label(station.id, pad, 4, 1.5, 45)
 	end
-	label("Farmhouse & barn", plotBox("Farmhouse", frame, P.farmhouse.min, P.farmhouse.max, { Color = COLORS.cream }, model), 12)
+	label("Farmhouse & barn", plotBox("Farmhouse", frame, P.farmhouse.min, P.farmhouse.max, { Color = COLORS.cream }, model), 12, 3, 120)
 	local door = part({
 		Name = "Door", Size = Vector3.new(4, 0.4, 4),
 		CFrame = frame * CFrame.new(P.door + Vector3.new(0, 0.2, 0)), Color = COLORS.hay,
