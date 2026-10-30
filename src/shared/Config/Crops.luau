@@ -40,8 +40,20 @@ Crops.List = {
 	crop("DragonsEyePumpkin", "Dragon's Eye Pumpkin", "Mythic", 48000, 21600, 70000),
 }
 
+-- What the HUD and windows show for each crop until there are 3D pictures
+-- (emoji Roblox can draw: nothing newer than Unicode 12, so no 🫑 or 🫐).
+local ICONS = {
+	Carrot = "🥕", Wheat = "🌾", Potato = "🥔", Lettuce = "🥬",
+	Corn = "🌽", Onion = "🧅", Strawberry = "🍓", Tomato = "🍅",
+	BellPepper = "🌶️", Pumpkin = "🎃", Watermelon = "🍉", Blueberry = "🌳",
+	Pineapple = "🍍", CocoaPod = "🍫", Dragonfruit = "🐉", GrapeVine = "🍇",
+	Moonmelon = "🌕", Starfruit = "⭐", GoldenApple = "🍎",
+	CrystalRose = "🌹", PhoenixPepper = "🔥", DragonsEyePumpkin = "👁️",
+}
+
 Crops.ById = {}
 for _, entry in Crops.List do
+	entry.icon = ICONS[entry.id]
 	Crops.ById[entry.id] = entry
 end
 

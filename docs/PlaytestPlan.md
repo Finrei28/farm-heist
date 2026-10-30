@@ -38,18 +38,19 @@ Build them in `DevCommandService` (Studio only, plus `Util/Staff` in live server
 
 | Command | Does | Needed from |
 |---|---|---|
-| `/coins N` | add coins | Stage B |
-| `/level N` | set XP to reach level N (and its Land Permits) | Stage B |
-| `/grow H` | fast-forward your field H hours online | Stage B |
-| `/away H` | settle H hours offline (growth and workers), show the Welcome back card | Stage C |
-| `/restock full` | everything in stock at Barley's until the next restock | Stage B |
-| `/tp N` · `/tp town` · `/tp porch` | teleport (through `MovementService.Teleport`) | Stage A–B |
+| `/coins N` ✅ | add coins | Stage B |
+| `/level N` ✅ · `/xp N` ✅ | set XP to reach level N (and its Land Permits) · add XP | Stage B |
+| `/grow S` ✅ · `/grow ripe` ✅ | fast-forward your field S seconds online · ripen everything | Stage B |
+| `/away H` ✅ | settle H hours offline (growth now; workers and the Welcome back card in week 3) | Stage B–C |
+| `/restock` ✅ · `/restock full` ✅ | Barley's next restock now · with everything in stock | Stage B |
+| `/seeds Crop N` ✅ · `/seeds all N` ✅ | give seeds | Stage B |
+| `/tp N` ✅ · `/tp town` ✅ · `/tp porch` ✅ · `/tp barley` ✅ · `/tp home` ✅ | teleport (through `MovementService.Teleport`) | Stage A–B |
 | `/stopwatch` | prints server time to Output (for timing from logs instead of a phone) | Stage A |
 | `/shield off` | end your Sprout Shield and arrival grace now | Stage D |
 | `/ko` · `/suspect` | knock yourself out / mark yourself a Suspect | Stage D |
 | `/crimelog` | prints your visits, debts, last arrests, raid ledger | Stage D |
 | `/weather X` · `/auction now` | force weather; start an auction | Stage E |
-| `/wipe` | reset your save (test store only) | all |
+| `/wipe` ✅ | start your save over, in place | all |
 
 ## Stage A: walk the greybox (now: solo, Studio, ~30 min)
 
@@ -76,7 +77,6 @@ If A3 is off by more than 0.7 s, or A4 fails, fix `PlotLayout` before week 1 and
 | # | Case | Steps | Measure | Pass |
 |---|---|---|---|---|
 | B1 | First minute | Fresh save (`/wipe`), new tester, no explanation | time to first plant; first harvest | plant < 60 s, harvest < 3 min |
-| B2 | Farm Guide | Same tester, follow the Guide card to the end | time per step; where they stalled | Guide done in ≤ 15 min; no step stalls > 60 s |
 | B3 | Growth timings | Plant a Carrot, a Corn and a Pumpkin; time to ripe (use `/grow` for long crops) | seconds | ±2 s of `Config/Crops` (60 / 300 / 900) |
 | B4 | Watering | Water a half-grown Pumpkin | remaining time drops 10% | matches `GrowthRules.water` |
 | B5 | Barley's restocks | Watch two restocks; buy out a Rare seed; rejoin | stock per player; rejoining doesn't refill | as `SeedStock` says |
@@ -98,6 +98,7 @@ If A3 is off by more than 0.7 s, or A4 fails, fix `PlotLayout` before week 1 and
 | C5 | Workers offline | Hire a full T1 crew, `/away 8` | Welcome back numbers vs `PipelineRules.settle` with the same state | within ±5% (it's the same code: a big gap is a service bug) |
 | C6 | Economy pace | Two testers play 45 min from fresh | level and coins at 15 / 30 / 45 min | within ±30% of `tools/progression` (daily profile, first day) |
 | C7 | Wages strike | Run coins to 0 with workers | strike shows and is understood | tester says why they stopped |
+| C8 | Farm Guide | Fresh save, new tester, follow the Guide card to the end (moved from Stage B: its steps need the truck and the Farm Stand) | time per step; where they stalled | Guide done in ≤ 15 min; no step stalls > 60 s |
 
 ## Stage D: raids, the big one (after weeks 4–5)
 
@@ -169,7 +170,7 @@ Before launch, also check Creator Analytics is receiving the onboarding funnel (
 | From | To | Gate |
 |---|---|---|
 | A | week 1 | A3 and A4 pass |
-| B | week 2 | B1, B2, B7, B9 pass |
+| B | week 2 | B1, B7, B9 pass |
 | C | week 4 | C2 and C6 pass (or the sim is retuned to match) |
 | D | week 6 | every D-dodge case passes; D-fun averages ≥ 4.0; arrest rate 30–55% |
 | E | launch prep | E5 passes |

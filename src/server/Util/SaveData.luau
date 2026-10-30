@@ -23,7 +23,8 @@ local TEMPLATE = {
 	-- cleared: block numbers cleared with Land Permits, in order (the start
 	-- blocks aren't listed). While a block is being cleared there's also
 	-- clearing = { block, obstacles }. Permits come from the level (shared/LandRules).
-	land = { cleared = {} },
+	-- fresh: ["tile"] = true for newly cleared tiles not planted yet (+25% growth).
+	land = { cleared = {}, fresh = {} },
 	silo = 0, -- Silo upgrades bought (barn capacity)
 
 	inventory = {

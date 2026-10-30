@@ -2,8 +2,9 @@
 -- §3): the valley and hills, the town square and its five buildings, the
 -- ring road, the highway and tunnel, the back trail, and the 8 farms with
 -- their hedges, fences, gate, shop, warehouse, farmhouse and 8×8 field (the
--- start corner tilled, the rest overgrown). Plain blocks and labels: enough
--- to walk the distances and time a raid before any art exists.
+-- start corner tilled, the rest overgrown: World/FarmArt). Plain blocks and
+-- labels, in the art direction's palette (docs/ArtDirection.md): enough to
+-- walk the distances and time a raid until the look pass replaces them.
 --
 -- Rebuilt from scratch at every server start (workspace.World). Each farm is
 -- a Model named Plot<n> with a PlotIndex attribute and an invisible "Zone"
@@ -11,44 +12,15 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local PlotLayout = require(ReplicatedStorage.Shared.PlotLayout)
-local LandRules = require(ReplicatedStorage.Shared.LandRules)
+local Parts = require(script.Parent.Parts)
+local FarmArt = require(script.Parent.FarmArt)
 
 local WorldBuilder = {}
 
-WorldBuilder.VERSION = 2
+WorldBuilder.VERSION = 3
 
-local COLORS = {
-	grass = Color3.fromRGB(150, 196, 104),
-	yard = Color3.fromRGB(132, 184, 92),
-	hill = Color3.fromRGB(104, 152, 72),
-	plaza = Color3.fromRGB(226, 214, 186),
-	road = Color3.fromRGB(150, 144, 134),
-	trail = Color3.fromRGB(196, 164, 112),
-	soil = Color3.fromRGB(120, 84, 56),
-	overgrown = Color3.fromRGB(96, 140, 64),
-	rock = Color3.fromRGB(128, 136, 146),
-	hedge = Color3.fromRGB(47, 107, 42),
-	fence = Color3.fromRGB(122, 82, 50),
-	barnRed = Color3.fromRGB(184, 62, 40),
-	cream = Color3.fromRGB(247, 237, 214),
-	slate = Color3.fromRGB(127, 140, 153),
-	hay = Color3.fromRGB(242, 179, 61),
-	water = Color3.fromRGB(124, 195, 232),
-	dark = Color3.fromRGB(28, 23, 18),
-}
-
-local function part(props, parent: Instance): BasePart
-	local p: any = Instance.new("Part")
-	p.Anchored = true
-	p.TopSurface = Enum.SurfaceType.Smooth
-	p.BottomSurface = Enum.SurfaceType.Smooth
-	p.Material = Enum.Material.SmoothPlastic
-	for key, value in props do
-		p[key] = value
-	end
-	p.Parent = parent
-	return p
-end
+local COLORS = Parts.COLORS
+local part, plotBox = Parts.part, Parts.plotBox
 
 -- A flat disc (a cylinder standing up).
 local function disc(name: string, radius: number, height: number, y: number, color: Color3, parent: Instance)
@@ -104,21 +76,10 @@ local function label(text: string, adornee: BasePart, height: number, studs: num
 	return gui
 end
 
--- A box from plot-space corners (min.Y is the ground it stands on).
-local function plotBox(name: string, frame: CFrame, min: Vector3, max: Vector3, props, parent: Instance): BasePart
-	local size = Vector3.new(math.max(0.2, max.X - min.X), math.max(0.2, max.Y - min.Y), math.max(0.2, max.Z - min.Z))
-	local centre = Vector3.new((min.X + max.X) / 2, min.Y + size.Y / 2, (min.Z + max.Z) / 2)
-	local all = table.clone(props)
-	all.Name = name
-	all.Size = size
-	all.CFrame = frame * CFrame.new(centre)
-	return part(all, parent)
-end
-
 ------------------------------------------------------------------------
 
 local function buildValley(world: Instance)
-	disc("Valley", PlotLayout.VALLEY_RADIUS, 2, -1, COLORS.grass, world).Material = Enum.Material.Grass
+	disc("Valley", PlotLayout.VALLEY_RADIUS, 2, -1, COLORS.meadow, world)
 	-- Hills: a ring of tall blocks, open in the north for the highway tunnel.
 	local hills = Instance.new("Folder")
 	hills.Name = "Hills"
@@ -133,14 +94,18 @@ local function buildValley(world: Instance)
 			Size = Vector3.new(depth, 40, 2 * math.pi * radius / 36 + 4),
 			CFrame = CFrame.lookAt(position, Vector3.new(0, 20, 0)) * CFrame.Angles(0, math.rad(90), 0),
 			Color = COLORS.hill,
-			Material = Enum.Material.Grass,
 		}, hills)
 	end
+	-- (Nothing flat may sit at the same height as something it overlaps: the
+	-- two surfaces would fight over which one shows and flicker as the
+	-- camera moves. So the ground goes in layers: valley 0, lawn and town
+	-- paths 0.2, roads and trails 0.3, farm paths 0.35, the highway 0.42,
+	-- the plaza 0.4.)
 	local highway = PlotLayout.HIGHWAY
 	part({
 		Name = "Highway",
-		Size = Vector3.new(highway.width, 0.3, highway.to - highway.from),
-		CFrame = CFrame.new(0, 0.15, (highway.from + highway.to) / 2),
+		Size = Vector3.new(highway.width, 0.42, highway.to - highway.from),
+		CFrame = CFrame.new(0, 0.21, (highway.from + highway.to) / 2),
 		Color = COLORS.road,
 	}, world)
 	local tunnel = part({
@@ -178,13 +143,31 @@ local function buildTown(world: Instance)
 	}, town)
 	label("Police porch", porch, 4, 2, 80)
 
+	-- Barley's counter, in front of the seed shop (SeedShopService puts the
+	-- Seed Rack prompt on it), and Barley in his straw hat behind it.
+	local counterAt = PlotLayout.frontOf("Seeds", 4) + Vector3.new(0, 1.75, 0)
+	local facing = CFrame.lookAt(counterAt, Vector3.new(0, counterAt.Y, 0))
+	part({ Name = "SeedCounter", Size = Vector3.new(12, 3.5, 3), CFrame = facing, Color = COLORS.kraft }, town)
+	part({ Name = "CounterTop", Size = Vector3.new(12.6, 0.4, 3.6), CFrame = facing * CFrame.new(0, 1.95, 0), Color = COLORS.post }, town)
+	local barley = Instance.new("Model")
+	barley.Name = "Barley"
+	local feet = facing * CFrame.new(0, -1.75, 2.8)
+	part({ Name = "Body", Size = Vector3.new(2.4, 3.4, 1.4), CFrame = feet * CFrame.new(0, 1.7, 0), Color = COLORS.leaf }, barley)
+	Parts.ball("Head", feet * CFrame.new(0, 4.3, 0), 2, { Color = Color3.fromRGB(240, 196, 150) }, barley)
+	Parts.cylinder("HatBrim", feet * CFrame.new(0, 5, 0), 3.6, 0.25, { Color = COLORS.hay }, barley)
+	Parts.cylinder("HatCrown", feet * CFrame.new(0, 5.5, 0), 2, 1, { Color = COLORS.hay }, barley)
+	barley.Parent = town
+	label("Barley", barley.Body, 4.6, 1.4, 90)
+
 	local spawn = Instance.new("SpawnLocation")
 	spawn.Name = "TownSpawn"
 	spawn.Anchored = true
 	spawn.Neutral = true
 	spawn.Duration = 0
 	spawn.Size = Vector3.new(8, 1, 8)
-	spawn.CFrame = CFrame.new(square.spawn + Vector3.new(0, 0.5, 0))
+	-- facing north, at the fountain and the Exchange (not the Police Station)
+	local spawnAt = square.spawn + Vector3.new(0, 0.5, 0)
+	spawn.CFrame = CFrame.lookAt(spawnAt, spawnAt + Vector3.new(0, 0, 1))
 	spawn.Color = COLORS.hay
 	spawn.TopSurface = Enum.SurfaceType.Smooth
 	spawn.Parent = town
@@ -194,11 +177,11 @@ local function buildTown(world: Instance)
 
 	-- Paths from the square to each farm's gate.
 	for index = 1, PlotLayout.COUNT do
-		local from = PlotLayout.polar(PlotLayout.angle(index), square.plazaRadius, 0.12)
-		local to = PlotLayout.visitWorld(index) + Vector3.new(0, 0.12, 0)
+		local from = PlotLayout.polar(PlotLayout.angle(index), square.plazaRadius, 0.1)
+		local to = PlotLayout.visitWorld(index) + Vector3.new(0, 0.1, 0)
 		part({
 			Name = `Path{index}`,
-			Size = Vector3.new(6, 0.24, (to - from).Magnitude),
+			Size = Vector3.new(6, 0.2, (to - from).Magnitude),
 			CFrame = CFrame.lookAt((from + to) / 2, to),
 			Color = COLORS.trail,
 		}, town)
@@ -214,7 +197,13 @@ local function buildPlot(index: number, world: Instance)
 	model:SetAttribute("PlotIndex", index)
 	model.Parent = world
 
-	plotBox("Yard", frame, Vector3.new(-W / 2, 0, 0), Vector3.new(W / 2, 0.2, D), { Color = COLORS.yard, Material = Enum.Material.Grass }, model)
+	-- The lawn, mown in stripes: strips side by side (never one on top of
+	-- another, which flickers).
+	local STRIPE = 20
+	for x = -W / 2, W / 2 - STRIPE, STRIPE do
+		local light = ((x + W / 2) / STRIPE) % 2 == 1
+		plotBox("Yard", frame, Vector3.new(x, 0, 0), Vector3.new(x + STRIPE, 0.2, D), { Color = if light then COLORS.lawnStripe else COLORS.lawn }, model)
+	end
 
 	-- Hedges can't be climbed; the back fence can (slowly); the front has the
 	-- gate. Fences are posts and three rails you can see through, as tall as
@@ -233,7 +222,8 @@ local function buildPlot(index: number, world: Instance)
 		local gaps = math.max(1, math.round((max.X - min.X) / 12))
 		for i = 0, gaps do
 			local x = min.X + (max.X - min.X) * i / gaps
-			plotBox("Post", frame, Vector3.new(x - 0.5, 0, min.Z - 0.25), Vector3.new(x + 0.5, height, max.Z + 0.25), { Color = COLORS.fence }, rails)
+			-- (posts stand a little above the top rail: level tops would flicker)
+			plotBox("Post", frame, Vector3.new(x - 0.5, 0, min.Z - 0.25), Vector3.new(x + 0.5, height + 0.6, max.Z + 0.25), { Color = COLORS.post }, rails)
 		end
 		plotBox(`{name}Blocker`, frame, min, Vector3.new(max.X, PlotLayout.FENCE_BLOCK, max.Z),
 			{ Transparency = 1, CanQuery = false, CanTouch = false }, model)
@@ -247,14 +237,15 @@ local function buildPlot(index: number, world: Instance)
 	fence("FrontFenceShopSide", Vector3.new(-W / 2, 0, -1), Vector3.new(P.shop.min.X, 0, 0))
 	fence("FrontFenceByGate", Vector3.new(P.shop.max.X, 0, -1), Vector3.new(gateLeft, 0, 0))
 	fence("FrontFence", Vector3.new(gateRight, 0, -1), Vector3.new(W / 2, 0, 0)) -- (with the trucks-only gate across the driveway)
-	local gatePost = plotBox("Gate", frame, Vector3.new(gateLeft, 0, -1.5), Vector3.new(gateRight, 0.4, 0.5), { Color = COLORS.hay }, model)
+	local gatePost = plotBox("Gate", frame, Vector3.new(gateLeft, 0, -1.5), Vector3.new(gateRight, 0.5, 0.5), { Color = COLORS.hay }, model)
 	label(`Farm {index}: for rent`, gatePost, 8, 3, 200)
 
 	-- Buildings.
 	label("Shop", plotBox("Shop", frame, P.shop.min, P.shop.max, { Color = COLORS.barnRed }, model), 10, 3, 120)
 	plotBox("Gatehouse", frame, P.gatehouse.min, P.gatehouse.max, { Color = COLORS.cream }, model)
-	plotBox("Driveway", frame, P.driveway.min, P.driveway.max, { Color = COLORS.road }, model)
-	plotBox("Path", frame, P.path.min, P.path.max, { Color = COLORS.trail }, model)
+	-- (on the lawn, not level with it)
+	plotBox("Driveway", frame, P.driveway.min + Vector3.new(0, 0.2, 0), P.driveway.max + Vector3.new(0, 0.15, 0), { Color = COLORS.road }, model)
+	plotBox("Path", frame, P.path.min + Vector3.new(0, 0.2, 0), P.path.max + Vector3.new(0, 0.15, 0), { Color = COLORS.trail }, model)
 	-- The warehouse: a roof on posts, so you can walk in to the stations.
 	local wh = P.warehouse
 	plotBox("WarehouseFloor", frame, wh.min, Vector3.new(wh.max.X, 0.4, wh.max.Z), { Color = COLORS.slate }, model)
@@ -274,36 +265,9 @@ local function buildPlot(index: number, world: Instance)
 	}, model)
 	door:SetAttribute("Deposit", true) -- the barn's deposit point and the owner's spawn
 
-	-- The field: the start corner tilled, the rest overgrown (one rock per block).
-	local field = Instance.new("Folder")
-	field.Name = "Field"
-	field.Parent = model
-	for tile = 1, P.field.size * P.field.size do
-		local block = LandRules.blockOfTile(tile)
-		local centre = PlotLayout.tileLocal(tile)
-		local open = LandRules.isStart(block)
-		local t = part({
-			Name = `Tile{tile}`,
-			Size = Vector3.new(P.field.tile - 0.6, 0.4, P.field.tile - 0.6),
-			CFrame = frame * CFrame.new(centre + Vector3.new(0, 0.3, 0)),
-			Color = if open then COLORS.soil else COLORS.overgrown,
-			Material = if open then Enum.Material.Ground else Enum.Material.Grass,
-		}, field)
-		t:SetAttribute("Tile", tile)
-		t:SetAttribute("Block", block)
-	end
-	for block = 1, 16 do
-		if not LandRules.isStart(block) then
-			local tiles = LandRules.tilesOf(block)
-			local corner = (PlotLayout.tileLocal(tiles[1]) + PlotLayout.tileLocal(tiles[4])) / 2
-			part({
-				Name = `Rock{block}`, Size = Vector3.new(4, 3, 3),
-				CFrame = frame * CFrame.new(corner + Vector3.new(0, 1.5, 0)), Color = COLORS.rock,
-				Material = Enum.Material.Slate,
-			}, field)
-		end
-	end
-	part({ Name = "Scarecrow", Size = Vector3.new(1, 8, 1), CFrame = frame * CFrame.new(P.scarecrow + Vector3.new(0, 4, 0)), Color = COLORS.fence }, model)
+	-- The field: the start corner tilled, the rest overgrown (World/FarmArt).
+	FarmArt.buildField(model, frame)
+	part({ Name = "Scarecrow", Size = Vector3.new(1, 8, 1), CFrame = frame * CFrame.new(P.scarecrow + Vector3.new(0, 4, 0)), Color = COLORS.post }, model)
 	part({ Name = "Kennel", Size = Vector3.new(8, 6, 7), CFrame = frame * CFrame.new(P.kennel + Vector3.new(0, 3, 0)), Color = COLORS.barnRed }, model)
 
 	-- The farm's zone, for checks you can see in Studio (the server uses PlotLayout.zone).

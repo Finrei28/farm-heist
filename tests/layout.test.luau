@@ -112,6 +112,25 @@ return function(spec, harness)
 			expect(PlotLayout.tileLocal(1).Z).toBeLessThan(PlotLayout.tileLocal(8).Z)
 			expect(farthest).toBeLessThan((PlotLayout.tileLocal(64) - P.door).Magnitude)
 		end)
+		it("finds the tile under a position (and none off the field)", function()
+			for index = 1, PlotLayout.COUNT do
+				for tile = 1, 64 do
+					local centre = PlotLayout.tileWorld(index, tile)
+					expect(PlotLayout.tileAt(index, centre)).toBe(tile)
+					-- near a corner of the tile, still the same tile
+					local nearCorner = PlotLayout.toWorld(index, PlotLayout.tileLocal(tile) + Vector3.new(5.5, 3, -5.5))
+					expect(PlotLayout.tileAt(index, nearCorner)).toBe(tile)
+				end
+				expect(PlotLayout.tileAt(index, PlotLayout.spawnWorld(index))).toBe(nil)
+				expect(PlotLayout.tileAt(index, PlotLayout.toWorld(index, Vector3.new(0, 0, P.backFence - 1)))).toBe(nil)
+			end
+		end)
+		it("puts Barley's counter in front of the seed shop, on the square", function()
+			local counter = PlotLayout.frontOf("Seeds", 4)
+			local building = PlotLayout.building("Seeds")
+			expect(radius(counter)).toBeLessThan(building.radius - building.size.Z / 2)
+			expect(radius(counter)).toBeLessThan(PlotLayout.TOWN.plazaRadius)
+		end)
 		it("has its spawn inside and its Visit point outside the farm", function()
 			for index = 1, PlotLayout.COUNT do
 				expect(ZoneRules.inside(PlotLayout.zone(index), PlotLayout.spawnWorld(index))).toBe(true)

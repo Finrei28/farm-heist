@@ -127,6 +127,18 @@ function PlotLayout.tileWorld(index: number, tile: number): Vector3
 	return PlotLayout.toWorld(index, PlotLayout.tileLocal(tile))
 end
 
+-- The field tile a world position stands over, or nil (off the field).
+function PlotLayout.tileAt(index: number, position: Vector3): number?
+	local field = PlotLayout.PLOT.field
+	local p = PlotLayout.frame(index):PointToObjectSpace(position)
+	local column = math.floor((p.Z - field.depth) / field.tile) + 1
+	local row = math.floor((p.X - field.across) / field.tile) + 1
+	if column < 1 or column > field.size or row < 1 or row > field.size then
+		return nil
+	end
+	return (row - 1) * field.size + column
+end
+
 -- The centre of a box given as { min, max } in plot space.
 function PlotLayout.centre(box): Vector3
 	return (box.min + box.max) / 2
@@ -150,6 +162,13 @@ function PlotLayout.building(id: string)
 		end
 	end
 	return nil
+end
+
+-- The spot `gap` studs in front of a town building, on the square's side
+-- (where its counter is: Barley stands here).
+function PlotLayout.frontOf(id: string, gap: number): Vector3
+	local building = PlotLayout.building(id)
+	return PlotLayout.polar(building.angle, building.radius - building.size.Z / 2 - gap)
 end
 
 -- Where arrested players appear: the Police Station porch.

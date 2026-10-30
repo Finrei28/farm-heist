@@ -4,10 +4,10 @@
 --
 --   StateChanged   S→C  (state)  coins, level, land, seeds ... see DataService.getPublicState
 --   GetState       C→S  () -> state?
---   Notify         S→C  { text, color? }  toasts and server-wide announcements
+--   Notify         S→C  { text, kind?, ... }  toasts, cards and announcements (server/Util/Notice)
 --   FieldAction    C→S  ("Plant" "tile|cropId" | "Water" tile | "Harvest" tile | "Flag" tile) -> { ok, reason? }
---   SeedAction     C→S  ("Buy" cropId) -> { ok, reason? }   Barley's Seeds (shared/SeedStock)
---   LandAction     C→S  ("Clear" block | "Obstacle") -> { ok, reason? }   Land Permits (shared/LandRules)
+--   SeedAction     C→S  ("Buy" "cropId|count") -> { ok, reason? }   Barley's Seeds (shared/SeedStock)
+--   LandAction     C→S  ("Clear" block) -> { ok, reason? }   Land Permits (shared/LandRules; obstacles are server prompts)
 --   TravelAction   C→S  ("Home" | "Town" | "Visit" userId | "Cancel") -> { ok, reason? }   (shared/TravelRules)
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")

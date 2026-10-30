@@ -19,6 +19,8 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local Shared = ReplicatedStorage.Shared
 local Remotes = require(Shared.Remotes)
 local Settings = require(Shared.Config.Settings)
+local LandRules = require(Shared.LandRules)
+local ProgressionRules = require(Shared.ProgressionRules)
 local ProfileStore = require(ServerScriptService.Server.Packages.ProfileStore)
 
 local StateChanged = Remotes.event("StateChanged")
@@ -26,6 +28,7 @@ local GetState = Remotes.func("GetState")
 
 local SaveData = require(script.Parent.Parent.Util.SaveData)
 local Analytics = require(script.Parent.Parent.Util.Analytics)
+local Notice = require(script.Parent.Parent.Util.Notice)
 local TEMPLATE = SaveData.TEMPLATE
 local reconcile = SaveData.reconcile
 
@@ -36,13 +39,24 @@ local LAST_ONLINE_INTERVAL = 60
 local profiles = {} -- [Player] = data
 local sessions = {} -- [Player] = ProfileStore profile
 local stateDirty = {} -- [Player] = true while a state sync is queued
+local awaySeconds = {} -- [Player] = seconds between their last session and this one
 local loadedCallbacks = {}
+local levelUpCallbacks = {}
+local wipedCallbacks = {}
 local beforeRelease = {}
 local store = nil
 local shuttingDown = false
 
 local function keyFor(player)
 	return `Player_{player.UserId}`
+end
+
+local function setStat(player, name: string, value: number)
+	local leaderstats = player:FindFirstChild("leaderstats")
+	local stat = leaderstats and leaderstats:FindFirstChild(name)
+	if stat then
+		stat.Value = value
+	end
 end
 
 local function createLeaderstats(player, data)
@@ -82,6 +96,7 @@ local function loadPlayer(player)
 	profile.OnSessionEnd:Connect(function()
 		profiles[player] = nil
 		sessions[player] = nil
+		awaySeconds[player] = nil
 		if player.Parent == Players then
 			player:Kick("Your save was opened on another server. Please rejoin.")
 		end
@@ -95,6 +110,8 @@ local function loadPlayer(player)
 	local data = profile.Data
 	profiles[player] = data
 	sessions[player] = profile
+	-- (read now: the minute loop below moves lastOnline on once they're in)
+	awaySeconds[player] = if data.lastOnline > 0 then math.max(0, os.time() - data.lastOnline) else 0
 
 	createLeaderstats(player, data)
 	Analytics.step(player, data, "Joined")
@@ -113,6 +130,12 @@ end
 -- it right after granting a purchase), or nil while loading.
 function DataService.GetProfile(player)
 	return sessions[player]
+end
+
+-- Seconds the player was away before this session (0 for a new save), for
+-- offline growth and, later, the Welcome back card.
+function DataService.AwaySeconds(player): number
+	return awaySeconds[player] or 0
 end
 
 -- Calls callback(player, data) for every player once their data has loaded.
@@ -143,12 +166,56 @@ function DataService.AddCoins(player, amount: number, kind: string?, sku: string
 	end
 	data.coins += amount
 	Analytics.coins(player, amount, data.coins, kind, sku)
-	local leaderstats = player:FindFirstChild("leaderstats")
-	local coins = leaderstats and leaderstats:FindFirstChild("Coins")
-	if coins then
-		coins.Value = data.coins
+	setStat(player, "Coins", data.coins)
+	DataService.NotifyState(player)
+end
+
+-- Adds Farm XP (shared/ProgressionRules). A level-up gets a card (with any
+-- Land Permit it brings) and runs the OnLevelUp callbacks.
+function DataService.AddXp(player, amount: number)
+	local data = profiles[player]
+	if not data or not (amount > 0) then
+		return
+	end
+	local before, after = ProgressionRules.addXp(data, amount)
+	if after ~= before then
+		setStat(player, "Level", after)
+		local permits = LandRules.permitsEarned(after) - LandRules.permitsEarned(before)
+		Notice.send(player, `Farm Level {after}!`, "LevelUp", { level = after, permits = permits })
+		for _, callback in levelUpCallbacks do
+			task.spawn(callback, player, data, before, after)
+		end
 	end
 	DataService.NotifyState(player)
+end
+
+-- Calls callback(player, data, oldLevel, newLevel) after every level-up.
+function DataService.OnLevelUp(callback)
+	table.insert(levelUpCallbacks, callback)
+end
+
+-- Starts a player's save over (the /wipe dev command), in place, and runs
+-- the OnWiped callbacks so the farm is redrawn.
+function DataService.Wipe(player)
+	local data = profiles[player]
+	if not data then
+		return
+	end
+	table.clear(data)
+	for key, value in TEMPLATE do
+		data[key] = SaveData.deepCopy(value)
+	end
+	setStat(player, "Coins", data.coins)
+	setStat(player, "Level", data.level)
+	for _, callback in wipedCallbacks do
+		task.spawn(callback, player, data)
+	end
+	DataService.NotifyState(player)
+end
+
+-- Calls callback(player, data) after DataService.Wipe.
+function DataService.OnWiped(callback)
+	table.insert(wipedCallbacks, callback)
 end
 
 -- Deducts coins if the player can afford it. Returns whether it succeeded.

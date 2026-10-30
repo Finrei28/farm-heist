@@ -9,7 +9,7 @@ A farming game for Roblox. Grow crops on your own plot (which gets bigger as you
 
 ## Status
 
-The project is set up, the game's rules are written and tested, the XP curve is tuned with a progression sim, and Cloverdale exists as a greybox (blocks and labels) built from one layout file. The greybox was walked in Studio on 2026-10-30 (play-test Stage A, see the log), and the world's look is planned in the art direction. There's no HUD or gameplay service yet: week 1 of the MVP plan (design doc §9) and the look pass are next.
+Week 1 of the MVP plan (design doc §9) is in: you get a farm, plant, water and harvest, buy seeds from Barley, level up, clear land with Land Permits, and travel Home and to Town, all in Farm Heist's own "Kraft & Crate" interface. The world has its first look pass (light, the field, crops). Selling (the warehouse, the truck, the Farm Stand) is week 2. The rules are tested (203 tests), the XP curve is tuned with a progression sim, and Cloverdale is built from one layout file. Play-test Stage A passed in Studio on 2026-10-30; Stage B (the farming loop, with a real tester) is next.
 
 ## One-time setup (Windows)
 
@@ -26,7 +26,11 @@ The same as Tide Market:
 
 1. In Studio, create a new **Baseplate** place and save it in this folder (e.g. `FarmHeist.rbxl`; it's git-ignored).
 2. In a terminal here: `rojo serve`
-3. In Studio: **Plugins → Rojo → Connect**, then **Play**. The greybox of Cloverdale is built when the server starts (it replaces the Baseplate), you spawn on the town square, and Output shows your save loading (`[Farm Heist] Loaded: 100 coins, level 1`).
+3. In Studio: **Plugins → Rojo → Connect**, then **Play**. Cloverdale is built when the server starts (it replaces the Baseplate), you get a farm, and you appear at its farmhouse door.
+
+**Playing:** stand on a tile and press **E** or tap the round stamp at the bottom right: it plants the seed packet picked in the hotbar (1–9), waters, or harvests, whatever the tile needs. Hold it and walk to do a whole row. Shift runs. The **Barn** crate on the left shows your crops, seeds and land. **Barley** sells seeds at his counter in town (the **TOWN** signpost takes you there in 3 s). From Farm Level 2 you get Land Permits: walk to a yellow "Clear here" sign on your field.
+
+**Dev commands** (Studio, typed in chat): `/coins 5000` · `/level 5` · `/xp 60` · `/grow 60` · `/grow ripe` · `/away 2` · `/restock` · `/restock full` · `/seeds Pumpkin 10` · `/seeds all 5` · `/tp town` · `/tp barley` · `/tp porch` · `/tp home` · `/tp 3` · `/wipe`. The full list is at the top of `src/server/Services/DevCommandService.luau`.
 
 ### Walking the greybox
 
@@ -36,7 +40,7 @@ Everything is placed by `src/shared/PlotLayout.luau`, so a change there moves th
 2. Stand on a back-row tile of any field (the tiles furthest from the farmhouse), walk to the back fence: about 24 studs.
 3. From the yellow Door pad in front of the farmhouse, sprint (Shift) to the back fence: the race assumes about 6–7 s.
 
-If anything feels off, change PlotLayout and run `lune run tools/raidrace` to see what it does to the raid race. These checks are Stage A of [docs/PlaytestPlan.md](docs/PlaytestPlan.md), which has the full list, pass bars and how to sprint before the Shift key exists.
+If anything feels off, change PlotLayout and run `lune run tools/raidrace` to see what it does to the raid race. These checks are Stage A of [docs/PlaytestPlan.md](docs/PlaytestPlan.md), which has the full list and pass bars.
 
 Saves use **ProfileStore** (session locking), at `src/server/Packages/ProfileStore.luau`. To test saving in Studio, publish the place, then Game Settings → Security → *Enable Studio Access to API Services*. Without it everything runs on a mock store.
 
@@ -66,7 +70,8 @@ lune run tests/run
 | `pipeline` | the farm running while you're away, with nothing lost or made up |
 | `progression` | the XP curve, harvest and sales XP, level-ups bringing Land Permits |
 | `layout` | nothing in Cloverdale overlaps, the distances in the doc, the raid race outcome (with at least 1 s to spare) |
-| `world` | builds the greybox for real with Lune's Roblox instances and checks it matches the layout |
+| `world` | builds the greybox for real with Lune's Roblox instances and checks it matches the layout; every crop at every stage; the field following a save's land |
+| `barn`, `plot` | crop stacks and barn capacity; which farm a joining player gets |
 | `movement` | the anti-teleport check |
 | `config`, `savedata` | the tables agree with each other and with the design doc; saves are DataStore-safe |
 
@@ -79,13 +84,15 @@ lune run tests/run
 ## Layout
 
 ```
-src/shared/   Config/ (Crops, Rarities, Land, Crime, Market, Shop, Warehouse, Workers, Auction, Growth, Progression, Settings)
-              Rules: GrowthRules · SeedStock · MarketPrice · DemandModel · LandRules · ProgressionRules · CrimeRules
-                     FineRules · TravelRules · ZoneRules · AuctionRules · WorkerRules · PipelineRules · MoveRules · Remotes
+src/shared/   Config/ (Crops, Rarities, Land, Barn, Crime, Market, Shop, Warehouse, Workers, Auction, Growth, Progression, Settings)
+              Rules: GrowthRules · SeedStock · BarnRules · PlotRules · MarketPrice · DemandModel · LandRules · ProgressionRules
+                     CrimeRules · FineRules · TravelRules · ZoneRules · AuctionRules · WorkerRules · PipelineRules · MoveRules · Remotes
               PlotLayout (where everything in the valley and in a farm is)
-src/server/   Services/ DataService · MovementService     World/ WorldBuilder (the greybox)
-              Util/ SaveData · Analytics · ActionRemote · Staff     Packages/ ProfileStore
-src/client/   init.client (placeholder until the HUD)
+src/server/   Services/ Data · Movement · Plot · Field · SeedShop · Land · Travel · DevCommand
+              World/ WorldBuilder · FarmArt (the field and crops) · Parts (palette) · LightingSetup
+              Util/ SaveData · Analytics · ActionRemote · Notice · Staff     Packages/ ProfileStore
+src/client/   UI (the Kraft & Crate kit) · PlayerState · Reasons
+              Controllers/ Hud · Hotbar · Field · SeedRack · Barn · Prompt · Sprint
 tests/        *.test.luau, lib/ (harness, spec, raidrace)
 tools/        check.luau · progression.luau · raidrace.luau · designmap.luau
 docs/         GameDesign.md · ArtDirection.md · PlaytestPlan.md · PlaytestLog.md (+ playtest/ screenshots)

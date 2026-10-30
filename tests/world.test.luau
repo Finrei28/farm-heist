@@ -91,5 +91,74 @@ return function(spec, harness)
 			local again = build()
 			expect(again ~= nil).toBe(true)
 		end)
+		it("puts Barley's counter where SeedShopService looks for it", function()
+			local counter = world.Town:FindFirstChild("SeedCounter")
+			local expected = PlotLayout.frontOf("Seeds", 4)
+			expect((counter.CFrame.Position - expected).Magnitude).toBeLessThan(2)
+		end)
+	end)
+
+	describe("the field's art (World/FarmArt)", function()
+		local CFrame = roblox.CFrame
+		local FarmArt = harness.loadServerWith("World/FarmArt", { Instance = roblox.Instance })
+		local Crops = harness.load("Config/Crops")
+		local GrowthRules = harness.load("GrowthRules")
+		local world = build()
+		local plot = world.Plot2
+		local frame = PlotLayout.frame(2)
+
+		it("builds every crop at every stage, all anchored", function()
+			for _, crop in Crops.List do
+				for _, stage in { "Seed", "Sprout", "Growing", "Ripe" } do
+					local model = FarmArt.cropModel(crop.id, stage, CFrame.new())
+					local parts = 0
+					for _, descendant in model:GetDescendants() do
+						if descendant:IsA("BasePart") then
+							parts += 1
+							expect(descendant.Anchored).toBe(true)
+							expect(descendant.CanCollide).toBe(false) -- (you walk through crops)
+						end
+					end
+					expect(parts).toBeGreaterThan(0)
+				end
+			end
+		end)
+		it("names the stage from growth: seed, sprout, growing, ripe", function()
+			local tile = GrowthRules.plant("Carrot")
+			expect(FarmArt.stage(tile)).toBe("Seed")
+			GrowthRules.advance(tile, 20)
+			expect(FarmArt.stage(tile)).toBe("Sprout")
+			GrowthRules.advance(tile, 20)
+			expect(FarmArt.stage(tile)).toBe("Growing")
+			GrowthRules.advance(tile, 20)
+			expect(FarmArt.stage(tile)).toBe("Ripe")
+		end)
+		it("shows a crop on a tile and takes it away again", function()
+			local tilePart = plot.Field.Tile1
+			local tile = GrowthRules.plant("Pumpkin")
+			FarmArt.showTile(tilePart, tile, 1000)
+			expect(tilePart:GetAttribute("Crop")).toBe("Pumpkin")
+			expect(tilePart:GetAttribute("Stage")).toBe("Seed")
+			expect(tilePart:GetAttribute("RipeAt")).toBeNear(1000 + 900)
+			expect(tilePart:FindFirstChild("Crop") ~= nil).toBe(true)
+			FarmArt.showTile(tilePart, nil, 1000)
+			expect(tilePart:GetAttribute("Crop")).toBe(nil)
+			expect(tilePart:FindFirstChild("Crop")).toBe(nil)
+		end)
+		it("matches the save's land: cleared blocks tilled, a block being cleared down to its obstacles", function()
+			expect(#FarmArt.obstacles(plot, 3)).toBe(4)
+			FarmArt.applyLand(plot, frame, { cleared = { 3 }, fresh = { ["5"] = true }, clearing = { block = 7, obstacles = 2 } })
+			expect(plot.Field:FindFirstChild("Overgrowth3")).toBe(nil)
+			expect(plot.Field.Tile5:GetAttribute("Open")).toBe(true)
+			expect(plot.Field.Tile5:GetAttribute("Fresh")).toBe(true)
+			expect(#FarmArt.obstacles(plot, 7)).toBe(2)
+			expect(plot.Field.Overgrowth7:GetAttribute("Clearing")).toBe(true)
+			expect(#FarmArt.obstacles(plot, 4)).toBe(4)
+			-- and back to a new farm when the owner leaves
+			FarmArt.applyLand(plot, frame, { cleared = {}, fresh = {} })
+			expect(plot.Field.Tile5:GetAttribute("Open")).toBe(false)
+			expect(#FarmArt.obstacles(plot, 3)).toBe(4)
+			expect(#FarmArt.obstacles(plot, 7)).toBe(4)
+		end)
 	end)
 end

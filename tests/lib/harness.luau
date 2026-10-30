@@ -194,7 +194,15 @@ function loadModule(path: string, scriptNode, extraGlobals)
 	local source = fs.readFile(path)
 	local env = {
 		script = scriptNode,
-		require = fakeRequire,
+		-- (modules it requires get the same extra globals: WorldBuilder's helpers need real Instances too)
+		require = if extraGlobals
+			then function(target)
+				if typeof(target) == "string" then
+					return require(target)
+				end
+				return loadModule(rawget(target, "__path"), target, extraGlobals)
+			end
+			else fakeRequire,
 		game = game,
 		workspace = workspace,
 		os = fakeOs,

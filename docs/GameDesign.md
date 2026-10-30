@@ -415,16 +415,21 @@ Shared by the whole server (`Config/Weather.luau`). A 24-minute day (16 min day,
 ## 5. GUI and UI design
 
 ### 5.1 Look: "Kraft & Crate"
-The UI looks like things you'd find on a farm: kraft paper, crate labels, seed packets, painted wood signs, chalkboards.
-- **Panels:** kraft-paper cards with a stitched (dashed) inner border, 14 px corners, a soft drop shadow, over a dimmed backdrop (tap outside to close).
-- **Header:** a painted wooden sign hung from two nails, with the title in cream and a brown outline.
-- **Tabs:** seed-packet tabs along the top. The chosen one is coloured and raised.
+The UI looks like things you'd find on a farm: kraft paper, crate labels, seed packets, painted wood signs, chalkboards. It's Farm Heist's own look. It doesn't borrow Tide Market's (no dark walnut pills, awnings or round black buttons). The kit is `src/client/UI.luau`, and every HUD piece and window is built from it:
+- **Wood** (`UI.wood`): boards with dark seams, across for signs, up and down for crates. **Crates** (`UI.crate`) are the side-bar buttons: boards, rails and a cream stencilled label.
+- **Panels:** kraft-paper cards with a stitched inner border, over a dimmed backdrop (tap outside to close). The Seed Rack is a rack of boards instead.
+- **Header:** a painted wooden sign hung on two ropes with nails, the title in cream with a dark outline. A round red **stamp** closes the window.
+- **Tabs:** seed packets with a crimped top and a band of colour. The chosen one stands up.
+- **Stamps** (`UI.stamp`): round rubber-stamp buttons with an inner ring: the big context button and the Run button.
+- **Chalkboards** (`UI.chalkboard`): dark green in a wooden frame, in chalk handwriting: the tile you're on, Barley's restock countdown, locked seeds.
+- **Rosettes** (`UI.rosette`): county-fair prize ribbons: your Farm Level in the HUD and the level-up card.
+- **Coins** are drawn (a gold disc with a rim and a shine). Roblox can't show the 🪙 emoji, or anything newer than Unicode 12.
 - **Buttons:** chunky, with a darker 4 px bottom edge that squashes when pressed. **Green** = confirm/do it, **gold** = spend coins, **red** = steal/danger/alarm, **blue** = info/go somewhere, **Robux green with the R$ icon**.
 - **Item cards:** a crate-label strip with a 3D picture on the left (`ItemPreview`), the name in its rarity colour, small tags (Ripe, Wet, Giant, ×12), a detail line, and buttons on the right.
-- **Price tags:** cream tags on a string (the shop and the seed rack).
-- **Toasts:** paper notes pinned with a tack, sliding in at the top right.
+- **Price tags** (`UI.tag`): tags with a pointed end, a hole and a string: prices, and the location chip.
+- **Toasts:** paper notes pinned with a coloured tack, slightly crooked, in handwriting, at the top right. Announcements are on yellow paper.
 
-**Tokens** (`client/UI/Theme.luau`):
+**Tokens** (`UI.C` in `client/UI.luau`):
 
 | Token | Hex | Used for |
 |---|---|---|
@@ -440,14 +445,15 @@ The UI looks like things you'd find on a farm: kraft paper, crate labels, seed p
 
 **Rarity colours:** Common `#B8B8B8` · Uncommon `#5CC75C` · Rare `#3E8EF0` · Epic `#A05CF0` · Legendary `#F5B323` · Mythic `#F04FA8` (with a rainbow gradient sweep). Each rarity also has its own **badge shape** (circle, leaf, diamond, star, crown, flower), so colour is never the only cue.
 
-**Fonts:** `Enum.Font.FredokaOne` for headers, numbers and buttons; `BuilderSans` for body text. At least 14 px on phones.
+**Fonts:** `Enum.Font.FredokaOne` for headers, numbers and buttons; `BuilderSans` for body text; `PatrickHand` for anything handwritten (notes, chalk). At least 14 px on phones.
 
 ### 5.2 HUD (landscape phone)
 
 ```
 ┌───────────────────────────────────────────────────────────────────────────────┐
-│ 🪙 12,450   Lv 7 ▓▓▓▓░░    ☀ 14:20 · Rain in 2:10 · 🌕 Harvest Moon 3:45   🔔 alerts │
-│ [Your Farm 🟢]           ◀ 🥕 Carrot 21 ▲ · 🎃 Pumpkin 640 ▼ · 🍇 Grape 1,620 ▲ ▶   │
+│ (Roblox chat)        ║ (●) 12,450 ║(Lv 7)   ☀ 14:20 · Rain in 2:10     🔔 notes  │
+│                      ╚═▓▓▓▓░░═════╝ ribbon                                        │
+│                         ◁ Your Farm ]   ◀ 🥕 Carrot 21 ▲ · 🎃 Pumpkin 640 ▼ ▶      │
 │ ┌────┐                                                                      ┌────┐│
 │ │Barn│                                                       (toasts stack) │    ││
 │ │Ware│                                                                      │    ││
@@ -455,20 +461,21 @@ The UI looks like things you'd find on a farm: kraft paper, crate labels, seed p
 │ │Work│                                                                      │    ││
 │ │Mkt │                                                                      │    ││
 │ │More│                                       ┌───────────┐                       │
-│ └────┘   [🏠 Home] [🏘 Town]                 │  HARVEST  │ ← big context button │
-│          [ 🏏 | 🚿 | 🌱 Carrot ×12 | 🌱 Corn ×4 | 🧪 ]  │  (hold)   │   (jump stays clear)  │
+│ └────┘      ◁ HOME ][ TOWN ▷                 ( HARVEST ) ← the context stamp      │
+│          [ 🏏 | 🥕 ×12 | 🌽 ×4 | 🎃 ×1 ]  (seed packets)   (jump stays clear)  │
 └───────────────────────────────────────────────────────────────────────────────┘
 ```
-- **Top left:** coins and Farm Level. Below it, the **location chip**:
+- **Top centre** (the "purse"): a wooden sign hung on ropes from the top of the screen with your coins, the Farm Level rosette and the XP rail. Under it the **location chip**, a price tag:
   - 🟢 **Your Farm** (green)
-  - 🟡 **Visiting Sam's farm** (amber)
+  - 🟡 **Visiting Sam's farm** (gold)
   - 🔴 **TRESPASSING** (red, pulsing, once you're a Suspect)
   - ⚪ **Town**
-- **Top centre:** the clock, the weather and the next event's countdown; under it the **market ticker**.
+  It's at the top centre, not top left, because Roblox's chat window lives top left on computers (found in week 1). The top right is Roblox's player list.
+- **Beside it:** the clock, the weather and the next event's countdown; under them the **market ticker** (from the weather and market weeks).
 - **Top right:** the alert stack (theft alarms, auction starting, truck paid, Hot Crop).
 - **Left side bar:** Barn · Warehouse · Shop · Workers · Market · More (Cropdex, Trade, Trusted, Farm Log, Store, Settings). Badges show counts (crates waiting, crops ripe).
-- **Bottom:** the hotbar. The bat 🏏 is slot 1 only inside your farm, then the watering can, then seed stacks. The **Home** and **Town** travel buttons sit above it.
-- **Bottom right:** the **context button**. It changes to whatever you can do right now: Plant · Water · Harvest · Steal (red, hold) · Swing · Arrest (red, hold) · Deposit · Pack.
+- **Bottom:** the hotbar of **seed packets** (the picked one stands up). The bat 🏏 joins it as slot 1, only inside your farm. There's no watering-can slot: the context stamp waters. The **Home** and **Town** signposts sit above it.
+- **Bottom right:** the **context stamp**, with a chalkboard above saying what's on the tile and how long it has left. It changes to whatever you can do right now: Plant · Water · Harvest · Steal (red, hold) · Swing · Arrest (red, hold) · Deposit · Pack. One press does one action. Hold it and walk to repeat that same action on every tile you cross (plant a row, harvest a row), never a different one.
 
 ### 5.3 Windows
 
@@ -620,8 +627,8 @@ src/client/   UI (Kraft & Crate theme, HUD in code) · Controllers/ Field · War
 
 | Week | Build | Done when |
 |---|---|---|
-| 1 | Plots and zones, field (plant, water, grow, harvest), Barn inventory, Barley's shop with restocks, saving. Greybox Cloverdale | 8 players can farm for 15 min without bugs |
-| 2 | Farm Level and XP, Land Permits and clearing, Packing Shed and the pickup truck, the market price (wave + events), Exchange board, Farm Stand with shoppers and pricing | Players argue about truck vs shop |
+| 1 ✅ | Plots and zones, field (plant, water, grow, harvest), Barn inventory, Barley's shop with restocks, saving, offline growth. Farm Level and XP, Land Permits and clearing (moved up from week 2: their rules were done, and Stage B tests them). Travel (Home, Town, Visit), dev commands, the Kraft & Crate HUD, the first look pass. Greybox Cloverdale | 8 players can farm for 15 min without bugs (Stage B9) |
+| 2 | Packing Shed and the pickup truck, the market price (wave + events), Exchange board, Farm Stand with shoppers and pricing | Players argue about truck vs shop |
 | 3 | T1 warehouse and Farm Shop, all worker types, wages and strikes, offline growth and worker settlement, Welcome back card | Testers come back the next day to collect |
 | 4 | Stealing, the sack, deposit, bat, knockout, Suspect, arrest, Police Station, fines and debt, every bypass counter + tests | Raids feel fun on both sides; nobody can dodge an arrest |
 | 5 | Defences, theft alarm, Home, Sprout Shield, arrival grace, raid caps, Trusted list, MovementService | A defended farm catches most raids; an undefended one still survives |
@@ -764,6 +771,25 @@ The first time anyone played Cloverdale: walks timed in Studio with real movemen
 | 4 | Every farm's labels piled up through the walls | Labels sized in studs and hidden beyond 45–260 studs |
 | 5 | As a picture, the greybox is the Baseplate's lighting (its Depth of Field blurs the back row, where thieves stand), a hill wall, an empty town and 8 identical farms | [ArtDirection.md](ArtDirection.md): the world's look, written from the play-test screenshots |
 
+### MVP week 1: the farming loop
+
+Built: `PlotService` (farms handed out, spawn at the door, the InFarm zone), `FieldService` (plant, water, harvest, growth online and offline), `SeedShopService` (Barley's counter, rare-seed announcements), `LandService` ("Clear here" signs, obstacles timed on the server), `TravelService`, `DevCommandService`, `World/FarmArt` (tilled rows, block edging, overgrowth with its 4 obstacles, crops at 4 stages) and `World/LightingSetup`. Shared: `BarnRules`, `PlotRules`, `PlotLayout.tileAt`. The client: the Kraft & Crate kit and the HUD, hotbar, field stamp, Seed Rack, Barn and Run controllers. 203 tests. Played in Studio: plant, water, harvest, buy seeds, level up, clear a block, travel home, on desktop and phone emulation. The review found:
+
+| # | Found | Fix |
+|---|---|---|
+| 1 | §9 put Farm Level and Land Permits in week 2, but Stage B (after week 1) tests them | Built in week 1; §9 updated |
+| 2 | The first HUD copied Tide Market's shapes (rounded pills and buttons, square slots, a black Run circle) | Farm Heist's own kit: wood, crates, seed packets, tags, stamps, chalkboards, rosettes, handwritten notes (§5.1). The user asked for it |
+| 3 | Roblox's chat window sits over the top-left HUD on computers | The coins, level and location hang top centre (§5.2) |
+| 4 | Roblox shows 🪙, 🪪, 🫑 and 🫐 as blanks (Unicode 13 and later) | Coins are drawn; 📜 for permits; Bell Pepper 🌶️, Blueberry Bush 🌳, Phoenix Pepper 🔥 |
+| 5 | One long press harvested, replanted and watered a tile, spending a seed you didn't mean to | A press does one action; holding repeats only that action across tiles (§5.2) |
+| 6 | The watering can as a hotbar slot is a step too many on a phone | The context stamp waters; no can slot (§5.2) |
+| 7 | Nothing showed where a half-cleared block's other obstacles were | They glow gold, and the chalkboard says "hold E on each glowing obstacle" |
+| 8 | The Land map was mirrored compared with standing at the farmhouse door | Drawn as seen from the door (farmhouse side on the right) |
+| 9 | Tilled tiles read as wooden planks; the farm path, driveway and lawn stripes flickered (two surfaces at one height); windows blinked on every save sync | Rounded soil rows; ground in layers (`WorldBuilder`'s note); windows only redraw when what they show changes |
+| 10 | `lastOnline` moves on every minute, so a slow join could lose offline growth | `DataService.AwaySeconds` reads it the moment the save loads |
+
+Left for later weeks, as planned: the Farm Guide (week 7), the Welcome back card (week 3, a note for now), the Sprout Shield dome and arrival grace (week 5), Trusted friends (week 5), a farm closing on its visitors when the owner leaves (week 4). A half-cleared block shows its last obstacles after a rejoin, which may not be the ones that were left (cosmetic).
+
 ### Checklist against the original brief
 
 | Requirement | Where |
@@ -792,6 +818,6 @@ In order. Each one makes the next one cheaper. Every step ends with a review aga
 2. ✅ **Write the shared rules with Lune tests.** `GrowthRules`, `SeedStock`, `MarketPrice`, `DemandModel`, `LandRules`, `CrimeRules` (every bypass in the §4.12 table), `FineRules`, `TravelRules`, `ZoneRules`, `AuctionRules`, `WorkerRules`, `PipelineRules.simulate`, plus config checks: 155 tests, all passing (`lune run tools/check`).
 3. ✅ **Build a progression sim.** `lune run tools/progression`: the XP curve is tuned so every permit target is met, and wages stay at 5–8% of income. It also showed that coins pile up late (see step 6).
 4. ✅ **Greybox Cloverdale and time the raid race.** The layout, the greybox and the race from real distances are done and tested (5.8 s without defences, 11.4 s with them; the tall fence went to 3.5 s). Walked in Studio on 2026-10-30 (play-test Stage A, §10): the distances hold. Still open from Stage A: A7 (finding your way) needs a new tester.
-5. **MVP weeks 1–4 (§9)**, play-tested as they land (PlaytestPlan Stages A–D). Week 1 needs the Stage B dev commands (`/coins`, `/level`, `/grow`, `/restock`, `/tp`, `/wipe`) built with it. The look pass ([ArtDirection.md](ArtDirection.md) §11) runs alongside: light, fences and the field with week 1's crops first, so the farming loop has something to look at. The raid stage measures the arrest rate (target 35–50%) and whether raids feel fun from both sides before defences are built in week 5.
+5. **MVP weeks 1–4 (§9)**, play-tested as they land (PlaytestPlan Stages A–D). ✅ Week 1 (the farming loop, with its dev commands and the first look pass: light, fences, the field and crops). Next: Stage B with a tester, then week 2 (selling). The look pass ([ArtDirection.md](ArtDirection.md) §11) carries on alongside. The raid stage measures the arrest rate (target 35–50%) and whether raids feel fun from both sides before defences are built in week 5.
 6. **Late-game coin sinks** (found by the sim). Ideas to choose from: bigger auction lots and a weekly "Grand Auction", worker training past level 5, farm decorations that raise the Shop Rating cap, a coin-bought prestige ("Harvest Festival") that resets land for a permanent bonus, and costly seasonal seeds. Re-run the sim to see coins level off.
 7. **Content and policy checks before launch.** Run the maturity questionnaire with the bonk and arrest content (aim for *Mild*), name the crops and NPCs, and plan the low-poly crop mesh pipeline (like Tide Market's `tools/plant_art`).

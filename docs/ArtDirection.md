@@ -9,7 +9,7 @@ The greybox does its job: the distances and the raid race hold up (PlaytestLog, 
 | # | Seen | Why it matters | Fix (section) |
 |---|---|---|---|
 | 1 | The Baseplate template's lighting: flat noon light, plus Bloom and **Depth of Field** ([05](playtest/2026-10-30/05-door-to-back-row.jpg)) | Looks like every new Roblox place. Depth of Field blurs the far end of the field, where thieves stand | §4 |
-| 2 | A photo-like Grass texture under flat plastic boxes ([03](playtest/2026-10-30/03-farm-from-above.jpg), [07](playtest/2026-10-30/07-field-close.jpg)) | Two styles fighting | §2, §3 |
+| 2 | A photo-like Grass texture under flat plastic boxes ([03](playtest/2026-10-30/03-farm-from-above.jpg), [07](playtest/2026-10-30/07-field-close.jpg)) | Two styles fighting | §2, §3. Done in week 1: all SmoothPlastic in this palette, a striped lawn |
 | 3 | The hills are a ring of 40-stud walls ([01](playtest/2026-10-30/01-valley-from-above.jpg)) | Reads as a stadium wall, not a valley | §5 |
 | 4 | The town square is a 320-stud flat disc with five small boxes; you arrive facing the Police Station ([02](playtest/2026-10-30/02-town-spawn.jpg), [12](playtest/2026-10-30/12-phone-town.jpg)) | Nothing says "town", and the first thing you see is the jail | §6 |
 | 5 | Bare grass wedges between the farms, big empty yards ([01](playtest/2026-10-30/01-valley-from-above.jpg)) | Empty, and nothing to hide behind on the back trail | §5, §7 |
@@ -52,11 +52,10 @@ The UI tokens (§5.1 of the design doc), plus the world's own colours:
 
 ## 4. Light and sky
 
-Set in code (`World/LightingSetup`, run by WorldBuilder) so every server looks the same and it's in git. The one exception is `Technology`: scripts can't set it (the play-test's command bar couldn't even read it), so it's set by hand in Studio and saved in the place. Starting values to tune by eye:
+Set in code (`World/LightingSetup`, run by WorldBuilder) so every server looks the same and it's in git. `Lighting.Technology` isn't a choice any more: Studio no longer lists it in Properties, and scripts can't read or set it, so Roblox picks the lighting engine. Starting values to tune by eye:
 
 | Setting | Value | Why |
 |---|---|---|
-| `Lighting.Technology` (by hand) | ShadowMap | Soft sun shadows, cheap on phones |
 | `ClockTime` | driven by the 24-minute day (§4.14) | |
 | `Brightness` / `ExposureCompensation` | 2.4 / 0.1 | Bright |
 | `Ambient` / `OutdoorAmbient` | `#5A5650` / `#A09A90` | Light shadows: nothing important hides in the dark |
@@ -129,9 +128,9 @@ Front to back:
 
 Each step is checked in Studio from the viewpoints above, against this doc.
 
-1. **Light and sky** (§4).
-2. **Fences, hedges and the gate arch:** pickets and slats instead of the greybox's rails, rounded hedges, the arch with the name plate (§7).
-3. **The field:** block edging, locked-land overgrowth, and crop stages for week 1's crops (Carrot, Corn, Pumpkin). The other crops come later from a crop-art tool (design doc §11 step 7).
+1. ✅ **Light and sky** (§4): `World/LightingSetup` (week 1).
+2. **Fences, hedges and the gate arch:** pickets and slats instead of the greybox's rails, rounded hedges, the arch with the name plate (§7). (Done so far: 8-stud rails you can see through, cream rails on brown posts.)
+3. ✅ **The field** (week 1, `World/FarmArt`): rounded soil rows, block edging, overgrowth with a stump, rock, weeds and bush on each locked block, crops at 4 stages (Carrot, Corn and Pumpkin modelled; the rest a bush with fruit in their colour), ripe glow rings and sparkles. The other crops' own models come later from a crop-art tool (design doc §11 step 7).
 4. **The valley:** Terrain hills, woods in the gaps, back-trail cover, the tunnel mouth (§5).
 5. **Farm colours** and name plates (§7).
 6. **The town:** plaza, clocktower, signposts, building façades (§6).

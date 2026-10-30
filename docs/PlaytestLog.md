@@ -19,6 +19,23 @@ Follow-ups: <what to test next time>
 
 ## Sessions
 
+### 2026-10-30 · week 1 smoke test (not Stage B yet) · build: this session's week 1
+Testers: Claude, driving Studio (keyboard, the chat's dev commands, the command bar) · Setup: solo Play, desktop and iPhone emulation · Lag: 0 · Screenshots: [playtest/2026-10-30-week1/](playtest/2026-10-30-week1/)
+
+| Check | Result | OK? | Notes |
+|---|---|---|---|
+| Join | spawned at your farmhouse door, facing the field, after the "Farm Heist" sign | ✓ | |
+| Plant · water · harvest | the stamp changes with the tile; growth timer right; `/grow ripe` then one press harvests | ✓ | a long press used to harvest, replant and water: fixed |
+| Hold and walk | plants every tile crossed | ✓ | |
+| Barley's | `/tp barley`, E opens the rack, Buy ×5 and ×1 take 50 and 10 coins, seeds arrive | ✓ | |
+| Level up | `/level 2`: the rosette card with the Land Permit line; yellow signs on the field | ✓ | the note sat under the rosette's tails: fixed |
+| Clear land | sign (250 coins) → 4 holds of 2 s → tilled fresh soil (+25%) | ✓ | nothing showed where the far obstacles were: they glow now |
+| Home | 3 s bar, teleport, cooldown on the sign | ✓ | |
+| Phone layout | purse top centre, crates top left, stamp beside the jump button, boot Run stamp above it | ✓ | |
+
+Bugs fixed during the session: see GameDesign §10 "MVP week 1". Not covered: 8 players (B9), saving across sessions (B7 needs API access on), a new tester (B1).
+Follow-ups: Stage B with a real tester.
+
 ### 2026-10-30 · Stage A · build 0795bb8 + this session's changes
 Testers: Claude, driving Studio (walks scripted with `Humanoid:MoveTo`, timed every 0.25 s; screenshots in [playtest/2026-10-30/](playtest/2026-10-30/)) · Setup: solo Play · Lag: 0
 
