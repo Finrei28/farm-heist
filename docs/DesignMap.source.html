@@ -1,0 +1,1490 @@
+<title>Farm Heist Design Map</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&display=swap">
+<style>
+/* Layout: a kraft-paper workbench. A painted wooden sign on top, seed-packet tabs, each tab one paper board of to-scale figures. */
+:root{
+  --kraft:#E3CB9F; --kraft-2:#D5B883; --paper:#FBF2DE; --paper-2:#F3E4C4;
+  --ink:#3A2A1C; --ink-2:#6A5340; --line:#B89567; --fiber:rgba(90,60,30,.06);
+  --barn:#B83E28; --hay:#C98B12; --leaf:#3C8A34; --sky:#2F7FBE; --soil:#6B4A2F; --plum:#7E48BD;
+  --t-leaf:#D3E8BD; --t-hay:#F6DFA4; --t-red:#F2C7B9; --t-sky:#C8E2F5; --t-plum:#E3D2F6; --t-grey:#E9DCC1;
+  --wood:#7A5232; --wood-2:#5A3A22; --cream:#FFF4DC;
+  --m-grass:#AFD382; --m-grass-2:#9BC86F; --m-hill:#77A852; --m-hill-2:#64953F; --m-road:#A89F92; --m-plaza:#EADDC2;
+  --m-bldg:#F7EDD6; --m-roof:#B83E28; --m-slate:#7F8C99; --m-soil:#8A6143; --m-soil-2:#73503A; --m-hedge:#2F6B2A;
+  --m-trail:#CDA873; --m-tree:#3F7F33; --m-tree-2:#336D2A; --m-water:#7CC3E8;
+  /* the game's own UI palette: fixed in both themes, always on its own backgrounds */
+  --g-red:#C8452D; --g-gold:#F2B33D; --g-green:#4E9F3D; --g-soil:#6B4A2F; --g-kraft:#D9B98A; --g-cream:#FFF4DC;
+  --g-ink:#3A2A1C; --g-sky:#5BB6F0; --g-alarm:#E8352B;
+  --r-common:#B8B8B8; --r-uncommon:#5CC75C; --r-rare:#3E8EF0; --r-epic:#A05CF0; --r-legendary:#F5B323; --r-mythic:#F04FA8;
+  --f-display:"Fredoka","Baloo 2","Trebuchet MS",system-ui,sans-serif;
+  --f-body:"Nunito","Segoe UI",system-ui,sans-serif;
+  --f-stamp:"Courier Prime","Courier New",ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --kraft:#1C1610; --kraft-2:#2A2118; --paper:#2A2118; --paper-2:#342A1F;
+  --ink:#F2E4C8; --ink-2:#CDB693; --line:#5E4A35; --fiber:rgba(255,230,190,.035);
+  --barn:#EC7257; --hay:#F0B640; --leaf:#78C768; --sky:#6DB8EC; --soil:#B88E66; --plum:#BB8DF2;
+  --t-leaf:#2E4826; --t-hay:#56421B; --t-red:#58281D; --t-sky:#1E3B52; --t-plum:#3D2C55; --t-grey:#3B3024;
+  --wood:#4D3420; --wood-2:#3A2616;
+  --m-grass:#3E5A2C; --m-grass-2:#365126; --m-hill:#2C4420; --m-hill-2:#24391A; --m-road:#5E574D; --m-plaza:#4A4234;
+  --m-bldg:#5E5342; --m-roof:#A33B28; --m-slate:#4C5763; --m-soil:#5E4330; --m-soil-2:#4E3727; --m-hedge:#1D3D1B;
+  --m-trail:#7C6446; --m-tree:#2B5223; --m-tree-2:#22441C; --m-water:#3D6E89;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --kraft:#1C1610; --kraft-2:#2A2118; --paper:#2A2118; --paper-2:#342A1F;
+  --ink:#F2E4C8; --ink-2:#CDB693; --line:#5E4A35; --fiber:rgba(255,230,190,.035);
+  --barn:#EC7257; --hay:#F0B640; --leaf:#78C768; --sky:#6DB8EC; --soil:#B88E66; --plum:#BB8DF2;
+  --t-leaf:#2E4826; --t-hay:#56421B; --t-red:#58281D; --t-sky:#1E3B52; --t-plum:#3D2C55; --t-grey:#3B3024;
+  --wood:#4D3420; --wood-2:#3A2616;
+  --m-grass:#3E5A2C; --m-grass-2:#365126; --m-hill:#2C4420; --m-hill-2:#24391A; --m-road:#5E574D; --m-plaza:#4A4234;
+  --m-bldg:#5E5342; --m-roof:#A33B28; --m-slate:#4C5763; --m-soil:#5E4330; --m-soil-2:#4E3727; --m-hedge:#1D3D1B;
+  --m-trail:#7C6446; --m-tree:#2B5223; --m-tree-2:#22441C; --m-water:#3D6E89;
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+body{background:var(--kraft);background-image:radial-gradient(var(--fiber) 1px,transparent 1.2px),radial-gradient(var(--fiber) 1px,transparent 1.2px);background-size:7px 7px,11px 11px;background-position:0 0,3px 5px;color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.6}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 56px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;line-height:1.15;margin:0}
+p{margin:0}
+a{color:var(--sky)}
+:focus-visible{outline:3px solid var(--sky);outline-offset:2px;border-radius:6px}
+
+/* header sign */
+.top{display:grid;gap:18px;justify-items:start}
+.sign{position:relative;background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(0,0,0,.12)),repeating-linear-gradient(0deg,var(--wood) 0 9px,var(--wood-2) 9px 10px,var(--wood) 10px 21px);border-radius:14px;padding:16px 34px 18px;box-shadow:0 6px 0 var(--wood-2),0 14px 24px rgba(0,0,0,.18);transform:rotate(-1.2deg)}
+.sign::before,.sign::after{content:"";position:absolute;top:12px;width:9px;height:9px;border-radius:50%;background:#cfc6b8;box-shadow:inset -2px -2px 0 rgba(0,0,0,.35)}
+.sign::before{left:12px}.sign::after{right:12px}
+.sign h1{color:var(--cream);font-weight:700;font-size:clamp(2.3rem,7vw,4rem);letter-spacing:.02em;text-shadow:0 3px 0 rgba(0,0,0,.35)}
+.tag{font-family:var(--f-display);font-weight:600;font-size:1.25rem;color:var(--barn)}
+.lede{max-width:66ch;color:var(--ink)}
+.facts{display:flex;flex-wrap:wrap;gap:10px;list-style:none;margin:0;padding:0}
+.facts li{font-family:var(--f-stamp);font-size:.82rem;letter-spacing:.06em;text-transform:uppercase;background:var(--paper);border:1.5px dashed var(--line);padding:5px 10px;border-radius:6px;color:var(--ink-2)}
+.facts b{color:var(--ink);font-weight:700}
+
+/* seed-packet tabs */
+.tabs{display:flex;flex-wrap:wrap;gap:10px;margin:30px 0 0;align-items:flex-end}
+.packet{--c:var(--leaf);appearance:none;cursor:pointer;font-family:var(--f-display);font-weight:600;font-size:1rem;color:var(--ink);background:var(--paper-2);border:2px solid var(--line);border-bottom:none;padding:14px 18px 10px;border-radius:4px 4px 0 0;clip-path:polygon(0 8px,8px 0,16px 8px,24px 0,32px 8px,40px 0,48px 8px,56px 0,64px 8px,72px 0,80px 8px,88px 0,96px 8px,104px 0,112px 8px,120px 0,128px 8px,136px 0,144px 8px,152px 0,160px 8px,168px 0,176px 8px,184px 0,192px 8px,200px 0,200px 100%,0 100%);min-width:0;position:relative;transition:transform .15s}
+.packet::after{content:"";position:absolute;left:0;right:0;bottom:0;height:5px;background:var(--c);opacity:.55}
+.packet .n{font-family:var(--f-stamp);font-size:.75rem;color:var(--ink-2);display:block;letter-spacing:.08em}
+.packet[aria-selected="true"]{background:var(--paper);transform:translateY(-4px);padding-bottom:14px}
+.packet[aria-selected="true"]::after{opacity:1;height:7px}
+.packet:hover{transform:translateY(-2px)}
+.packet[aria-selected="true"]:hover{transform:translateY(-4px)}
+.p-map{--c:var(--leaf)}.p-flow{--c:var(--barn)}.p-world{--c:var(--hay)}.p-ui{--c:var(--sky)}
+
+.board{background:var(--paper);border-radius:0 14px 14px 14px;padding:clamp(18px,3.5vw,36px);box-shadow:0 2px 0 var(--line),0 16px 30px rgba(60,40,20,.12);position:relative;display:grid;gap:34px}
+.board::before{content:"";position:absolute;inset:9px;border:1.5px dashed var(--line);border-radius:8px 10px 10px 10px;pointer-events:none;opacity:.8}
+.intro{display:grid;gap:8px;max-width:72ch}
+.intro h2{font-size:clamp(1.6rem,3.4vw,2.2rem);font-weight:600}
+.eyebrow{font-family:var(--f-stamp);font-size:.8rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2)}
+figure{margin:0;display:grid;gap:10px;min-width:0}
+figure h3{font-size:1.2rem;font-weight:600}
+figcaption{color:var(--ink-2);font-size:.95rem;max-width:80ch}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:10px}
+.scroll > svg,.scroll > .hud{min-width:var(--minw,0px)}
+.hint{display:none;font-family:var(--f-stamp);font-size:.75rem;color:var(--ink-2);letter-spacing:.08em}
+@media (max-width:760px){.hint{display:block}}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:34px}
+.dg{width:100%;height:auto;display:block}
+
+/* diagram marks */
+.dg text{font-family:var(--f-body);font-size:11px;fill:var(--ink-2)}
+.dg .tt{font-family:var(--f-display);font-weight:600;font-size:13px;fill:var(--ink)}
+.dg .sm{font-size:10.5px}
+.dg .cap{font-family:var(--f-stamp);font-size:10.5px;letter-spacing:.12em;fill:var(--ink-2)}
+.dg .rt{fill:var(--barn)}
+.dg .in{fill:var(--ink)}
+.dg .node{fill:var(--paper-2);stroke:var(--line);stroke-width:1.4}
+.dg .n-leaf{fill:var(--t-leaf);stroke:var(--leaf);stroke-width:1.4}
+.dg .n-red{fill:var(--t-red);stroke:var(--barn);stroke-width:1.4}
+.dg .n-hay{fill:var(--t-hay);stroke:var(--hay);stroke-width:1.4}
+.dg .n-sky{fill:var(--t-sky);stroke:var(--sky);stroke-width:1.4}
+.dg .n-grey{fill:var(--t-grey);stroke:var(--line);stroke-width:1.4}
+.dg .n-note{fill:none;stroke:var(--barn);stroke-width:1.2;stroke-dasharray:5 4}
+.dg .chip{fill:var(--t-grey)}
+.dg .e{fill:none;stroke:var(--ink-2);stroke-width:1.6}
+.dg .e-red{stroke:var(--barn)}
+.dg .e-dash{stroke-dasharray:6 5}
+.dg .e-info{stroke:var(--sky);stroke-dasharray:4 4}
+.dg .under{fill:none;stroke:var(--paper);stroke-width:9}
+.dg .ah{fill:var(--ink-2)}.dg .ah-r{fill:var(--barn)}.dg .ah-s{fill:var(--sky)}
+.dg .coin{fill:var(--t-hay);stroke:var(--hay);stroke-width:2.2}
+.dg .grid{stroke:var(--line);stroke-width:1}
+.dg .axis{stroke:var(--ink-2);stroke-width:1.2}
+.dg .l-truck{fill:none;stroke:var(--sky);stroke-width:3}
+.dg .l-shop{fill:none;stroke:var(--leaf);stroke-width:3}
+.dg .w-truck{fill:var(--t-sky)}.dg .w-shop{fill:var(--t-leaf)}
+.dg .b-red{fill:var(--t-red);stroke:var(--barn)}.dg .b-hay{fill:var(--t-hay);stroke:var(--hay)}
+.dg .b-grey{fill:var(--t-grey);stroke:var(--line)}.dg .b-sky{fill:var(--t-sky);stroke:var(--sky)}
+.dg .b-leaf{fill:var(--t-leaf);stroke:var(--leaf)}.dg .b-plum{fill:var(--t-plum);stroke:var(--plum)}
+.dg .tick-hay{stroke:var(--hay);stroke-width:2}.dg .tick-plum{stroke:var(--plum);stroke-width:3}
+.dg .mark{stroke:var(--ink-2);stroke-width:1.2;stroke-dasharray:3 4}
+.dg .dot-red{fill:var(--barn)}.dg .dot-ink{fill:var(--ink)}
+
+/* worker slots */
+.slots{display:grid;grid-template-columns:minmax(118px,1.3fr) repeat(4,minmax(54px,1fr));border:1.5px solid var(--line);border-radius:10px;overflow:hidden;font-size:.92rem;min-width:430px}
+.slots > div{padding:7px 10px;border-top:1px solid var(--line);display:flex;align-items:center;gap:4px;min-width:0}
+.slots .h{font-family:var(--f-stamp);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2);background:var(--paper-2);border-top:none}
+.slots .w{font-family:var(--f-display);font-weight:600}
+.slots .w small{display:block;font-family:var(--f-body);font-weight:400;font-size:.75rem;color:var(--ink-2)}
+.slots .w{flex-direction:column;align-items:flex-start;gap:0}
+.pip{width:12px;height:12px;border-radius:3px;background:var(--leaf);display:inline-block}
+.dash{color:var(--ink-2)}
+.slots .note{grid-column:2 / -1;color:var(--ink-2);font-size:.85rem}
+.slots .dash{white-space:nowrap}
+
+/* map */
+.mp{width:100%;height:auto;display:block}
+.mp .hill{fill:var(--m-hill)}.mp .hill2{fill:var(--m-hill-2)}.mp .valley{fill:var(--m-grass)}.mp .yard{fill:var(--m-grass-2)}
+.mp .road{fill:none;stroke:var(--m-road);stroke-width:16}.mp .hwy{fill:none;stroke:var(--m-road);stroke-width:14}
+.mp .roadfill{fill:var(--m-road)}.mp .cl{fill:none;stroke:var(--cream);stroke-width:1.2;stroke-dasharray:6 7;opacity:.85}
+.mp .trail{fill:none;stroke:var(--m-trail);stroke-width:9}.mp .trailfill{fill:var(--m-trail)}
+.mp .plaza{fill:var(--m-plaza)}.mp .bldg{fill:var(--m-bldg);stroke:var(--m-soil-2);stroke-width:1}
+.mp .roof{fill:var(--m-roof)}.mp .slate{fill:var(--m-slate)}.mp .awn{fill:var(--cream)}.mp .gate{fill:var(--hay)}
+.mp .path{fill:var(--m-trail)}.mp .truck{fill:var(--cream)}.mp .soil{fill:var(--m-soil)}.mp .soil2{fill:var(--m-soil-2)}
+.mp .crop{fill:var(--leaf)}.mp .hedge{stroke:var(--m-hedge);stroke-width:5}.mp .fence{stroke:var(--soil);stroke-width:2.4;stroke-dasharray:5 3}
+.mp .you{fill:none;stroke:var(--hay);stroke-width:3.5}.mp .tree{fill:var(--m-tree)}.mp .tree2{fill:var(--m-tree-2)}.mp .water{fill:var(--m-water)}
+.mp .badge{fill:var(--paper);stroke:var(--ink);stroke-width:1.5}.mp .badge-you{fill:var(--hay);stroke:var(--ink);stroke-width:1.5}
+.mp .tunnel{fill:#1c1712}.mp .silo{fill:var(--m-slate);stroke:var(--m-soil-2);stroke-width:1}
+.mp text{font-family:var(--f-display);font-weight:600;font-size:11.5px;fill:var(--ink);paint-order:stroke;stroke:var(--m-grass);stroke-width:3px;stroke-linejoin:round}
+.mp .on-plaza{stroke:var(--m-plaza)}.mp .on-road{stroke:var(--m-road);font-size:10px;letter-spacing:.12em}.mp .on-trail{stroke:var(--m-trail);font-size:10px;letter-spacing:.12em}
+.mp .on-hill{stroke:var(--m-hill)}.mp .on-page{stroke:var(--paper)}.mp .on-yard{stroke:var(--m-grass-2)}
+.mp .bt{stroke:none;font-size:11px;fill:var(--g-ink)}
+.mp .comp{stroke:var(--ink);stroke-width:1.6;fill:none}
+/* plot close-up (drawn in studs inside a scaled group) */
+.pc .hedgef{fill:var(--m-hedge)}.pc .fence{stroke:var(--soil);stroke-width:1.1;stroke-dasharray:2.2 1.4;fill:none}
+.pc .front{stroke:var(--m-soil-2);stroke-width:.6;fill:none}
+.pc .station{fill:var(--m-bldg)}.pc .shelf{fill:var(--cream)}.pc .door{fill:var(--wood)}
+.pc .npc{fill:var(--sky)}.pc .light{fill:var(--hay)}.pc .mud{fill:var(--m-soil-2);opacity:.85}
+.pc .cloche{fill:rgba(140,200,240,.35);stroke:var(--sky);stroke-width:.6}
+.pc .glow{fill:none;stroke:var(--r-mythic);stroke-width:1.2}
+.pc .flag{fill:var(--barn)}.pc .pole{stroke:var(--ink);stroke-width:.5}
+.pc .goods{fill:none;stroke:var(--leaf);stroke-width:.8}.pc .ah-g{fill:var(--leaf)}
+.pc .thief{fill:none;stroke:var(--barn);stroke-width:.8;stroke-dasharray:2 1.4}.pc .ah-r{fill:var(--barn)}
+.pc .belt{fill:none;stroke:var(--cream);stroke-width:.7}.pc .ah-c{fill:var(--cream)}
+.pc .scare{stroke:var(--soil);stroke-width:.9;fill:none}.pc .scare-h{fill:var(--hay)}
+.pc .wild{fill:var(--m-hill)}.pc .tuft{fill:none;stroke:var(--m-hedge);stroke-width:.6}.pc .rock{fill:var(--m-slate)}
+.pc .stump{fill:var(--wood)}.pc .stump-in{fill:var(--m-trail)}.pc .wild-edge{fill:none;stroke:var(--m-soil-2);stroke-width:.4}
+.pc .clearable{fill:none;stroke:var(--hay);stroke-width:.9;stroke-dasharray:2 1.2}
+.dg .b-wait{fill:var(--t-hay);stroke:var(--hay);stroke-dasharray:5 3}
+.dg .fence-d{stroke:var(--soil);stroke-width:3;stroke-dasharray:6 4}
+.dg .house{fill:var(--paper-2);stroke:var(--line);stroke-width:1.4}.dg .house-roof{fill:var(--barn)}
+.ladder{border-collapse:collapse;width:100%;font-size:.92rem;font-variant-numeric:tabular-nums}
+.ladder th{font-family:var(--f-stamp);font-weight:700;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2);text-align:left;padding:6px 10px;border-bottom:1.5px solid var(--line)}
+.ladder td{padding:5px 10px;border-top:1px dashed var(--line)}
+.ladder td:nth-child(n+2),.ladder th:nth-child(n+2){text-align:right}
+.ladder tr.got td:first-child{color:var(--leaf);font-weight:700}
+.pc text{font-size:3.5px;stroke-width:.9px}
+.pc .s-sm{font-size:2.9px}
+.pc .s-light{fill:var(--cream);stroke:none}
+.pc .lt{font-size:3.6px;stroke:none;fill:var(--g-cream);font-weight:700}
+.pc .ltc{fill:var(--barn)}
+.legend{display:flex;flex-wrap:wrap;gap:8px 18px;list-style:none;margin:0;padding:0;font-size:.9rem;color:var(--ink-2)}
+.legend li{display:flex;align-items:center;gap:7px}
+.sw{width:18px;height:12px;border-radius:3px;display:inline-block;flex:none}
+.world-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(260px,1fr);gap:30px;align-items:start}
+@media (max-width:900px){.world-grid{grid-template-columns:1fr}}
+.places{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.places li{display:grid;gap:2px;padding-bottom:12px;border-bottom:1px dashed var(--line)}
+.places b{font-family:var(--f-display);font-weight:600;font-size:1.02rem}
+.places span{color:var(--ink-2);font-size:.92rem}
+.side h3{font-size:1.15rem;font-weight:600;margin-bottom:10px}
+.side{display:grid;gap:22px}
+.walk{display:grid;grid-template-columns:1fr auto;gap:4px 14px;font-size:.92rem}
+.walk span:nth-child(even){font-family:var(--f-stamp);font-weight:700;font-variant-numeric:tabular-nums}
+.art{display:grid;gap:8px;margin:0;padding-left:20px;color:var(--ink);max-width:80ch}
+
+/* ===== game UI mockups (fixed in-game palette) ===== */
+.seg{display:flex;flex-wrap:wrap;gap:8px}
+.seg button{appearance:none;cursor:pointer;font-family:var(--f-display);font-weight:600;font-size:.95rem;padding:8px 14px;border-radius:12px;border:2px solid var(--line);background:var(--paper-2);color:var(--ink);box-shadow:0 3px 0 var(--line)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink);box-shadow:0 3px 0 var(--ink-2)}
+.hud{container-type:inline-size;position:relative;aspect-ratio:16/9;max-width:100%;border-radius:16px;overflow:hidden;font-family:var(--f-display);color:var(--g-ink);border:3px solid var(--g-soil);box-shadow:0 8px 0 #4a3220}
+.sc{position:absolute;inset:0}
+.sc-sky{background:linear-gradient(#8ccfff,#d6f1ff 44%,#9fcf72 44%,#8cc264)}
+.sc-hills{top:26%;height:19%;background:radial-gradient(55% 100% at 18% 100%,#79b257 59%,transparent 60%),radial-gradient(45% 85% at 78% 100%,#69a24b 59%,transparent 60%),radial-gradient(40% 70% at 50% 100%,#86bd62 59%,transparent 60%)}
+.sc-fence{top:43%;height:2.2%;background:repeating-linear-gradient(90deg,#8a6040 0 .6cqw,transparent .6cqw 3cqw),linear-gradient(transparent 30%,#8a6040 30% 55%,transparent 55%)}
+.sc-field{left:24%;right:6%;top:55%;bottom:4%;background:repeating-linear-gradient(90deg,#7b5434 0 3cqw,#94683f 3cqw 3.6cqw);border-radius:1cqw;transform:perspective(40cqw) rotateX(40deg);transform-origin:50% 100%}
+.sc-crops{left:27%;right:9%;top:54%;display:grid;grid-template-columns:repeat(8,1fr);row-gap:1cqw;font-size:2.4cqw;text-align:center;line-height:1}
+.sc-barn{left:13%;top:25%;width:15cqw;height:12cqw;background:#c8452d;clip-path:polygon(0 38%,50% 0,100% 38%,100% 100%,0 100%)}
+.sc-barn::after{content:"";position:absolute;left:35%;right:35%;bottom:0;height:42%;background:#fff4dc;border:.4cqw solid #8a2b1b}
+.sc-wh{left:66%;top:28%;width:17cqw;height:9cqw;background:#7f8c99;border-top:1.6cqw solid #5f6b77;border-radius:.4cqw}
+.sc-wh::after{content:"WAREHOUSE";position:absolute;left:0;right:0;top:20%;text-align:center;font-size:1.1cqw;color:#fff4dc;letter-spacing:.1em}
+.av{position:absolute;left:47%;top:46%;width:6cqw;height:auto}
+.thief{position:absolute;left:78%;top:57%;width:4.4cqw;height:auto}
+.pill{position:absolute;display:flex;align-items:center;gap:.7cqw;background:var(--g-cream);border:.25cqw solid var(--g-soil);border-radius:2cqw;padding:.45cqw 1.1cqw;box-shadow:0 .35cqw 0 var(--g-soil);font-size:1.55cqw;font-weight:600;white-space:nowrap}
+.coins{left:2%;top:3.2%}
+.lvl{display:inline-block;width:6cqw;height:1cqw;border-radius:1cqw;background:#e6d4b1;overflow:hidden;vertical-align:middle}
+.lvl i{display:block;height:100%;width:62%;background:var(--g-green)}
+.loc{left:2%;top:11.5%;font-size:1.35cqw;padding:.35cqw 1cqw}
+.loc.green{background:#d9f0c9;border-color:#2f6b25;box-shadow:0 .35cqw 0 #2f6b25}
+.loc.red{background:var(--g-alarm);color:#fff;border-color:#8a1b12;box-shadow:0 .35cqw 0 #8a1b12;animation:blink 1.2s steps(2,end) infinite}
+.wx{left:50%;transform:translateX(-50%);top:3.2%}
+.ticker{position:absolute;left:31%;right:31%;top:11.5%;background:#2c241c;color:#fff4dc;border:.25cqw solid #6b4a2f;border-radius:.8cqw;font-family:var(--f-stamp);font-size:1.15cqw;padding:.3cqw .8cqw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ticker .up{color:#8be07b}.ticker .dn{color:#ff9a86}
+.sbar{position:absolute;left:1.6%;top:21%;display:grid;gap:.8cqw}
+.sbtn{width:6.2cqw;height:6.2cqw;border-radius:1.2cqw;background:linear-gradient(#8a5a35,#6e4527);border:.25cqw solid #4a2e1a;box-shadow:0 .4cqw 0 #3e2615;color:#fff4dc;display:grid;place-items:center;align-content:center;font-size:2.2cqw;line-height:1;position:relative}
+.sbtn small{font-size:.95cqw;font-weight:600;margin-top:.3cqw}
+.sbtn .bdg{position:absolute;top:-.6cqw;right:-.6cqw;background:var(--g-alarm);color:#fff;font-size:1cqw;min-width:2cqw;height:2cqw;border-radius:1cqw;display:grid;place-items:center;border:.2cqw solid #fff4dc}
+.hot{position:absolute;left:50%;transform:translateX(-50%);bottom:3%;display:flex;gap:.6cqw}
+.slot{width:5.6cqw;height:5.6cqw;border-radius:1cqw;background:rgba(255,244,220,.92);border:.25cqw solid var(--g-soil);display:grid;place-items:center;font-size:2.5cqw;position:relative}
+.slot small{position:absolute;bottom:.15cqw;right:.4cqw;font-size:.95cqw;font-weight:700}
+.slot .k{position:absolute;top:.1cqw;left:.4cqw;font-size:.9cqw;color:#6b4a2f}
+.slot.on{outline:.4cqw solid var(--g-gold);outline-offset:.1cqw}
+.travel{position:absolute;left:28%;bottom:14.5%;display:flex;gap:.6cqw}
+.tbtn{font-size:1.2cqw;font-weight:600;background:var(--g-sky);color:#10324a;border-radius:1cqw;padding:.4cqw 1cqw;box-shadow:0 .35cqw 0 #2f7fb8;border:.2cqw solid #2f7fb8}
+.tbtn.lock{background:#cfc5b4;color:#6a5a48;box-shadow:0 .35cqw 0 #9c907d;border-color:#9c907d}
+.ctx{position:absolute;right:3%;bottom:6%;width:12.5cqw;height:12.5cqw;border-radius:50%;display:grid;place-items:center;text-align:center;font-weight:700;font-size:1.9cqw;line-height:1.05;color:#fff4dc;background:var(--g-green);border:.35cqw solid #2f6b25;box-shadow:0 .6cqw 0 #2f6b25}
+.ctx small{display:block;font-size:1cqw;font-weight:600;opacity:.9}
+.ctx.red{background:var(--g-red);border-color:#8a2b1b;box-shadow:0 .6cqw 0 #8a2b1b}
+.ring{position:absolute;inset:-1.1cqw;border-radius:50%;background:conic-gradient(var(--g-gold) 0 62%,rgba(0,0,0,.18) 62% 100%);-webkit-mask:radial-gradient(circle,transparent 63%,#000 64%);mask:radial-gradient(circle,transparent 63%,#000 64%)}
+.sack{position:absolute;right:17.5%;bottom:8%;font-size:1.5cqw}
+.compass{position:absolute;right:2.5%;top:22%;font-size:1.3cqw}
+.toasts{position:absolute;right:2%;top:3.2%;width:25%;display:grid;gap:.8cqw}
+.toast{background:#fff4dc;border:.2cqw solid #b89567;border-radius:.6cqw;padding:.7cqw 1cqw;font-size:1.2cqw;font-weight:600;box-shadow:0 .4cqw .8cqw rgba(0,0,0,.15);position:relative;transform:rotate(-.6deg)}
+.toast::before{content:"";position:absolute;top:-.6cqw;left:50%;width:1.2cqw;height:1.2cqw;border-radius:50%;background:var(--g-red);box-shadow:inset -.2cqw -.2cqw 0 rgba(0,0,0,.3)}
+.toast small{display:block;font-weight:400;font-family:var(--f-body);font-size:1.05cqw;color:#6a5340}
+.tb{display:inline-block;margin-top:.4cqw;font-size:1cqw;background:var(--g-sky);border-radius:.6cqw;padding:.2cqw .7cqw;color:#10324a}
+.alarm-edge{position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 0 .6cqw rgba(232,53,43,.9),inset 0 0 7cqw rgba(232,53,43,.55);animation:pulse 1.1s ease-in-out infinite}
+.acard{position:absolute;right:2%;top:3.2%;width:30%;background:#fff4dc;border:.3cqw solid #8a1b12;border-radius:1cqw;overflow:hidden;box-shadow:0 .5cqw 0 #8a1b12}
+.acard header{background:var(--g-alarm);color:#fff;font-size:1.45cqw;font-weight:700;padding:.5cqw 1cqw}
+.acard .bd{display:grid;grid-template-columns:9cqw 1fr;gap:.9cqw;padding:.8cqw 1cqw;font-size:1.15cqw;font-family:var(--f-body);align-items:center}
+.pip-cam{height:6.5cqw;border-radius:.5cqw;background:linear-gradient(#7b5434,#94683f);position:relative;overflow:hidden;border:.2cqw solid #3a2a1c}
+.pip-cam::after{content:"CAM 2";position:absolute;left:.4cqw;top:.2cqw;font-family:var(--f-stamp);font-size:.8cqw;color:#fff}
+.pip-cam svg{position:absolute;left:35%;bottom:6%;width:30%}
+.acard .bts{display:flex;gap:.6cqw;padding:0 1cqw 1cqw}
+.mbtn{font-family:var(--f-display);font-weight:600;font-size:1.15cqw;border-radius:.8cqw;padding:.4cqw .9cqw;color:#fff4dc;background:var(--g-red);box-shadow:0 .35cqw 0 #8a2b1b}
+.mbtn.blue{background:var(--g-sky);color:#10324a;box-shadow:0 .35cqw 0 #2f7fb8}
+.edge-arrow{position:absolute;right:.8%;top:56%;display:flex;align-items:center;gap:.5cqw;font-size:1.15cqw;font-weight:700;color:#fff;background:var(--g-alarm);padding:.4cqw .8cqw;border-radius:1cqw 0 0 1cqw}
+.ko{position:absolute;inset:0;background:rgba(40,36,32,.55);-webkit-backdrop-filter:grayscale(1) blur(2px);backdrop-filter:grayscale(1) blur(2px);display:grid;place-items:center}
+.kocard{background:#fff4dc;border:.35cqw solid #6b4a2f;border-radius:1.4cqw;padding:1.6cqw 2.6cqw;text-align:center;display:grid;gap:.6cqw;justify-items:center;box-shadow:0 .6cqw 0 #4a3220;max-width:46%}
+.kocard .stars{font-size:2.6cqw;letter-spacing:.6cqw;color:var(--g-gold);animation:spin 2.4s linear infinite}
+.kocard h4{margin:0;font-family:var(--f-display);font-size:3cqw;color:var(--g-red)}
+.kocard p{font-size:1.35cqw;font-family:var(--f-body);color:#3a2a1c}
+.kocard .warn{font-size:1.1cqw;color:#8a2b1b}
+.count{width:6.5cqw;height:6.5cqw;border-radius:50%;display:grid;place-items:center;font-size:2.8cqw;font-weight:700;background:conic-gradient(var(--g-red) 0 60%,#e6d4b1 60% 100%);position:relative}
+.count::before{content:"";position:absolute;inset:.7cqw;border-radius:50%;background:#fff4dc}
+.count span{position:relative}
+@keyframes pulse{50%{box-shadow:inset 0 0 0 .6cqw rgba(232,53,43,.5),inset 0 0 4cqw rgba(232,53,43,.25)}}
+@keyframes blink{50%{filter:brightness(1.25)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.alarm-edge,.loc.red,.kocard .stars{animation:none}}
+.state-note{color:var(--ink-2);font-size:.95rem;min-height:3em}
+
+/* windows */
+.wins{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,470px),1fr));gap:46px 28px;padding-top:14px}
+.win{position:relative;background:var(--g-kraft);background-image:radial-gradient(rgba(90,60,30,.08) 1px,transparent 1.2px);background-size:6px 6px;border:3px solid var(--g-soil);border-radius:18px;box-shadow:0 6px 0 #5a3d26,0 14px 24px rgba(0,0,0,.16);padding:40px 18px 18px;color:var(--g-ink);font-family:var(--f-body);font-size:.95rem;min-width:0;display:grid;gap:12px;align-content:start}
+.win::before{content:"";position:absolute;inset:7px;border:2px dashed rgba(107,74,47,.45);border-radius:13px;pointer-events:none}
+.wsign{position:absolute;top:-19px;left:50%;transform:translateX(-50%);background:repeating-linear-gradient(0deg,#7a5232 0 7px,#6a4529 7px 8px);color:#fff4dc;font-family:var(--f-display);font-weight:700;font-size:1.1rem;padding:7px 26px;border-radius:10px;border:2px solid #4a2e1a;white-space:nowrap;text-shadow:0 2px 0 #3e2615;box-shadow:0 4px 0 #3e2615;max-width:92%;overflow:hidden;text-overflow:ellipsis}
+.wsign::before,.wsign::after{content:"";position:absolute;top:50%;width:7px;height:7px;margin-top:-3.5px;border-radius:50%;background:#d8cfc0}
+.wsign::before{left:8px}.wsign::after{right:8px}
+.wtabs{display:flex;gap:6px;flex-wrap:wrap}
+.wtab{font-family:var(--f-display);font-weight:600;font-size:.85rem;padding:4px 12px;border-radius:8px 8px 3px 3px;background:#efe0bf;border:1.5px solid #b89567;color:#6a5340}
+.wtab.on{background:var(--g-sky);border-color:#2f7fb8;color:#10324a}
+.card{background:#fff4dc;border:2px solid #c7a676;border-radius:12px;padding:10px 12px;min-width:0}
+.btn{appearance:none;font-family:var(--f-display);font-weight:600;font-size:.95rem;border:none;border-radius:11px;padding:7px 14px;cursor:default;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;line-height:1.2}
+button.btn{cursor:pointer}
+button.btn:active{transform:translateY(3px)}
+button.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.green{background:var(--g-green);color:#fff4dc;box-shadow:0 4px 0 #2f6b25}
+.btn.gold{background:var(--g-gold);color:#3a2a1c;box-shadow:0 4px 0 #b47d14}
+.btn.red{background:var(--g-red);color:#fff4dc;box-shadow:0 4px 0 #8a2b1b}
+.btn.blue{background:var(--g-sky);color:#10324a;box-shadow:0 4px 0 #2f7fb8}
+.btn.robux{background:#2fae58;color:#fff;box-shadow:0 4px 0 #1d7a3b}
+.btn.off{background:#cfc5b4;color:#6a5a48;box-shadow:0 4px 0 #9c907d}
+.num{font-family:var(--f-display);font-weight:600;font-variant-numeric:tabular-nums}
+.muted{color:#6a5340}
+.rar{font-family:var(--f-display);font-weight:600}
+.rar.common{color:#7b7b7b}.rar.uncommon{color:#2f8a2f}.rar.rare{color:#2366c4}.rar.epic{color:#7a37c9}.rar.legendary{color:#b67c06}.rar.mythic{color:#c9287f}
+/* warehouse */
+.pipe{display:grid;grid-template-columns:repeat(auto-fit,minmax(84px,1fr));gap:10px}
+.st{background:#fff4dc;border:2px solid #c7a676;border-radius:10px;padding:8px;display:grid;gap:2px;position:relative;text-align:center}
+.st b{font-family:var(--f-display);font-weight:600;font-size:.9rem}
+.st .q{font-family:var(--f-display);font-weight:700;font-size:1.5rem;line-height:1.1}
+.st .r{font-size:.75rem;color:#6a5340}
+.st .wp{display:flex;gap:3px;justify-content:center}
+.st .wp i{width:10px;height:10px;border-radius:50%;background:#4e9f3d;display:block}
+.st .wp i.e{background:transparent;border:1.5px solid #9c907d}
+.st.bn{border-color:#e07b12;background:#fde6c4;box-shadow:0 0 0 3px rgba(224,123,18,.35)}
+.st.bn::before{content:"BOTTLENECK";position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:#e07b12;color:#fff;font-family:var(--f-stamp);font-weight:700;font-size:.62rem;letter-spacing:.08em;padding:1px 6px;border-radius:4px;white-space:nowrap}
+.tip{background:#fde6c4;border:1.5px dashed #e07b12;border-radius:10px;padding:7px 10px;font-size:.88rem}
+.truckrow{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
+.bar{height:12px;border-radius:7px;background:#e6d4b1;overflow:hidden;border:1.5px solid #b89567}
+.bar i{display:block;height:100%;background:var(--g-sky)}
+.routes{display:flex;flex-wrap:wrap;gap:6px}
+.rchip{font-size:.8rem;background:#efe0bf;border:1.5px solid #b89567;border-radius:20px;padding:2px 10px}
+/* shop */
+.prow{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1.6fr) auto;gap:6px 12px;align-items:center;padding:8px 0;border-top:1px dashed #b89567}
+.prow:first-of-type{border-top:none}
+.pname b{font-family:var(--f-display);font-weight:600}
+.pname small{display:block;color:#6a5340;font-size:.78rem}
+.ptag{display:grid;gap:3px}
+.ptag .val{display:flex;justify-content:space-between;gap:8px;font-size:.85rem}
+.ptag input{width:100%;accent-color:#4e9f3d}
+.face{font-size:1.5rem;text-align:center;line-height:1}
+.face small{display:block;font-size:.72rem;color:#6a5340;font-family:var(--f-body);white-space:nowrap}
+.stars{color:#c98b12;letter-spacing:1px}
+/* auction */
+.lot{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:center;background:linear-gradient(135deg,#7a1f2b,#5a1420);border:3px solid #d9a93a;border-radius:14px;padding:14px;color:#fff4dc}
+.packet-art{width:74px;height:96px;border-radius:6px;background:linear-gradient(#fff4dc 0 30%,#f5b323 30% 100%);border:2px solid #8a5a10;display:grid;place-items:center;font-size:2rem;position:relative;box-shadow:0 4px 0 rgba(0,0,0,.25)}
+.packet-art::before{content:"SEEDS";position:absolute;top:4px;font-family:var(--f-stamp);font-weight:700;font-size:.62rem;letter-spacing:.1em;color:#6b4a2f}
+.lot h4{margin:0;font-family:var(--f-display);font-size:1.15rem}
+.lot .big{font-family:var(--f-display);font-weight:700;font-size:1.9rem;line-height:1.1;font-variant-numeric:tabular-nums}
+.lot .lead{font-size:.88rem;opacity:.9}
+.timer{width:62px;height:62px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(#f2b33d calc(var(--p,1)*100%),rgba(255,255,255,.18) 0);position:relative;flex:none}
+.timer::before{content:"";position:absolute;inset:6px;border-radius:50%;background:#5a1420}
+.timer span{position:relative;font-family:var(--f-display);font-weight:700;font-size:1.05rem}
+.lotinfo{display:flex;justify-content:space-between;gap:12px;align-items:center}
+.bids{display:flex;gap:10px;flex-wrap:wrap}
+.flash{font-size:.85rem;color:#8a2b1b;min-height:1.3em;font-weight:700}
+.next{font-size:.85rem;color:#6a5340}
+/* hiring */
+.slotbar{display:flex;flex-wrap:wrap;gap:6px}
+.sl{font-size:.8rem;background:#efe0bf;border:1.5px solid #b89567;border-radius:8px;padding:3px 8px;font-family:var(--f-display);font-weight:600}
+.sl.full{background:#e9d2c8;border-color:#c8452d;color:#8a2b1b}
+.badges{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.idb{background:#fff4dc;border:2px solid #c7a676;border-radius:10px;overflow:hidden;display:grid;text-align:center}
+.idb header{background:var(--g-sky);color:#10324a;font-family:var(--f-stamp);font-weight:700;font-size:.7rem;letter-spacing:.1em;padding:3px}
+.idb .ph{width:46px;height:46px;border-radius:50%;margin:10px auto 4px;display:grid;place-items:center;font-size:1.6rem;background:#efe0bf;border:2px solid #b89567}
+.idb b{font-family:var(--f-display);font-weight:600}
+.idb .meta{font-size:.78rem;color:#6a5340;padding:0 6px}
+.idb .trait{display:inline-block;margin:4px auto;font-size:.72rem;background:#d9f0c9;border-radius:10px;padding:1px 8px}
+.idb .act{padding:8px}
+/* trade */
+.crates{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.crate{background:repeating-linear-gradient(90deg,#c99a5e 0 22px,#b9894f 22px 24px);border:3px solid #7a5232;border-radius:10px;padding:8px;display:grid;gap:8px;align-content:start;min-width:0}
+.crate h5{margin:0;font-family:var(--f-display);font-size:.95rem;color:#3a2a1c;background:#fff4dc;border-radius:6px;padding:2px 8px;justify-self:start}
+.items{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
+.it{aspect-ratio:1;border-radius:8px;background:#fff4dc;border:2px solid #8a6040;display:grid;place-items:center;font-size:clamp(.9rem,3.2vw,1.3rem);position:relative;min-width:0}
+.it.mt{background:rgba(255,244,220,.45);border-style:dashed}
+.it small{position:absolute;bottom:0;right:3px;font-size:.62rem;font-weight:700;font-family:var(--f-display)}
+.tot{background:#fff4dc;border-radius:8px;padding:4px 8px;font-size:.85rem;display:flex;justify-content:space-between}
+.ready{font-family:var(--f-display);font-weight:600;font-size:.85rem;text-align:center;border-radius:8px;padding:4px}
+.ready.y{background:#d9f0c9;color:#2f6b25}.ready.n{background:#efe0bf;color:#6a5340}
+/* busted */
+.busted{background:#fff4dc;color:#3a2a1c;border:3px solid #3a2a1c;border-radius:14px;padding:16px;display:grid;grid-template-columns:minmax(120px,170px) 1fr;gap:16px;align-items:center;position:relative;overflow:hidden;font-family:var(--f-body)}
+.mug{aspect-ratio:3/4;background:repeating-linear-gradient(180deg,#d9d4ca 0 14px,#b9b2a6 14px 15px);border-radius:8px;position:relative;overflow:hidden;border:2px solid #3a2a1c}
+.mug svg{position:absolute;inset:auto 0 0 0;width:100%}
+.mug .hc{position:absolute;right:4px;top:4px;font-family:var(--f-stamp);font-size:.62rem;line-height:15px;text-align:right;color:#6a5340}
+.stamp{font-family:var(--f-display);font-weight:700;font-size:2.4rem;color:var(--g-red);transform:rotate(-7deg);border:4px solid var(--g-red);border-radius:10px;display:inline-block;padding:0 12px;letter-spacing:.04em;line-height:1.2}
+.case{display:grid;gap:6px;font-size:.92rem}
+.case .row{display:flex;justify-content:space-between;gap:8px;border-bottom:1px dashed #b89567;padding-bottom:4px}
+.case .row span:last-child{font-family:var(--f-stamp);font-weight:700;text-align:right}
+@media (max-width:520px){.busted{grid-template-columns:1fr}.mug{max-width:160px}}
+/* kit */
+.kit{display:grid;gap:22px}
+.swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.swatch{border-radius:12px;overflow:hidden;border:1.5px solid var(--line);background:var(--paper-2)}
+.swatch i{display:block;height:46px}
+.swatch div{padding:6px 10px;font-size:.82rem}
+.swatch b{font-family:var(--f-display);font-weight:600;display:block;font-size:.92rem}
+.swatch code{font-family:var(--f-stamp);color:var(--ink-2)}
+.rarities{display:flex;flex-wrap:wrap;gap:10px}
+.rb{display:flex;align-items:center;gap:7px;background:#3a2a1c;color:#fff4dc;border-radius:20px;padding:4px 12px 4px 6px;font-family:var(--f-display);font-weight:600;font-size:.9rem}
+.rb svg{width:20px;height:20px}
+.rowflex{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.lchip{font-family:var(--f-display);font-weight:600;font-size:.9rem;border-radius:20px;padding:4px 12px;border:2px solid}
+.lchip.g{background:#d9f0c9;border-color:#2f6b25;color:#2f6b25}
+.lchip.a{background:#fbe6b5;border-color:#b47d14;color:#7a5208}
+.lchip.r{background:var(--g-alarm);border-color:#8a1b12;color:#fff}
+.lchip.w{background:#fff4dc;border-color:#9c907d;color:#3a2a1c}
+.kitbox{background:var(--g-kraft);border:3px solid var(--g-soil);border-radius:14px;padding:16px;display:grid;gap:14px}
+.kitbox h4{margin:0;font-family:var(--f-display);font-weight:600;color:#3a2a1c;font-size:1rem}
+.foot{margin-top:28px;color:var(--ink-2);font-size:.88rem;display:flex;flex-wrap:wrap;gap:6px 18px}
+.foot code{font-family:var(--f-stamp)}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="sign"><h1>FARM HEIST</h1></div>
+    <p class="tag">Grow it. Ship it. Guard it.</p>
+    <p class="lede">The design map for a Roblox farming game. You grow crops on your own plot, pack them in your warehouse, and truck them to the city at the global price or sell them in your own shop at yours. Leave your ripe crops alone too long and someone might sneak in. Stay home and you can bonk them with your bat and get them arrested.</p>
+    <ul class="facts">
+      <li><b>8</b> farms per server</li>
+      <li><b>22</b> crops · <b>6</b> rarities</li>
+      <li><b>9</b> kinds of worker</li>
+      <li><b>5 s</b> knockout</li>
+      <li>offline growth <b>25%</b></li>
+      <li><b>12</b> land permits by level</li>
+    </ul>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Design map sections">
+    <button class="packet p-map" role="tab" id="tab-map" aria-controls="map" aria-selected="true"><span class="n">PACKET 1</span>System map</button>
+    <button class="packet p-flow" role="tab" id="tab-flow" aria-controls="flow" aria-selected="false" tabindex="-1"><span class="n">PACKET 2</span>Game flow</button>
+    <button class="packet p-world" role="tab" id="tab-world" aria-controls="world" aria-selected="false" tabindex="-1"><span class="n">PACKET 3</span>World</button>
+    <button class="packet p-ui" role="tab" id="tab-ui" aria-controls="ui" aria-selected="false" tabindex="-1"><span class="n">PACKET 4</span>UI</button>
+  </nav>
+
+  <!-- ===================== SYSTEM MAP ===================== -->
+  <section class="board" id="map" role="tabpanel" aria-labelledby="tab-map">
+    <div class="intro">
+      <span class="eyebrow">How the game fits together</span>
+      <h2>Where crops and coins go</h2>
+      <p>Crops go round clockwise: seeds into the field, the harvest into the barn, through the warehouse, out by truck or through your shop, and back as coins to spend. The red branch underneath is what happens when someone raids a field.</p>
+    </div>
+
+    <figure>
+      <span class="hint">Scroll sideways to see the whole map →</span>
+      <div class="scroll" style="--minw:900px">
+      <svg class="dg" viewBox="0 0 1120 600" role="img" aria-label="Flow diagram: seeds from Barley's shop, the auction or trades are planted in the field; harvests go to the barn, then the warehouse (intake, wash and sort, pack, route). Routed crates go by truck to the City at the Exchange price, or to the stockroom, shelves and NPC shoppers at your price. Both pay coins, which buy more seeds. Below, a raid: ripe crops are stolen into a loot sack; the thief either gets away to their own barn or is knocked out, arrested and fined, with the fine going to the owner.">
+        <defs>
+          <marker id="sm-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="ah"/></marker>
+          <marker id="sm-r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="ah-r"/></marker>
+          <marker id="sm-s" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="ah-s"/></marker>
+        </defs>
+
+        <!-- coins return line (drawn first so the raid arrow can bridge it) -->
+        <path class="e" d="M528 360 L95 360 L95 238" marker-end="url(#sm-a)"/>
+        <text x="262" y="378" class="sm">spend: seeds · workers · buildings · bids</text>
+
+        <!-- sources -->
+        <rect class="node" x="20" y="70" width="150" height="50" rx="10"/>
+        <text class="tt" x="95" y="91" text-anchor="middle">Barley's Seeds</text>
+        <text x="95" y="108" text-anchor="middle" class="sm">restock every 5 min</text>
+        <rect class="node" x="20" y="128" width="150" height="50" rx="10"/>
+        <text class="tt" x="95" y="149" text-anchor="middle">Auction House</text>
+        <text x="95" y="166" text-anchor="middle" class="sm">3 lots every 8 min</text>
+        <rect class="node" x="20" y="186" width="150" height="50" rx="10"/>
+        <text class="tt" x="95" y="207" text-anchor="middle">Trades</text>
+        <text x="95" y="224" text-anchor="middle" class="sm">in person · logged</text>
+
+        <!-- field -->
+        <rect class="n-leaf" x="220" y="104" width="150" height="100" rx="12"/>
+        <text class="tt" x="295" y="132" text-anchor="middle">Field</text>
+        <text x="295" y="152" text-anchor="middle" class="sm">grows 100% online</text>
+        <text x="295" y="167" text-anchor="middle" class="sm">25% offline</text>
+        <text x="295" y="186" text-anchor="middle" class="sm">ripe in 1 min – 6 h</text>
+        <rect class="chip" x="248" y="212" width="94" height="20" rx="10"/>
+        <text x="295" y="226" text-anchor="middle" class="sm in">Farmhand ≤ 4</text>
+        <path class="e" d="M170 95 C 196 95, 196 138, 218 138" marker-end="url(#sm-a)"/>
+        <path class="e" d="M170 153 L218 153" marker-end="url(#sm-a)"/>
+        <path class="e" d="M170 211 C 196 211, 196 168, 218 168" marker-end="url(#sm-a)"/>
+
+        <!-- barn -->
+        <rect class="node" x="420" y="118" width="130" height="72" rx="12"/>
+        <text class="tt" x="485" y="145" text-anchor="middle">Barn</text>
+        <text x="485" y="162" text-anchor="middle" class="sm">your inventory</text>
+        <text x="485" y="177" text-anchor="middle" class="sm">200 → 5,000 units</text>
+        <path class="e" d="M370 154 L418 154" marker-end="url(#sm-a)"/>
+        <text x="394" y="146" text-anchor="middle" class="sm">harvest</text>
+
+        <!-- warehouse -->
+        <text x="610" y="112" class="cap">WAREHOUSE</text>
+        <path class="e" d="M550 154 L608 154" marker-end="url(#sm-a)"/>
+        <text x="579" y="146" text-anchor="middle" class="sm">send</text>
+        <rect class="node" x="610" y="124" width="80" height="56" rx="10"/>
+        <text class="tt" x="650" y="148" text-anchor="middle">Intake</text>
+        <text x="650" y="165" text-anchor="middle" class="sm">from barn</text>
+        <path class="e" d="M690 152 L703 152" marker-end="url(#sm-a)"/>
+        <rect class="node" x="705" y="124" width="80" height="56" rx="10"/>
+        <text class="tt" x="745" y="148" text-anchor="middle">Wash &amp; Sort</text>
+        <text x="745" y="165" text-anchor="middle" class="sm">grade A ×1.15</text>
+        <rect class="chip" x="710" y="188" width="70" height="20" rx="10"/>
+        <text x="745" y="202" text-anchor="middle" class="sm in">Sorter ≤ 3</text>
+        <path class="e" d="M785 152 L798 152" marker-end="url(#sm-a)"/>
+        <rect class="node" x="800" y="124" width="80" height="56" rx="10"/>
+        <text class="tt" x="840" y="148" text-anchor="middle">Pack</text>
+        <text x="840" y="165" text-anchor="middle" class="sm">into crates</text>
+        <rect class="chip" x="805" y="188" width="70" height="20" rx="10"/>
+        <text x="840" y="202" text-anchor="middle" class="sm in">Packer ≤ 4</text>
+        <path class="e" d="M880 152 L914 152" marker-end="url(#sm-a)"/>
+        <polygon class="n-hay" points="950,118 984,152 950,186 916,152"/>
+        <text class="tt" x="950" y="156" text-anchor="middle" style="font-size:12px">Route</text>
+        <text x="950" y="108" text-anchor="middle" class="sm">rule per crop</text>
+
+        <!-- selling: truck lane -->
+        <text x="625" y="276" class="cap">SELLING</text>
+        <path class="e" d="M950 186 L950 282" marker-end="url(#sm-a)"/>
+        <text x="958" y="240" class="sm">truck</text>
+        <rect class="node" x="905" y="284" width="90" height="52" rx="10"/>
+        <text class="tt" x="950" y="306" text-anchor="middle">Load</text>
+        <text x="950" y="322" text-anchor="middle" class="sm">dock</text>
+        <rect class="chip" x="908" y="342" width="84" height="20" rx="10"/>
+        <text x="950" y="356" text-anchor="middle" class="sm in">Loader ≤ 2</text>
+        <path class="e" d="M905 310 L877 310" marker-end="url(#sm-a)"/>
+        <rect class="node" x="765" y="284" width="110" height="52" rx="10"/>
+        <text class="tt" x="820" y="306" text-anchor="middle">Truck</text>
+        <text x="820" y="322" text-anchor="middle" class="sm">price locks here</text>
+        <rect class="chip" x="770" y="342" width="100" height="20" rx="10"/>
+        <text x="820" y="356" text-anchor="middle" class="sm in">Driver 1 / truck</text>
+        <path class="e" d="M765 310 L737 310" marker-end="url(#sm-a)"/>
+        <rect class="node" x="625" y="284" width="110" height="52" rx="10"/>
+        <text class="tt" x="680" y="306" text-anchor="middle">The City</text>
+        <text x="680" y="322" text-anchor="middle" class="sm">pays on arrival</text>
+        <!-- exchange feeds the truck price -->
+        <rect class="n-sky" x="765" y="222" width="110" height="40" rx="10"/>
+        <text class="tt" x="820" y="240" text-anchor="middle" style="font-size:12px">The Exchange</text>
+        <text x="820" y="255" text-anchor="middle" class="sm">global price</text>
+        <path class="e e-info" d="M820 262 L820 282" marker-end="url(#sm-s)"/>
+
+        <!-- selling: shop lane -->
+        <path class="e" d="M984 152 L1060 152 L1060 400 L997 400" marker-end="url(#sm-a)"/>
+        <text x="1054" y="268" text-anchor="end" class="sm">my shop</text>
+        <rect class="node" x="905" y="374" width="90" height="52" rx="10"/>
+        <text class="tt" x="950" y="396" text-anchor="middle">Stockroom</text>
+        <text x="950" y="412" text-anchor="middle" class="sm">shop crates</text>
+        <rect class="chip" x="908" y="432" width="84" height="20" rx="10"/>
+        <text x="950" y="446" text-anchor="middle" class="sm in">Stocker ≤ 3</text>
+        <path class="e" d="M905 400 L877 400" marker-end="url(#sm-a)"/>
+        <rect class="node" x="765" y="374" width="110" height="52" rx="10"/>
+        <text class="tt" x="820" y="396" text-anchor="middle">Shelves</text>
+        <text x="820" y="412" text-anchor="middle" class="sm">your price</text>
+        <rect class="chip" x="765" y="432" width="110" height="20" rx="10"/>
+        <text x="820" y="446" text-anchor="middle" class="sm in">Cashier 1 / till</text>
+        <path class="e" d="M765 400 L737 400" marker-end="url(#sm-a)"/>
+        <rect class="node" x="625" y="374" width="110" height="52" rx="10"/>
+        <text class="tt" x="680" y="396" text-anchor="middle">NPC shoppers</text>
+        <text x="680" y="412" text-anchor="middle" class="sm">buy if it's fair</text>
+
+        <!-- coins -->
+        <circle class="coin" cx="560" cy="360" r="32"/>
+        <text class="tt" x="560" y="365" text-anchor="middle">Coins</text>
+        <path class="e" d="M625 316 L592 344" marker-end="url(#sm-a)"/>
+        <path class="e" d="M625 394 L593 372" marker-end="url(#sm-a)"/>
+
+        <!-- raid branch -->
+        <text x="20" y="462" class="cap rt">A RAID</text>
+        <path class="under" d="M240 340 L240 380"/>
+        <path class="e e-red" d="M240 204 L240 472" marker-end="url(#sm-r)"/>
+        <text x="248" y="300" class="sm rt">steal (hold 1–7 s)</text>
+        <text x="248" y="315" class="sm">ripe crops only</text>
+        <rect class="n-leaf" x="20" y="474" width="150" height="52" rx="10"/>
+        <text class="tt" x="95" y="496" text-anchor="middle">Thief's barn</text>
+        <text x="95" y="512" text-anchor="middle" class="sm">deposit = theirs</text>
+        <rect class="n-red" x="230" y="474" width="140" height="52" rx="10"/>
+        <text class="tt" x="300" y="496" text-anchor="middle">Loot Sack</text>
+        <text x="300" y="512" text-anchor="middle" class="sm">5 weight · −15% speed</text>
+        <path class="e e-red" d="M230 500 L172 500" marker-end="url(#sm-r)"/>
+        <text x="201" y="492" text-anchor="middle" class="sm">gets away</text>
+        <rect class="n-red" x="420" y="474" width="140" height="52" rx="10"/>
+        <text class="tt" x="490" y="496" text-anchor="middle">Knocked out</text>
+        <text x="490" y="512" text-anchor="middle" class="sm">5 s · loot goes back</text>
+        <path class="e e-red" d="M370 500 L418 500" marker-end="url(#sm-r)"/>
+        <text x="394" y="492" text-anchor="middle" class="sm">bonk</text>
+        <rect class="n-red" x="620" y="474" width="160" height="52" rx="10"/>
+        <text class="tt" x="700" y="496" text-anchor="middle">Police porch</text>
+        <text x="700" y="512" text-anchor="middle" class="sm">fine paid to the owner</text>
+        <path class="e e-red" d="M560 500 L618 500" marker-end="url(#sm-r)"/>
+        <text x="589" y="492" text-anchor="middle" class="sm">arrest</text>
+        <path class="e e-red" d="M660 474 L585 388" marker-end="url(#sm-r)"/>
+        <text x="632" y="452" class="sm rt">fine → owner</text>
+        <path class="e e-red e-dash" d="M490 526 L490 560 L700 560 L700 528" marker-end="url(#sm-r)"/>
+        <text x="595" y="580" text-anchor="middle" class="sm rt">quits or resets while knocked out → automatic arrest, fine ×1.5</text>
+        <rect class="n-note" x="820" y="474" width="276" height="88" rx="10"/>
+        <text x="836" y="495" class="sm in">Anyone hit on your farm is knocked out.</text>
+        <text x="836" y="512" class="sm in">Only Suspects can be arrested.</text>
+        <text x="836" y="532" class="sm">Fine = 8% of the thief's last hour</text>
+        <text x="836" y="548" class="sm">of earnings, at least 1.5× the loot.</text>
+      </svg>
+      </div>
+      <figcaption>Every arrow is something a player or a worker does. Grey chips name the worker for that step and the most a station can take at the top tier. The truck price comes from the Exchange and locks when the truck leaves.</figcaption>
+    </figure>
+
+    <div class="two">
+      <figure>
+        <h3>Worker slots per station</h3>
+        <div class="scroll">
+        <div class="slots" aria-label="Worker slots by building tier">
+          <div class="h">Worker</div><div class="h">Tier 0</div><div class="h">Tier 1</div><div class="h">Tier 2</div><div class="h">Tier 3</div>
+          <div class="w">Shed Hand<small>sort, pack, load</small></div><div><i class="pip"></i></div><div class="dash">→ Packer</div><div class="dash">–</div><div class="dash">–</div>
+          <div class="w">Sorter<small>Wash &amp; Sort</small></div><div class="dash">–</div><div><i class="pip"></i></div><div><i class="pip"></i><i class="pip"></i></div><div><i class="pip"></i><i class="pip"></i><i class="pip"></i></div>
+          <div class="w">Packer<small>Pack</small></div><div class="dash">–</div><div><i class="pip"></i><i class="pip"></i></div><div><i class="pip"></i><i class="pip"></i><i class="pip"></i></div><div><i class="pip"></i><i class="pip"></i><i class="pip"></i><i class="pip"></i></div>
+          <div class="w">Loader<small>dock</small></div><div class="dash">–</div><div><i class="pip"></i></div><div><i class="pip"></i><i class="pip"></i></div><div><i class="pip"></i><i class="pip"></i></div>
+          <div class="w">Driver<small>1 per truck</small></div><div class="dash">–</div><div><i class="pip"></i></div><div><i class="pip"></i><i class="pip"></i></div><div><i class="pip"></i><i class="pip"></i></div>
+          <div class="w">Stocker<small>shop shelves</small></div><div class="dash">–</div><div><i class="pip"></i></div><div><i class="pip"></i><i class="pip"></i></div><div><i class="pip"></i><i class="pip"></i><i class="pip"></i></div>
+          <div class="w">Cashier<small>1 per till</small></div><div class="dash">honour box</div><div><i class="pip"></i></div><div><i class="pip"></i><i class="pip"></i></div><div><i class="pip"></i><i class="pip"></i></div>
+          <div class="w">Farmhand<small>field</small></div><div class="note">1 per 16 field tiles, up to 4</div>
+          <div class="w">Watchman<small>gatehouse</small></div><div class="note">1, from Farm Level 8</div>
+        </div>
+        </div>
+        <figcaption>Warehouse workers follow the warehouse tier and shop workers follow the shop tier. Greyed slots in the game say what unlocks them.</figcaption>
+      </figure>
+
+      <figure>
+        <h3>Truck or shop?</h3>
+        <svg class="dg" viewBox="0 0 520 312" role="img" aria-label="Chart: the truck pays the market price, a line from 0.5 to 2 times base. Shoppers judge your shop price against a reference halfway between base and market, a flatter line from 0.75 to 1.5. They cross at 1 times base: below it the shop pays more, above it the truck does.">
+          <line class="grid" x1="60" y1="40" x2="490" y2="40"/>
+          <line class="grid" x1="60" y1="113.3" x2="490" y2="113.3"/>
+          <line class="grid" x1="60" y1="186.7" x2="490" y2="186.7"/>
+          <line class="grid" x1="203.3" y1="40" x2="203.3" y2="260"/>
+          <line class="grid" x1="346.7" y1="40" x2="346.7" y2="260"/>
+          <polygon class="w-shop" points="60,260 60,223.3 203.3,186.7"/>
+          <polygon class="w-truck" points="203.3,186.7 490,113.3 490,40"/>
+          <line class="l-truck" x1="60" y1="260" x2="490" y2="40"/>
+          <line class="l-shop" x1="60" y1="223.3" x2="490" y2="113.3"/>
+          <line class="axis" x1="60" y1="260" x2="490" y2="260"/>
+          <line class="axis" x1="60" y1="40" x2="60" y2="260"/>
+          <circle class="dot-ink" cx="203.3" cy="186.7" r="4"/>
+          <text x="211" y="204" class="sm in">cross at ×1.0</text>
+          <text x="66" y="248" class="tt" style="font-size:11px;fill:var(--leaf)">Shop</text>
+          <text x="484" y="104" text-anchor="end" class="tt" style="font-size:11px;fill:var(--sky)">Truck</text>
+          <text x="484" y="32" text-anchor="end" class="sm" style="fill:var(--sky)">truck pays = market</text>
+          <text x="484" y="134" text-anchor="end" class="sm" style="fill:var(--leaf)">shop reference = ½ base + ½ market</text>
+          <text x="60" y="281" text-anchor="middle">×0.5</text><text x="203.3" y="281" text-anchor="middle">×1.0</text><text x="346.7" y="281" text-anchor="middle">×1.5</text><text x="490" y="281" text-anchor="middle">×2.0</text>
+          <text x="52" y="264" text-anchor="end">0.5</text><text x="52" y="190.7" text-anchor="end">1.0</text><text x="52" y="117.3" text-anchor="end">1.5</text><text x="52" y="44" text-anchor="end">2.0</text>
+          <text x="275" y="302" text-anchor="middle">market price today (× the crop's base value)</text>
+          <text x="16" y="150" text-anchor="middle" transform="rotate(-90 16 150)">coins per unit (× base)</text>
+        </svg>
+        <figcaption>Shoppers judge your price against a reference that's half the base value and half today's market. When the market is below base, the shop pays more. When it's above, the truck does. Choosing between them is the main money decision.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ===================== GAME FLOW ===================== -->
+  <section class="board" id="flow" role="tabpanel" aria-labelledby="tab-flow" hidden>
+    <div class="intro">
+      <span class="eyebrow">Step by step</span>
+      <h2>The first hour, a raid, and the race</h2>
+      <p>New players get a guided start and 45 minutes when nobody can rob them. After that, every raid follows the same states, and whether it works comes down to a few seconds.</p>
+    </div>
+
+    <figure>
+      <h3>A new player's first hour</h3>
+      <span class="hint">Scroll sideways →</span>
+      <div class="scroll" style="--minw:820px">
+      <svg class="dg" viewBox="0 0 1000 250" role="img" aria-label="Timeline of the first 60 minutes: the Farm Guide takes about 10 minutes and pays 300 coins. The Sprout Shield protects the player for the first 45 minutes, then raids open both ways and the Farm Rules card shows. Trading unlocks at 60 minutes. Seed restocks every 5 minutes and auctions every 8 minutes run throughout.">
+        <text x="20" y="57" class="tt">Farm Guide</text>
+        <text x="20" y="97" class="tt">Protection</text>
+        <text x="20" y="137" class="tt">Town clock</text>
+        <text x="20" y="177" class="tt">Milestones</text>
+        <!-- guide 0–10 -->
+        <rect class="b-hay" x="140" y="40" width="135" height="24" rx="6"/>
+        <text x="148" y="57" class="sm in">8 steps · about 10 min</text>
+        <text x="281" y="57" class="sm">+300 coins · Lv 2 gives Land Permit 1</text>
+        <!-- shield 0–45, raids 45–60 -->
+        <rect class="b-leaf" x="140" y="80" width="607.5" height="24" rx="6"/>
+        <text x="148" y="97" class="sm in">Sprout Shield: nobody can steal from you, and you can't steal</text>
+        <rect class="b-red" x="747.5" y="80" width="202.5" height="24" rx="6"/>
+        <text x="755" y="97" class="sm in">raids open both ways</text>
+        <!-- clock ticks: restocks every 5 (hay), auctions every 8 (plum) -->
+        <g>
+          <line class="tick-hay" x1="207.5" y1="122" x2="207.5" y2="134"/><line class="tick-hay" x1="275" y1="122" x2="275" y2="134"/><line class="tick-hay" x1="342.5" y1="122" x2="342.5" y2="134"/><line class="tick-hay" x1="410" y1="122" x2="410" y2="134"/><line class="tick-hay" x1="477.5" y1="122" x2="477.5" y2="134"/><line class="tick-hay" x1="545" y1="122" x2="545" y2="134"/><line class="tick-hay" x1="612.5" y1="122" x2="612.5" y2="134"/><line class="tick-hay" x1="680" y1="122" x2="680" y2="134"/><line class="tick-hay" x1="747.5" y1="122" x2="747.5" y2="134"/><line class="tick-hay" x1="815" y1="122" x2="815" y2="134"/><line class="tick-hay" x1="882.5" y1="122" x2="882.5" y2="134"/><line class="tick-hay" x1="950" y1="122" x2="950" y2="134"/>
+          <line class="tick-plum" x1="248" y1="128" x2="248" y2="146"/><line class="tick-plum" x1="356" y1="128" x2="356" y2="146"/><line class="tick-plum" x1="464" y1="128" x2="464" y2="146"/><line class="tick-plum" x1="572" y1="128" x2="572" y2="146"/><line class="tick-plum" x1="680" y1="128" x2="680" y2="146"/><line class="tick-plum" x1="788" y1="128" x2="788" y2="146"/><line class="tick-plum" x1="896" y1="128" x2="896" y2="146"/>
+        </g>
+        <text x="20" y="152" class="sm"><tspan style="fill:var(--hay)">▮</tspan> restock <tspan style="fill:var(--plum)">▮</tspan> auction</text>
+        <!-- milestones -->
+        <circle class="dot-ink" cx="140" cy="172" r="5"/>
+        <text x="150" y="176" class="sm in">join at your farm (fly-over)</text>
+        <circle class="dot-red" cx="747.5" cy="172" r="5"/>
+        <text x="740" y="176" text-anchor="end" class="sm in">Farm Rules card + bat demo</text>
+        <circle class="dot-ink" cx="950" cy="172" r="5"/>
+        <text x="942" y="176" text-anchor="end" class="sm in">trading unlocks</text>
+        <!-- axis -->
+        <line class="axis" x1="140" y1="200" x2="950" y2="200"/>
+        <g>
+          <line class="axis" x1="140" y1="200" x2="140" y2="206"/><line class="axis" x1="275" y1="200" x2="275" y2="206"/><line class="axis" x1="410" y1="200" x2="410" y2="206"/><line class="axis" x1="545" y1="200" x2="545" y2="206"/><line class="axis" x1="680" y1="200" x2="680" y2="206"/><line class="axis" x1="815" y1="200" x2="815" y2="206"/><line class="axis" x1="950" y1="200" x2="950" y2="206"/>
+        </g>
+        <text x="140" y="220" text-anchor="middle">0</text><text x="275" y="220" text-anchor="middle">10</text><text x="410" y="220" text-anchor="middle">20</text><text x="545" y="220" text-anchor="middle">30</text><text x="680" y="220" text-anchor="middle">40</text><text x="815" y="220" text-anchor="middle">50</text><text x="950" y="220" text-anchor="middle">60</text>
+        <text x="545" y="242" text-anchor="middle">minutes of play</text>
+      </svg>
+      </div>
+      <figcaption>To scale. The Guide: plant, water, harvest, pack a crate, dispatch the pickup, buy seeds in town, stock the Farm Stand, hire a Shed Hand (the first one's free). Reaching Lv 2 along the way gives the first Land Permit, and its 250-coin fee is affordable right after the Guide. The shield counts minutes played, not clock time.</figcaption>
+    </figure>
+
+    <figure>
+      <h3>What a player on someone else's farm can be</h3>
+      <span class="hint">Scroll sideways →</span>
+      <div class="scroll" style="--minw:860px">
+      <svg class="dg" viewBox="0 0 1000 440" role="img" aria-label="State diagram. A Visitor becomes a Suspect by starting a steal or climbing in, then Carrying loot when the hold finishes, then Got away when they leave the farm. A bonk on a Suspect or carrier means Knocked out for 5 seconds with the loot returned. From there the owner can Arrest them, which sends them to the Police porch, or they wake up after 5 seconds with 6 seconds of immunity. A bonk on an innocent visitor stuns them but they can't be arrested. Quitting or resetting while knocked out, or quitting while being chased, goes straight to the Police porch with the fine times 1.5.">
+        <defs>
+          <marker id="st-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="ah"/></marker>
+          <marker id="st-r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="ah-r"/></marker>
+        </defs>
+        <!-- row 1 -->
+        <rect class="n-grey" x="40" y="50" width="190" height="64" rx="12"/>
+        <text class="tt" x="135" y="78" text-anchor="middle">Visitor</text>
+        <text x="135" y="96" text-anchor="middle" class="sm">walks in, looks around</text>
+        <rect class="n-hay" x="290" y="50" width="190" height="64" rx="12"/>
+        <text class="tt" x="385" y="78" text-anchor="middle">Suspect</text>
+        <text x="385" y="96" text-anchor="middle" class="sm">started a steal or climbed in</text>
+        <rect class="n-hay" x="540" y="50" width="190" height="64" rx="12"/>
+        <text class="tt" x="635" y="78" text-anchor="middle">Carrying loot</text>
+        <text x="635" y="96" text-anchor="middle" class="sm">sack on back · −15% speed</text>
+        <rect class="n-leaf" x="790" y="50" width="190" height="64" rx="12"/>
+        <text class="tt" x="885" y="78" text-anchor="middle">Got away</text>
+        <text x="885" y="96" text-anchor="middle" class="sm">empties sack at own barn</text>
+        <path class="e" d="M230 82 L288 82" marker-end="url(#st-a)"/>
+        <text x="260" y="40" text-anchor="middle" class="sm">steals / climbs in</text>
+        <path class="e" d="M480 82 L538 82" marker-end="url(#st-a)"/>
+        <text x="510" y="40" text-anchor="middle" class="sm">hold done</text>
+        <path class="e" d="M730 82 L788 82" marker-end="url(#st-a)"/>
+        <text x="760" y="40" text-anchor="middle" class="sm">leaves farm</text>
+        <!-- row 2 -->
+        <rect class="n-sky" x="40" y="200" width="190" height="64" rx="12"/>
+        <text class="tt" x="135" y="228" text-anchor="middle">Stunned visitor</text>
+        <text x="135" y="246" text-anchor="middle" class="sm">5 s · pays nothing · Leave farm</text>
+        <path class="e" d="M135 114 L135 198" marker-end="url(#st-a)"/>
+        <text x="143" y="160" class="sm">bonk</text>
+        <rect class="n-red" x="415" y="200" width="190" height="64" rx="12"/>
+        <text class="tt" x="510" y="228" text-anchor="middle">Knocked out</text>
+        <text x="510" y="246" text-anchor="middle" class="sm">5 s · anchored · loot returned</text>
+        <path class="e" d="M400 114 L468 198" marker-end="url(#st-a)"/>
+        <text x="428" y="160" text-anchor="end" class="sm">bonk</text>
+        <path class="e" d="M620 114 L560 198" marker-end="url(#st-a)"/>
+        <text x="600" y="160" class="sm">bonk · loot back</text>
+        <!-- row 3 -->
+        <rect class="n-grey" x="165" y="340" width="190" height="64" rx="12"/>
+        <text class="tt" x="260" y="368" text-anchor="middle">Woke up</text>
+        <text x="260" y="386" text-anchor="middle" class="sm">6 s immunity · Suspect 60 s</text>
+        <path class="e" d="M440 264 L332 338" marker-end="url(#st-a)"/>
+        <text x="372" y="296" text-anchor="end" class="sm">owner too slow</text>
+        <rect class="n-red" x="415" y="340" width="190" height="64" rx="12"/>
+        <text class="tt" x="510" y="368" text-anchor="middle">Arrested</text>
+        <text x="510" y="386" text-anchor="middle" class="sm">BUSTED! card · fine paid</text>
+        <path class="e e-red" d="M510 264 L510 338" marker-end="url(#st-r)"/>
+        <text x="518" y="306" class="sm rt">owner holds Arrest 1 s</text>
+        <text x="518" y="321" class="sm">Suspects only</text>
+        <rect class="n-red" x="665" y="340" width="190" height="64" rx="12"/>
+        <text class="tt" x="760" y="368" text-anchor="middle">Police porch</text>
+        <text x="760" y="386" text-anchor="middle" class="sm">walk back to your farm</text>
+        <path class="e e-red" d="M605 372 L663 372" marker-end="url(#st-r)"/>
+        <!-- dodge attempts -->
+        <path class="e e-red e-dash" d="M605 232 L900 232 L900 362 L857 362" marker-end="url(#st-r)"/>
+        <text x="614" y="224" class="sm rt">quits / resets / crashes → automatic arrest, ×1.5</text>
+        <path class="e e-red e-dash" d="M700 114 L700 160 L940 160 L940 390 L857 390" marker-end="url(#st-r)"/>
+        <text x="708" y="152" class="sm rt">quits while chased → ×1.5</text>
+      </svg>
+      </div>
+      <figcaption>Anyone hit by the owner's bat is knocked out, but only Suspects can be arrested, so luring people in pays nothing. Dashed red lines are the ways people try to dodge, and where they end up. Leaving with loot when nobody is chasing you just sends the loot back (it could be a real disconnect).</figcaption>
+    </figure>
+
+    <figure>
+      <h3>The raid race</h3>
+      <span class="hint">Scroll sideways →</span>
+      <div class="scroll" style="--minw:820px">
+      <svg class="dg" viewBox="0 0 1000 308" role="img" aria-label="To-scale timeline in seconds, from the real farm layout. Thief 1 with no defences holds 2.5 s, runs 1.8 s and climbs 1.5 s: safe at 5.8 s. Thief 2 against a cloche, the dog and the tall fence holds 5 s, runs 2.9 s and climbs 3.5 s: safe at 11.4 s. The owner at the warehouse is in bat reach at 7.7 s, the owner in town at 10.4 s. So Thief 1 escapes both, and Thief 2 is caught by both.">
+        <text x="20" y="57" class="tt">Thief 1</text><text x="20" y="72" class="sm">no defences</text>
+        <text x="20" y="107" class="tt">Thief 2</text><text x="20" y="122" class="sm">cloche, tall fence, dog</text>
+        <text x="20" y="177" class="tt">Owner</text><text x="20" y="192" class="sm">at the warehouse</text>
+        <text x="20" y="227" class="tt">Owner</text><text x="20" y="242" class="sm">in town (Home)</text>
+        <!-- thief 1 (x = 190 + 63.33 × seconds) -->
+        <rect class="b-red" x="190" y="44" width="158.3" height="26" rx="5"/><text x="198" y="61" class="sm in">hold 2.5 s</text>
+        <rect class="b-hay" x="348.3" y="44" width="114" height="26" rx="5"/><text x="356" y="61" class="sm in">run 24 studs</text>
+        <rect class="b-grey" x="462.3" y="44" width="95" height="26" rx="5"/><text x="470" y="61" class="sm in">climb 1.5 s</text>
+        <text x="557.3" y="38" text-anchor="middle" class="sm" style="fill:var(--leaf);font-weight:700">safe 5.8 s</text>
+        <!-- thief 2 -->
+        <rect class="b-red" x="190" y="94" width="316.7" height="26" rx="5"/><text x="198" y="111" class="sm in">hold 5 s (cloche doubles it)</text>
+        <rect class="b-hay" x="506.7" y="94" width="183.6" height="26" rx="5"/><text x="514" y="111" class="sm in">run, dog slows 40%</text>
+        <rect class="b-grey" x="690.3" y="94" width="221.7" height="26" rx="5"/><text x="698" y="111" class="sm in">climb tall fence 3.5 s</text>
+        <text x="918" y="111" class="sm">11.4 s</text>
+        <!-- owners (to within bat reach, 7 studs) -->
+        <rect class="b-grey" x="190" y="164" width="63.3" height="26" rx="5"/><text x="196" y="181" class="sm in">notice</text>
+        <rect class="b-leaf" x="253.3" y="164" width="424.4" height="26" rx="5"/><text x="261" y="181" class="sm in">sprint 160 studs</text>
+        <rect class="b-grey" x="190" y="214" width="63.3" height="26" rx="5"/><text x="196" y="231" class="sm in">notice</text>
+        <rect class="b-sky" x="253.3" y="214" width="190" height="26" rx="5"/><text x="261" y="231" class="sm in">Home 3 s</text>
+        <rect class="b-leaf" x="443.3" y="214" width="405.4" height="26" rx="5"/><text x="451" y="231" class="sm in">sprint 153 studs</text>
+        <!-- arrival markers -->
+        <line class="mark" x1="677.7" y1="34" x2="677.7" y2="196"/>
+        <text x="685" y="181" class="sm in" style="font-weight:700">there 7.7 s</text>
+        <line class="mark" x1="848.7" y1="34" x2="848.7" y2="246"/>
+        <text x="856" y="231" class="sm in" style="font-weight:700;fill:var(--ink)">there 10.4 s</text>
+        <!-- axis -->
+        <line class="axis" x1="190" y1="262" x2="950" y2="262"/>
+        <g>
+          <line class="axis" x1="190" y1="262" x2="190" y2="268"/><line class="axis" x1="316.7" y1="262" x2="316.7" y2="268"/><line class="axis" x1="443.3" y1="262" x2="443.3" y2="268"/><line class="axis" x1="570" y1="262" x2="570" y2="268"/><line class="axis" x1="696.7" y1="262" x2="696.7" y2="268"/><line class="axis" x1="823.3" y1="262" x2="823.3" y2="268"/><line class="axis" x1="950" y1="262" x2="950" y2="268"/>
+        </g>
+        <text x="190" y="282" text-anchor="middle">0</text><text x="316.7" y="282" text-anchor="middle">2</text><text x="443.3" y="282" text-anchor="middle">4</text><text x="570" y="282" text-anchor="middle">6</text><text x="696.7" y="282" text-anchor="middle">8</text><text x="823.3" y="282" text-anchor="middle">10</text><text x="950" y="282" text-anchor="middle">12 s</text>
+        <text x="570" y="298" text-anchor="middle" class="sm">seconds after the thief starts on a back-row Pumpkin</text>
+      </svg>
+      </div>
+      <figcaption>To scale, from the farm's real layout (<code>lune run tools/raidrace</code>). With no defences, Thief 1 is over the fence at 5.8 s, before either owner gets within bat reach. A cloche, the dog and the tall fence stretch Thief 2's raid to 11.4 s, so the owner from the warehouse arrives as the climb starts and the owner from town a second before it ends (someone climbing out still counts as inside). Defences buy seconds; the bat makes the catch.</figcaption>
+    </figure>
+  </section>
+
+  <!-- ===================== WORLD ===================== -->
+  <section class="board" id="world" role="tabpanel" aria-labelledby="tab-world" hidden>
+    <div class="intro">
+      <span class="eyebrow">Cloverdale</span>
+      <h2>What the world looks like</h2>
+      <p>A round green valley: the town in the middle, a ring road around it, eight farms facing the road, and hills all round with a tunnel to the City in the north.</p>
+    </div>
+
+    <div class="world-grid">
+      <figure>
+        <span class="hint">Scroll sideways →</span>
+        <div class="scroll" style="--minw:600px">
+        <svg class="mp" viewBox="0 0 1000 1040" role="img" aria-label="Top-down map of Cloverdale. The town square sits in the centre with the Exchange to the north, the Auction House east, the Hiring Hall south-east, the Police Station south-west and Barley's Seeds west, around the Trade Plaza fountain. A ring road circles the town. Eight rectangular farms face the road, each with a shop at the front, a warehouse and driveway, a farmhouse and a field at the back, separated by woods. The Back Trail circles behind the farms, and a highway runs north through the hills to a tunnel.">
+          <defs>
+            <pattern id="wm-tiles" x="-44" y="-392" width="11" height="11" patternUnits="userSpaceOnUse">
+              <rect width="11" height="11" class="soil2"/><rect x=".8" y=".8" width="9.4" height="9.4" rx="1.5" class="soil"/><circle cx="5.5" cy="5.5" r="2.4" class="crop"/>
+            </pattern>
+            <!-- shapes reused through <use> carry inline styles: page CSS classes don't reach into <use> copies -->
+            <g id="wm-plot">
+              <rect x="-66" y="-408" width="132" height="200" style="fill:var(--m-grass-2)"/>
+              <rect x="-5" y="-300" width="6" height="92" style="fill:var(--m-trail)"/>
+              <rect x="-5" y="-212" width="6" height="14" style="fill:var(--m-trail)"/>
+              <rect x="-62" y="-240" width="50" height="28" style="fill:var(--m-roof)"/>
+              <rect x="-62" y="-216" width="50" height="4" style="fill:var(--cream)"/>
+              <rect x="-9" y="-211" width="14" height="4" style="fill:var(--hay)"/>
+              <rect x="8" y="-262" width="18" height="64" style="fill:var(--m-road)"/>
+              <rect x="11" y="-244" width="12" height="20" style="fill:var(--cream)"/>
+              <rect x="26" y="-272" width="36" height="50" style="fill:var(--m-slate)"/>
+              <rect x="-58" y="-292" width="36" height="32" style="fill:var(--m-bldg);stroke:var(--m-soil-2);stroke-width:1"/>
+              <rect x="-58" y="-292" width="36" height="9" style="fill:var(--m-roof)"/>
+              <rect x="-44" y="-392" width="88" height="88" fill="url(#wm-tiles)"/>
+              <line x1="-66" y1="-408" x2="-66" y2="-208" style="stroke:var(--m-hedge);stroke-width:5"/>
+              <line x1="66" y1="-408" x2="66" y2="-208" style="stroke:var(--m-hedge);stroke-width:5"/>
+              <line x1="-66" y1="-408" x2="66" y2="-408" style="stroke:var(--soil);stroke-width:2.4;stroke-dasharray:5 3"/>
+            </g>
+            <g id="wm-tree"><circle r="12" style="fill:var(--m-tree)"/><circle cx="-7" cy="5" r="8" style="fill:var(--m-tree-2)"/><circle cx="7" cy="5" r="7" style="fill:var(--m-tree-2)"/></g>
+            <g id="wm-sapling"><circle r="7" style="fill:var(--m-tree)"/><circle cx="3" cy="3" r="4" style="fill:var(--m-tree-2)"/></g>
+          </defs>
+
+          <!-- hills and valley floor -->
+          <circle cx="500" cy="520" r="500" class="hill"/>
+          <g class="hill2">
+            <circle cx="599" cy="54.4" r="26"/><circle cx="779.8" cy="134.9" r="26"/><circle cx="912.2" cy="282" r="26"/><circle cx="973.4" cy="470.2" r="26"/><circle cx="952.7" cy="667.1" r="26"/><circle cx="853.7" cy="838.5" r="26"/><circle cx="693.6" cy="954.8" r="26"/><circle cx="500" cy="996" r="26"/><circle cx="306.4" cy="954.8" r="26"/><circle cx="146.3" cy="838.5" r="26"/><circle cx="47.3" cy="667.1" r="26"/><circle cx="26.6" cy="470.2" r="26"/><circle cx="87.8" cy="282" r="26"/><circle cx="220.2" cy="134.9" r="26"/><circle cx="401" cy="54.4" r="26"/>
+          </g>
+          <circle cx="500" cy="520" r="440" class="valley"/>
+
+          <!-- back trail -->
+          <circle cx="500" cy="520" r="425" class="trail"/>
+
+          <!-- highway north + tunnel -->
+          <line x1="500" y1="330" x2="500" y2="70" class="hwy"/>
+          <line x1="500" y1="330" x2="500" y2="70" class="cl"/>
+          <path d="M486 86 L486 66 A14 14 0 0 1 514 66 L514 86 Z" class="tunnel"/>
+
+          <!-- woods between farms -->
+          <g>
+            <use href="#wm-tree" x="676.8" y="343.2"/><use href="#wm-tree" x="719.2" y="300.8"/><use href="#wm-tree" x="761.6" y="258.4"/>
+            <use href="#wm-tree" x="750" y="520"/><use href="#wm-tree" x="810" y="520"/><use href="#wm-tree" x="870" y="520"/>
+            <use href="#wm-tree" x="676.8" y="696.8"/><use href="#wm-tree" x="719.2" y="739.2"/><use href="#wm-tree" x="761.6" y="781.6"/>
+            <use href="#wm-tree" x="500" y="770"/><use href="#wm-tree" x="500" y="830"/><use href="#wm-tree" x="500" y="890"/>
+            <use href="#wm-tree" x="323.2" y="696.8"/><use href="#wm-tree" x="280.8" y="739.2"/><use href="#wm-tree" x="238.4" y="781.6"/>
+            <use href="#wm-tree" x="250" y="520"/><use href="#wm-tree" x="190" y="520"/><use href="#wm-tree" x="130" y="520"/>
+            <use href="#wm-tree" x="323.2" y="343.2"/><use href="#wm-tree" x="280.8" y="300.8"/><use href="#wm-tree" x="238.4" y="258.4"/>
+          </g>
+
+          <!-- town: plaza, spokes to each farm gate, ring road -->
+          <circle cx="500" cy="520" r="140" class="plaza"/>
+          <g>
+            <use href="#wm-sapling" x="500" y="358"/><use href="#wm-sapling" x="614.6" y="405.4"/><use href="#wm-sapling" x="662" y="520"/><use href="#wm-sapling" x="614.6" y="634.6"/><use href="#wm-sapling" x="500" y="682"/><use href="#wm-sapling" x="385.4" y="634.6"/><use href="#wm-sapling" x="338" y="520"/><use href="#wm-sapling" x="385.4" y="405.4"/>
+          </g>
+          <g stroke-width="6" style="stroke:var(--m-trail)">
+            <line x1="553.6" y1="390.7" x2="569.6" y2="351.9"/><line x1="629.3" y1="466.4" x2="668.1" y2="450.4"/><line x1="629.3" y1="573.6" x2="668.1" y2="589.6"/><line x1="553.6" y1="649.3" x2="569.6" y2="688.1"/><line x1="446.4" y1="649.3" x2="430.4" y2="688.1"/><line x1="370.7" y1="573.6" x2="331.9" y2="589.6"/><line x1="370.7" y1="466.4" x2="331.9" y2="450.4"/><line x1="446.4" y1="390.7" x2="430.4" y2="351.9"/>
+          </g>
+          <circle cx="500" cy="520" r="190" class="road"/>
+          <circle cx="500" cy="520" r="190" class="cl"/>
+
+          <!-- town buildings -->
+          <circle cx="479" cy="410" r="11" class="silo"/><circle cx="521" cy="410" r="11" class="silo"/>
+          <rect x="472" y="404" width="56" height="34" class="bldg"/><rect x="472" y="404" width="56" height="9" class="slate"/>
+          <text x="500" y="456" text-anchor="middle" class="on-plaza">Exchange</text>
+          <rect x="567" y="469" width="56" height="40" class="bldg"/><rect x="567" y="469" width="56" height="11" class="roof"/>
+          <text x="595" y="525" text-anchor="middle" class="on-plaza">Auction House</text>
+          <rect x="531" y="581" width="56" height="40" class="bldg"/><rect x="531" y="581" width="56" height="11" class="roof"/>
+          <text x="559" y="637" text-anchor="middle" class="on-plaza">Hiring Hall</text>
+          <rect x="413" y="581" width="56" height="40" class="bldg"/><rect x="413" y="581" width="56" height="11" class="slate"/>
+          <text x="441" y="637" text-anchor="middle" class="on-plaza">Police</text>
+          <rect x="377" y="469" width="56" height="40" class="bldg"/><rect x="377" y="469" width="56" height="11" class="roof"/>
+          <text x="405" y="525" text-anchor="middle" class="on-plaza">Barley's Seeds</text>
+          <circle cx="500" cy="520" r="15" class="water"/>
+          <text x="500" y="552" text-anchor="middle" class="on-plaza">Trade Plaza</text>
+
+          <!-- eight farms (yours is plot 1, gold) -->
+          <use href="#wm-plot" transform="translate(500 520) rotate(22.5)"/>
+          <use href="#wm-plot" transform="translate(500 520) rotate(67.5)"/>
+          <use href="#wm-plot" transform="translate(500 520) rotate(112.5)"/>
+          <use href="#wm-plot" transform="translate(500 520) rotate(157.5)"/>
+          <use href="#wm-plot" transform="translate(500 520) rotate(202.5)"/>
+          <use href="#wm-plot" transform="translate(500 520) rotate(247.5)"/>
+          <use href="#wm-plot" transform="translate(500 520) rotate(292.5)"/>
+          <use href="#wm-plot" transform="translate(500 520) rotate(337.5)"/>
+          <rect x="-69" y="-411" width="138" height="206" class="you" transform="translate(500 520) rotate(22.5)"/>
+
+          <!-- gate badges -->
+          <g>
+            <circle cx="581.1" cy="324.1" r="10" class="badge-you"/><text x="581.1" y="328" text-anchor="middle" class="bt">1</text>
+            <circle cx="695.9" cy="438.9" r="10" class="badge"/><text x="695.9" y="442.8" text-anchor="middle" class="bt" style="fill:var(--ink)">2</text>
+            <circle cx="695.9" cy="601.1" r="10" class="badge"/><text x="695.9" y="605" text-anchor="middle" class="bt" style="fill:var(--ink)">3</text>
+            <circle cx="581.1" cy="715.9" r="10" class="badge"/><text x="581.1" y="719.8" text-anchor="middle" class="bt" style="fill:var(--ink)">4</text>
+            <circle cx="418.9" cy="715.9" r="10" class="badge"/><text x="418.9" y="719.8" text-anchor="middle" class="bt" style="fill:var(--ink)">5</text>
+            <circle cx="304.1" cy="601.1" r="10" class="badge"/><text x="304.1" y="605" text-anchor="middle" class="bt" style="fill:var(--ink)">6</text>
+            <circle cx="304.1" cy="438.9" r="10" class="badge"/><text x="304.1" y="442.8" text-anchor="middle" class="bt" style="fill:var(--ink)">7</text>
+            <circle cx="418.9" cy="324.1" r="10" class="badge"/><text x="418.9" y="328" text-anchor="middle" class="bt" style="fill:var(--ink)">8</text>
+          </g>
+
+          <!-- labels -->
+          <text x="500" y="714" text-anchor="middle" class="on-road">RING ROAD</text>
+          <text x="500" y="949" text-anchor="middle" class="on-trail">BACK TRAIL</text>
+          <text x="504" y="240" text-anchor="middle" class="on-road" transform="rotate(-90 504 240)">HIGHWAY</text>
+          <text x="522" y="64" class="on-hill">tunnel to the City</text>
+          <text x="790" y="548" text-anchor="middle">woods</text>
+          <!-- compass and scale (outside the valley) -->
+          <g transform="translate(58 70)"><path d="M0 22 L0 -18" class="comp"/><path d="M-6 -10 L0 -20 L6 -10" class="comp"/><text x="0" y="40" text-anchor="middle" class="on-page">N</text></g>
+          <line x1="870" y1="1008" x2="953" y2="1008" class="comp"/><line x1="870" y1="1002" x2="870" y2="1014" class="comp"/><line x1="953" y1="1002" x2="953" y2="1014" class="comp"/>
+          <text x="911" y="1030" text-anchor="middle" class="on-page">100 studs</text>
+        </svg>
+        </div>
+        <ul class="legend" aria-label="Map legend">
+          <li><span class="sw" style="background:var(--m-soil)"></span>field</li>
+          <li><span class="sw" style="background:var(--m-roof)"></span>shop (faces the road)</li>
+          <li><span class="sw" style="background:var(--m-slate)"></span>warehouse</li>
+          <li><span class="sw" style="background:var(--m-hedge)"></span>hedge (can't climb)</li>
+          <li><span class="sw" style="background:repeating-linear-gradient(90deg,var(--soil) 0 5px,transparent 5px 8px)"></span>back fence (climbable)</li>
+          <li><span class="sw" style="background:var(--hay)"></span>your farm</li>
+        </ul>
+        <figcaption>Cloverdale from above, to scale (one map unit is about 1.2 studs). Each farm's numbered badge is its gate on the ring road. Woods fill the gaps between farms, the Back Trail runs behind every back fence, and trucks leave through the tunnel.</figcaption>
+      </figure>
+
+      <aside class="side">
+        <div>
+          <h3>In town</h3>
+          <ul class="places">
+            <li><b>Barley's Seeds</b><span>The seed shop. New stock every 5 minutes, the same on every server.</span></li>
+            <li><b>Auction House</b><span>3 lots every 8 minutes. You have to be in the hall to bid.</span></li>
+            <li><b>Police Station</b><span>Arrested players appear on the porch. Most Wanted and Sheriff boards, the mugshot wall, the debt desk.</span></li>
+            <li><b>Cloverdale Exchange</b><span>A grain elevator with a giant flip-board of crop prices.</span></li>
+            <li><b>Hiring Hall</b><span>Patty's job board. New worker candidates every 10 minutes.</span></li>
+            <li><b>Trade Plaza</b><span>The fountain and picnic tables, where people meet to trade.</span></li>
+          </ul>
+        </div>
+        <div>
+          <h3>Walking times</h3>
+          <div class="walk">
+            <span>Town spawn → a farm gate</span><span>~15 s</span>
+            <span>Police porch → back of a farm</span><span>24–36 s</span>
+            <span>Home button (from anywhere)</span><span>3 s</span>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <figure>
+      <h3>One farm, front to back</h3>
+      <span class="hint">Scroll sideways →</span>
+      <div class="scroll" style="--minw:820px">
+      <svg class="mp pc" viewBox="0 0 960 590" role="img" aria-label="Close-up of one farm, 240 by 160 studs, road on the left and back trail on the right. At the front: the shop facing the road, the gate, the gatehouse and the driveway with a truck. Then the warehouse with its Load, Pack, Sort and Intake stations, and the farmhouse and barn. At the back, the 8 by 8 field with a scarecrow, floodlights, a guard dog kennel, a cloche and a glowing Mythic crop, then the climbable back fence. Hedges along both sides can't be climbed. Two thief routes: A through the front gate past the farmhouse, B over the back fence right by the field.">
+        <defs>
+          <pattern id="pc-tiles" x="150" y="32" width="12" height="12" patternUnits="userSpaceOnUse">
+            <rect width="12" height="12" class="soil2"/><rect x=".8" y=".8" width="10.4" height="10.4" rx="1.6" class="soil"/><circle cx="6" cy="6" r="2.6" class="crop"/>
+          </pattern>
+          <pattern id="pc-wild" x="150" y="32" width="24" height="24" patternUnits="userSpaceOnUse">
+            <rect width="24" height="24" class="wild"/>
+            <path d="M2 22 l1.5 -5 l1.5 5 M5 21 l1 -4 l1 4 M14 8 l1.5 -5 l1.5 5 M17 7 l1 -4 l1 4" class="tuft"/>
+            <ellipse cx="7" cy="9" rx="3.2" ry="2.4" class="rock"/>
+            <circle cx="17" cy="17" r="2.6" class="stump"/><circle cx="17" cy="17" r="1.2" class="stump-in"/>
+            <rect width="24" height="24" class="wild-edge"/>
+          </pattern>
+          <marker id="pc-g" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L10 5 L0 10 z" class="ah-g"/></marker>
+          <marker id="pc-r" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L10 5 L0 10 z" class="ah-r"/></marker>
+          <marker id="pc-c" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L10 5 L0 10 z" class="ah-c"/></marker>
+        </defs>
+        <g transform="translate(24 44) scale(3.1)">
+          <!-- road, sidewalk -->
+          <rect x="0" y="-6" width="16" height="172" class="roadfill"/>
+          <line x1="8" y1="-6" x2="8" y2="166" class="cl" style="stroke-width:.4;stroke-dasharray:2 2.4"/>
+          <rect x="16" y="-6" width="8" height="172" class="plaza"/>
+          <circle cx="20" cy="18" r="1.7" class="npc"/><circle cx="20" cy="30" r="1.7" class="npc"/><circle cx="20" cy="138" r="1.7" class="npc"/>
+          <!-- plot -->
+          <rect x="24" y="0" width="240" height="160" class="yard"/>
+          <rect x="24" y="-3" width="240" height="3" class="hedgef"/>
+          <rect x="24" y="160" width="240" height="3" class="hedgef"/>
+          <line x1="24" y1="0" x2="24" y2="66" class="front"/><line x1="24" y1="84" x2="24" y2="160" class="front"/>
+          <!-- path gate → field -->
+          <rect x="24" y="73" width="126" height="6" class="path"/>
+          <rect x="23" y="66" width="2.2" height="18" class="gate"/>
+          <!-- shop -->
+          <rect x="24" y="6" width="40" height="56" class="roof"/>
+          <rect x="24" y="6" width="4" height="56" class="awn"/>
+          <rect x="40" y="14" width="18" height="5" class="shelf"/><rect x="40" y="26" width="18" height="5" class="shelf"/><rect x="40" y="38" width="18" height="5" class="shelf"/>
+          <text x="46" y="55" text-anchor="middle" class="lt">Your shop</text>
+          <!-- gatehouse -->
+          <rect x="28" y="86" width="9" height="9" class="bldg"/>
+          <!-- farmhouse & barn -->
+          <rect x="84" y="10" width="42" height="44" class="bldg"/>
+          <rect x="84" y="10" width="42" height="10" class="roof"/>
+          <rect x="102" y="50" width="6" height="4" class="door"/>
+          <text x="105" y="33" text-anchor="middle" class="s-light" style="fill:var(--ink);font-size:3.4px">Farmhouse</text>
+          <text x="105" y="38.5" text-anchor="middle" class="s-light" style="fill:var(--ink);font-size:3.4px">&amp; barn</text>
+          <text x="105" y="47" text-anchor="middle" class="s-light s-sm" style="fill:var(--ink-2)">spawn · deposit</text>
+          <!-- driveway + truck -->
+          <rect x="24" y="100" width="48" height="18" class="roadfill"/>
+          <rect x="38" y="102" width="24" height="14" class="truck"/>
+          <rect x="33" y="103" width="5" height="12" style="fill:var(--sky)"/>
+          <!-- warehouse -->
+          <rect x="72" y="94" width="66" height="62" class="slate"/>
+          <text x="105" y="103" text-anchor="middle" class="lt">Warehouse</text>
+          <rect x="74" y="118" width="14" height="18" rx="1" class="station"/><rect x="90" y="118" width="14" height="18" rx="1" class="station"/><rect x="106" y="118" width="14" height="18" rx="1" class="station"/><rect x="122" y="118" width="14" height="18" rx="1" class="station"/>
+          <text x="81" y="128" text-anchor="middle" class="s-light s-sm" style="fill:var(--g-ink)">Load</text><text x="97" y="128" text-anchor="middle" class="s-light s-sm" style="fill:var(--g-ink)">Pack</text><text x="113" y="128" text-anchor="middle" class="s-light s-sm" style="fill:var(--g-ink)">Sort</text><text x="129" y="128" text-anchor="middle" class="s-light s-sm" style="fill:var(--g-ink)">Intake</text>
+          <path d="M134 145 L78 145" class="belt" marker-end="url(#pc-c)"/>
+          <text x="106" y="152" text-anchor="middle" class="s-light s-sm">conveyor</text>
+          <!-- field -->
+          <rect x="150" y="32" width="96" height="96" fill="url(#pc-tiles)"/>
+          <g fill="url(#pc-wild)"><rect x="198" y="80" width="24" height="24"/><rect x="222" y="80" width="24" height="24"/><rect x="150" y="104" width="24" height="24"/><rect x="174" y="104" width="24" height="24"/><rect x="198" y="104" width="24" height="24"/><rect x="222" y="104" width="24" height="24"/></g>
+          <rect x="198.6" y="80.6" width="22.8" height="22.8" class="clearable"/><rect x="222.6" y="80.6" width="22.8" height="22.8" class="clearable"/><rect x="150.6" y="104.6" width="22.8" height="22.8" class="clearable"/><rect x="174.6" y="104.6" width="22.8" height="22.8" class="clearable"/>
+          <rect x="222" y="44" width="12" height="12" class="glow"/>
+          <circle cx="168" cy="92" r="6.5" class="cloche"/>
+          <line x1="187" y1="66" x2="187" y2="57" class="pole"/><path d="M187 57 L193 59 L187 61 Z" class="flag"/>
+          <text x="198" y="138" text-anchor="middle" class="on-yard">Field: 10 of 16 blocks cleared (next permit at Lv 14)</text>
+          <!-- scarecrow, lights, dog, mud -->
+          <path d="M198 16 L198 28 M192 20 L204 20" class="scare"/><circle cx="198" cy="14" r="2" class="scare-h"/>
+          <text x="207" y="21" class="s-sm on-yard">scarecrow</text>
+          <circle cx="147" cy="29" r="2" class="light"/><circle cx="249" cy="29" r="2" class="light"/><circle cx="147" cy="131" r="2" class="light"/><circle cx="249" cy="131" r="2" class="light"/>
+          <rect x="152" y="143" width="10" height="8" class="bldg"/><rect x="152" y="143" width="10" height="2.5" class="roof"/>
+          <text x="165" y="150" class="s-sm on-yard">guard dog</text>
+          <ellipse cx="256" cy="52" rx="5" ry="9" class="mud"/>
+          <!-- back fence, trail, hills -->
+          <line x1="264" y1="0" x2="264" y2="160" class="fence"/>
+          <rect x="268" y="-6" width="14" height="172" class="trailfill"/>
+          <rect x="282" y="-6" width="14" height="172" class="hill"/>
+          <circle cx="288" cy="30" r="5" class="tree"/><circle cx="289" cy="126" r="5" class="tree"/><rect x="284" y="68" width="7" height="5" rx="1" class="gate"/>
+          <!-- goods flow -->
+          <path d="M150 52 C 140 48, 134 40, 128 36" class="goods" marker-end="url(#pc-g)"/>
+          <text x="139" y="34" text-anchor="middle" class="s-sm on-yard">harvest</text>
+          <path d="M115 55 L128 116" class="goods" marker-end="url(#pc-g)"/>
+          <text x="125" y="90" class="s-sm on-yard">send</text>
+          <path d="M74 122 L63 113" class="goods" marker-end="url(#pc-g)"/>
+          <path d="M37 109 L3 109" class="goods" marker-end="url(#pc-g)"/>
+          <path d="M80 94 C 76 82, 66 72, 58 64" class="goods" marker-end="url(#pc-g)"/>
+          <text x="74" y="88" text-anchor="end" class="s-sm on-yard">to my shop</text>
+          <!-- thief routes -->
+          <path d="M6 82 L24 82 L140 82 L178 92" class="thief" marker-end="url(#pc-r)"/>
+          <circle cx="10" cy="88" r="3.4" style="fill:var(--barn)"/><text x="10" y="89.3" text-anchor="middle" class="lt" style="font-size:3.6px">A</text>
+          <path d="M276 100 L264 100 L240 70" class="thief" marker-end="url(#pc-r)"/>
+          <circle cx="276" cy="92" r="3.4" style="fill:var(--barn)"/><text x="276" y="93.3" text-anchor="middle" class="lt" style="font-size:3.6px">B</text>
+          <!-- labels -->
+          <text x="144" y="-5" text-anchor="middle" class="on-page">hedge on both sides: can't be climbed</text>
+          <text x="264" y="171" text-anchor="middle" class="on-page">back fence</text>
+          <text x="12" y="171" text-anchor="middle" class="on-page">ring road</text>
+          <text x="275" y="-5" text-anchor="middle" class="on-page">back trail</text>
+          <text x="32.5" y="100" text-anchor="middle" class="s-sm on-yard">gatehouse</text>
+        </g>
+      </svg>
+      </div>
+      <figcaption><b>A</b>: the front gate is easy to walk through, but it takes a thief past the farmhouse where the owner spawns. <b>B</b>: the back fence is right by the field, but climbing takes 1.5 s (3.5 s with the tall fence), makes noise, and counts as being inside the whole time. Green arrows are crops moving: harvest into the barn, send to the warehouse, then out by truck or into the shop. The pink square is a glowing Mythic, the flag a tile marked "leave in field", the bubble a cloche. The rocky blocks are land not cleared yet; the gold dashed ones can take the next Land Permit.</figcaption>
+    </figure>
+
+    <div class="two">
+      <figure>
+        <h3>Land opens as you level up</h3>
+        <svg class="dg" viewBox="0 0 440 340" role="img" aria-label="The field as a 4 by 4 grid of blocks. The start corner of four blocks sits beside the farmhouse. Six more blocks have been cleared with permits 1 to 6 at levels 2 to 12. Four overgrown blocks touching cleared land can take the next permit at level 14. Two blocks at the back corner have to wait until a neighbour is cleared. The left side is safer, near the farmhouse; the right side is riskier, near the back fence.">
+          <rect class="house" x="14" y="52" width="46" height="36" rx="3"/><rect class="house-roof" x="14" y="52" width="46" height="10" rx="3"/>
+          <text x="37" y="104" text-anchor="middle" class="sm">farmhouse</text>
+          <!-- start -->
+          <rect class="b-leaf" x="82" y="42" width="56" height="56" rx="6"/><text class="tt" x="110" y="74" text-anchor="middle">start</text>
+          <rect class="b-leaf" x="142" y="42" width="56" height="56" rx="6"/><text class="tt" x="170" y="74" text-anchor="middle">start</text>
+          <rect class="b-leaf" x="82" y="102" width="56" height="56" rx="6"/><text class="tt" x="110" y="134" text-anchor="middle">start</text>
+          <rect class="b-leaf" x="142" y="102" width="56" height="56" rx="6"/><text class="tt" x="170" y="134" text-anchor="middle">start</text>
+          <!-- permits used -->
+          <rect class="b-leaf" x="202" y="42" width="56" height="56" rx="6"/><text class="tt" x="230" y="68" text-anchor="middle">P1</text><text x="230" y="83" text-anchor="middle" class="sm">Lv 2</text>
+          <rect class="b-leaf" x="202" y="102" width="56" height="56" rx="6"/><text class="tt" x="230" y="128" text-anchor="middle">P2</text><text x="230" y="143" text-anchor="middle" class="sm">Lv 4</text>
+          <rect class="b-leaf" x="262" y="42" width="56" height="56" rx="6"/><text class="tt" x="290" y="68" text-anchor="middle">P3</text><text x="290" y="83" text-anchor="middle" class="sm">Lv 6</text>
+          <rect class="b-leaf" x="262" y="102" width="56" height="56" rx="6"/><text class="tt" x="290" y="128" text-anchor="middle">P4</text><text x="290" y="143" text-anchor="middle" class="sm">Lv 8</text>
+          <rect class="b-leaf" x="82" y="162" width="56" height="56" rx="6"/><text class="tt" x="110" y="188" text-anchor="middle">P5</text><text x="110" y="203" text-anchor="middle" class="sm">Lv 10</text>
+          <rect class="b-leaf" x="142" y="162" width="56" height="56" rx="6"/><text class="tt" x="170" y="188" text-anchor="middle">P6</text><text x="170" y="203" text-anchor="middle" class="sm">Lv 12</text>
+          <!-- can take the next permit -->
+          <rect class="b-wait" x="202" y="162" width="56" height="56" rx="6"/><text class="tt" x="230" y="188" text-anchor="middle">next</text><text x="230" y="203" text-anchor="middle" class="sm">Lv 14</text>
+          <rect class="b-wait" x="262" y="162" width="56" height="56" rx="6"/><text class="tt" x="290" y="188" text-anchor="middle">next</text><text x="290" y="203" text-anchor="middle" class="sm">Lv 14</text>
+          <rect class="b-wait" x="82" y="222" width="56" height="56" rx="6"/><text class="tt" x="110" y="248" text-anchor="middle">next</text><text x="110" y="263" text-anchor="middle" class="sm">Lv 14</text>
+          <rect class="b-wait" x="142" y="222" width="56" height="56" rx="6"/><text class="tt" x="170" y="248" text-anchor="middle">next</text><text x="170" y="263" text-anchor="middle" class="sm">Lv 14</text>
+          <!-- not reachable yet -->
+          <rect class="b-grey" x="202" y="222" width="56" height="56" rx="6"/><text x="230" y="254" text-anchor="middle" class="sm">overgrown</text>
+          <rect class="b-grey" x="262" y="222" width="56" height="56" rx="6"/><text x="290" y="254" text-anchor="middle" class="sm">overgrown</text>
+          <!-- back fence -->
+          <line class="fence-d" x1="330" y1="36" x2="330" y2="284"/>
+          <text x="346" y="160" text-anchor="middle" class="sm" transform="rotate(90 346 160)">back fence: raiders climb in here</text>
+          <!-- safe / risky -->
+          <line class="axis" x1="82" y1="298" x2="318" y2="298"/>
+          <text x="82" y="316" class="sm" style="fill:var(--leaf);font-weight:700">← safer: near the farmhouse</text>
+          <text x="318" y="333" text-anchor="end" class="sm rt" style="font-weight:700">riskier: near the back fence →</text>
+        </svg>
+        <figcaption>An example farm at Farm Level 12: the start corner plus six permits. Gold blocks touch cleared land, so permit 7 (Lv 14) can go on any of them. The two grey blocks have to wait until a neighbour is cleared.</figcaption>
+      </figure>
+
+      <figure>
+        <h3>Land Permits</h3>
+        <div class="scroll">
+        <table class="ladder">
+          <thead><tr><th>Permit</th><th>Farm Level</th><th>Clearing fee</th><th>Field</th></tr></thead>
+          <tbody>
+            <tr class="got"><td>✓ 1</td><td>2</td><td>250</td><td>20 tiles</td></tr>
+            <tr class="got"><td>✓ 2</td><td>4</td><td>2,000</td><td>24</td></tr>
+            <tr class="got"><td>✓ 3</td><td>6</td><td>4,000</td><td>28</td></tr>
+            <tr class="got"><td>✓ 4</td><td>8</td><td>7,000</td><td>32</td></tr>
+            <tr class="got"><td>✓ 5</td><td>10</td><td>12,000</td><td>36</td></tr>
+            <tr class="got"><td>✓ 6</td><td>12</td><td>20,000</td><td>40</td></tr>
+            <tr><td>7</td><td>14</td><td>35,000</td><td>44</td></tr>
+            <tr><td>8</td><td>17</td><td>55,000</td><td>48</td></tr>
+            <tr><td>9</td><td>20</td><td>85,000</td><td>52</td></tr>
+            <tr><td>10</td><td>24</td><td>130,000</td><td>56</td></tr>
+            <tr><td>11</td><td>28</td><td>190,000</td><td>60</td></tr>
+            <tr><td>12</td><td>32</td><td>250,000</td><td>64 (8 × 8)</td></tr>
+          </tbody>
+        </table>
+        </div>
+        <figcaption>Reaching each level gives a permit, and the fee clears the block. Coins alone never open land, and permits can't be bought with Robux or traded, so the field grows only as fast as the player learns to run and defend it. Clearing is 4 quick holds (a stump, a rock, weeds, a bush), and the first crop in fresh soil grows 25% faster.</figcaption>
+      </figure>
+    </div>
+
+    <div class="intro">
+      <h3>Look and feel</h3>
+      <ul class="art">
+        <li>Bright low-poly and flat-shaded, like Tide Market's plant pack: chunky fences, round trees, crops 2–3× real size so you can read a field from the road.</li>
+        <li>A 24-minute day: warm afternoon light, an orange dusk for Golden Hour, a blue night with lantern pools and floodlights, a huge orange moon for the Harvest Moon.</li>
+        <li>Each farm grows its own kind of flower along the hedges, so the farms are easy to tell apart.</li>
+        <li>Ripe crops bounce and sparkle in their rarity colour. Mythics glow and can be seen from the ring road.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ===================== UI ===================== -->
+  <section class="board" id="ui" role="tabpanel" aria-labelledby="tab-ui" hidden>
+    <div class="intro">
+      <span class="eyebrow">Kraft &amp; Crate</span>
+      <h2>The game's own UI</h2>
+      <p>Windows look like things you'd find on a farm: kraft paper, painted wooden signs, seed packets and chalkboards. Try the four HUD states below. The shop sliders and the auction bids work.</p>
+    </div>
+
+    <figure>
+      <h3>The HUD on a landscape phone</h3>
+      <div class="seg" role="group" aria-label="HUD state">
+        <button type="button" data-state="home" aria-pressed="true">At home</button>
+        <button type="button" data-state="alarm" aria-pressed="false">Theft alarm</button>
+        <button type="button" data-state="trespass" aria-pressed="false">Raiding</button>
+        <button type="button" data-state="ko" aria-pressed="false">Knocked out</button>
+      </div>
+      <div class="scroll" style="--minw:640px"><div class="hud" id="hud" data-state="home" role="img" aria-label="Mockup of the in-game HUD">
+        <div class="sc sc-sky"></div>
+        <div class="sc sc-hills"></div>
+        <div class="sc sc-fence"></div>
+        <div class="sc sc-barn"></div>
+        <div class="sc sc-wh"></div>
+        <div class="sc sc-field"></div>
+        <div class="sc sc-crops" aria-hidden="true">
+          <span>🥕</span><span>🥕</span><span>🎃</span><span>🎃</span><span>🍓</span><span>🍓</span><span>🌽</span><span>🌽</span>
+          <span>🥕</span><span>🥕</span><span>🎃</span><span>🎃</span><span>🍓</span><span>🍓</span><span>🌽</span><span>🌽</span>
+        </div>
+        <!-- player -->
+        <svg class="av" viewBox="0 0 40 60" aria-hidden="true" data-s="home alarm trespass">
+          <rect x="12" y="2" width="16" height="15" rx="3" fill="#f6c36b" stroke="#3a2a1c" stroke-width="1.2"/>
+          <rect x="10" y="18" width="20" height="20" rx="2" fill="#3e8ef0" stroke="#3a2a1c" stroke-width="1.2"/>
+          <rect x="11" y="38" width="8" height="18" fill="#6b4a2f" stroke="#3a2a1c" stroke-width="1"/><rect x="21" y="38" width="8" height="18" fill="#6b4a2f" stroke="#3a2a1c" stroke-width="1"/>
+          <circle cx="17" cy="9" r="1.4" fill="#3a2a1c"/><circle cx="23" cy="9" r="1.4" fill="#3a2a1c"/>
+          <g data-s="home alarm"><rect x="30" y="4" width="4.5" height="30" rx="2" fill="#a8743f" stroke="#3a2a1c" stroke-width="1" transform="rotate(25 32 30)"/></g>
+          <g data-s="trespass" hidden><ellipse cx="7" cy="27" rx="7" ry="9" fill="#c9a46e" stroke="#3a2a1c" stroke-width="1.2"/><path d="M3 19 Q7 15 11 19" fill="none" stroke="#3a2a1c" stroke-width="1.2"/></g>
+        </svg>
+        <svg class="av" viewBox="0 0 60 40" aria-hidden="true" data-s="ko" hidden style="width:8cqw;top:60%">
+          <rect x="2" y="12" width="15" height="16" rx="3" fill="#f6c36b" stroke="#3a2a1c" stroke-width="1.2"/>
+          <rect x="18" y="10" width="20" height="20" rx="2" fill="#3e8ef0" stroke="#3a2a1c" stroke-width="1.2"/>
+          <rect x="38" y="11" width="18" height="8" fill="#6b4a2f" stroke="#3a2a1c" stroke-width="1"/><rect x="38" y="21" width="18" height="8" fill="#6b4a2f" stroke="#3a2a1c" stroke-width="1"/>
+          <path d="M6 18 l3 3 m0 -3 l-3 3 M11 18 l3 3 m0 -3 l-3 3" stroke="#3a2a1c" stroke-width="1.1"/>
+        </svg>
+        <!-- thief seen by the owner -->
+        <svg class="thief" viewBox="0 0 40 60" aria-hidden="true" data-s="alarm" hidden>
+          <rect x="12" y="2" width="16" height="15" rx="3" fill="#d79c6b" stroke="#3a2a1c" stroke-width="1.2"/>
+          <rect x="11" y="6" width="18" height="5" fill="#222"/>
+          <rect x="10" y="18" width="20" height="20" rx="2" fill="#555" stroke="#3a2a1c" stroke-width="1.2"/>
+          <rect x="11" y="38" width="8" height="18" fill="#333"/><rect x="21" y="38" width="8" height="18" fill="#333"/>
+          <ellipse cx="33" cy="27" rx="7" ry="9" fill="#c9a46e" stroke="#3a2a1c" stroke-width="1.2"/>
+          <text x="20" y="-1" text-anchor="middle" font-size="12" font-weight="700" fill="#e8352b">!</text>
+        </svg>
+
+        <div class="pill coins"><span>🪙 <span class="num">12,450</span></span><span style="font-size:1.2cqw">Lv 7</span><span class="lvl"><i></i></span></div>
+        <div class="pill loc green" data-s="home alarm">🟢 Your Farm</div>
+        <div class="pill loc red" data-s="trespass ko" hidden>TRESPASSING · Sam's farm</div>
+        <div class="pill wx">☀ 14:20 · 🌧 Rain in 2:10 · 🌕 Harvest Moon 3:45</div>
+        <div class="ticker">🥕 Carrot 21 <span class="up">▲4%</span> · 🎃 Pumpkin 640 <span class="dn">▼3%</span> · 🍇 Grape 1,620 <span class="up">▲11%</span> · HOT: Corn ×1.5</div>
+        <div class="sbar">
+          <div class="sbtn">🏚<small>Barn</small></div>
+          <div class="sbtn">📦<small>Ware</small><span class="bdg">3</span></div>
+          <div class="sbtn">🏪<small>Shop</small></div>
+          <div class="sbtn">🧑‍🌾<small>Work</small></div>
+          <div class="sbtn">📈<small>Market</small></div>
+          <div class="sbtn">⋯<small>More</small></div>
+        </div>
+        <div class="travel">
+          <span class="tbtn" data-s="home alarm">🏠 Home</span><span class="tbtn" data-s="home alarm">🏘 Town</span>
+          <span class="tbtn lock" data-s="trespass ko" hidden>🔒 Home</span><span class="tbtn lock" data-s="trespass ko" hidden>🔒 Town</span>
+        </div>
+        <div class="hot">
+          <div class="slot on" data-s="home alarm"><span class="k">1</span>🏏</div>
+          <div class="slot"><span class="k">2</span>🚿</div>
+          <div class="slot"><span class="k">3</span>🥕<small>×12</small></div>
+          <div class="slot"><span class="k">4</span>🌽<small>×4</small></div>
+          <div class="slot"><span class="k">5</span>🧪<small>×2</small></div>
+        </div>
+        <div class="ctx" data-s="home alarm">HARVEST<small>hold</small></div>
+        <div class="ctx red" data-s="trespass" hidden><span class="ring"></span>STEAL<small>holding…</small></div>
+        <div class="sack" data-s="trespass" hidden>🧺 <b>3/5</b></div>
+        <div class="pill compass" data-s="trespass" hidden>Get home ↗ 210 studs</div>
+        <div class="toasts" data-s="home">
+          <div class="toast">Truck paid +1,284 🪙<small>12 crates at the locked price</small></div>
+          <div class="toast">Auction in 0:52<small>Lot 1: Moonmelon seed</small><span class="tb">🏘 Town</span></div>
+        </div>
+        <div class="alarm-edge" data-s="alarm" hidden></div>
+        <div class="acard" data-s="alarm" hidden>
+          <header>🚨 Sam is stealing your Pumpkin!</header>
+          <div class="bd">
+            <div class="pip-cam"><svg viewBox="0 0 40 60"><rect x="12" y="2" width="16" height="15" rx="3" fill="#d79c6b"/><rect x="11" y="6" width="18" height="5" fill="#222"/><rect x="10" y="18" width="20" height="20" fill="#555"/><rect x="11" y="38" width="8" height="18" fill="#333"/><rect x="21" y="38" width="8" height="18" fill="#333"/></svg></div>
+            <div>Back row, 140 studs away. Hold ring: <b>60%</b></div>
+          </div>
+          <div class="bts"><span class="mbtn">Go get them!</span><span class="mbtn blue">🏠 Home 3 s</span></div>
+        </div>
+        <div class="edge-arrow" data-s="alarm" hidden>Sam ▶</div>
+        <div class="ko" data-s="ko" hidden>
+          <div class="kocard">
+            <div class="stars">★ ★ ★</div>
+            <h4>KNOCKED OUT</h4>
+            <div class="count"><span>3</span></div>
+            <p><b>The farmer can arrest you!</b></p>
+            <p class="warn">You're a Suspect here. Leaving now counts as fleeing: fine ×1.5.</p>
+          </div>
+        </div>
+      </div>
+      </div>
+      <p class="state-note" id="hud-note" aria-live="polite">At home: the bat is in slot 1 because you're inside your own farm, and the big button does whatever is in front of you.</p>
+    </figure>
+
+    <div class="wins">
+      <!-- warehouse -->
+      <div class="win" aria-label="Warehouse window mockup">
+        <div class="wsign">Warehouse · T1</div>
+        <div class="wtabs"><span class="wtab on">Pipeline</span><span class="wtab">Routes</span><span class="wtab">Upgrade</span></div>
+        <div class="pipe">
+          <div class="st"><b>Intake</b><span class="q">14</span><span class="r">waiting</span><span class="wp"></span><span class="r">by hand</span></div>
+          <div class="st"><b>Sort</b><span class="q">6</span><span class="r">batches</span><span class="wp"><i></i></span><span class="r">8/min</span></div>
+          <div class="st bn"><b>Pack</b><span class="q">22</span><span class="r">waiting</span><span class="wp"><i></i><i></i></span><span class="r">5/min</span></div>
+          <div class="st"><b>Load</b><span class="q">2</span><span class="r">crates</span><span class="wp"><i></i></span><span class="r">10/min</span></div>
+          <div class="st"><b>Truck</b><span class="q">9/12</span><span class="r">crates</span><span class="wp"><i></i></span><span class="r">Driver</span></div>
+        </div>
+        <div class="tip">Packing is your bottleneck. Packer slots are full (2/2): the T2 warehouse adds a third.</div>
+        <div class="card truckrow">
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:.85rem"><b class="num">Box Truck</b><span>9 of 12 crates · 90 s round trip</span></div>
+            <div class="bar"><i style="width:75%"></i></div>
+            <div style="font-size:.82rem;margin-top:4px" class="muted">Would lock: Pumpkin <b>640</b> · Carrot <b>21</b> · Corn <b>218</b> (Hot ×1.5)</div>
+          </div>
+          <span class="btn green">Dispatch</span>
+        </div>
+        <div class="routes"><span class="rchip">🎃 Pumpkin → Truck 70% · Shop 30%</span><span class="rchip">🥕 Carrot → Shop</span><span class="rchip">🌽 Corn → Truck</span></div>
+      </div>
+
+      <!-- shop -->
+      <div class="win" aria-label="Shop pricing window mockup">
+        <div class="wsign">Farm Shop · <span class="stars">★★★★☆</span></div>
+        <div class="wtabs"><span class="wtab on">Prices</span><span class="wtab">Shelves</span><span class="wtab">Upgrade</span></div>
+        <div class="card" style="padding:4px 12px">
+          <div class="prow" data-ref="618">
+            <div class="pname"><b class="rar rare">🎃 Pumpkin</b><small>reference <span class="num">618</span> · 14 on shelf</small></div>
+            <div class="ptag"><div class="val"><span>your price <b class="num pv">690</b></span><span class="pc-pct muted">+12%</span></div><input type="range" id="price-pumpkin" min="309" max="1854" value="690" aria-label="Pumpkin price"></div>
+            <div class="face"><span class="fc">🙂</span><small class="fs">~3.1 / min</small></div>
+          </div>
+          <div class="prow" data-ref="20">
+            <div class="pname"><b class="rar common">🥕 Carrot</b><small>reference <span class="num">20</span> · 40 on shelf</small></div>
+            <div class="ptag"><div class="val"><span>your price <b class="num pv">26</b></span><span class="pc-pct muted">+30%</span></div><input type="range" id="price-carrot" min="10" max="60" value="26" aria-label="Carrot price"></div>
+            <div class="face"><span class="fc">😐</span><small class="fs">~1.6 / min</small></div>
+          </div>
+          <div class="prow" data-ref="74">
+            <div class="pname"><b class="rar uncommon">🍓 Strawberry</b><small>reference <span class="num">74</span> · 22 on shelf</small></div>
+            <div class="ptag"><div class="val"><span>your price <b class="num pv">70</b></span><span class="pc-pct muted">−5%</span></div><input type="range" id="price-strawberry" min="37" max="222" value="70" aria-label="Strawberry price"></div>
+            <div class="face"><span class="fc">😀</span><small class="fs">~4.4 / min</small></div>
+          </div>
+        </div>
+        <div class="tip" style="background:#fff4dc;border-color:#b89567">Rating 4.2★. 2 shoppers left grumpy in the last 10 min: the Corn shelf was empty.</div>
+      </div>
+
+      <!-- auction -->
+      <div class="win" aria-label="Auction window mockup">
+        <div class="wsign">Auction House · Lot 2 of 3</div>
+        <div class="lot">
+          <div class="packet-art" aria-hidden="true">🍈</div>
+          <div style="display:grid;gap:6px;min-width:0">
+            <h4>Moonmelon seed <span style="color:#f5b323">· Legendary</span></h4>
+            <div class="lotinfo">
+              <div><div class="big" id="au-bid">7,350</div><div class="lead" id="au-lead">leading: Sam</div></div>
+              <div class="timer" id="au-timer" style="--p:1"><span id="au-t">0:24</span></div>
+            </div>
+            <div class="lead">Estimated value 12,000 · minimum raise 5%</div>
+          </div>
+        </div>
+        <div class="bids">
+          <button type="button" class="btn gold" data-raise="0.05" id="bid-5">+5%</button>
+          <button type="button" class="btn gold" data-raise="0.10" id="bid-10">+10%</button>
+          <button type="button" class="btn gold" data-raise="0.25" id="bid-25">+25%</button>
+        </div>
+        <div class="flash" id="au-flash" aria-live="polite"></div>
+        <div class="card" style="font-size:.88rem;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><span>Your escrow: <b class="num" id="au-esc">0</b></span><span>Wallet: <b class="num" id="au-wal">12,450</b></span></div>
+        <div class="next">Next: Golden Watering Can · Grandma Rose (Legendary Packer contract)</div>
+      </div>
+
+      <!-- hiring -->
+      <div class="win" aria-label="Hiring Hall window mockup">
+        <div class="wsign">Hiring Hall</div>
+        <div class="slotbar">
+          <span class="sl full">Packer 2/2</span><span class="sl full">Sorter 1/1</span><span class="sl">Loader 0/1</span><span class="sl full">Driver 1/1</span><span class="sl full">Stocker 1/1</span><span class="sl">Cashier 0/1</span>
+        </div>
+        <div class="badges">
+          <div class="idb"><header>LOADER</header><div class="ph">🧢</div><b>Pip</b><span class="trait">Speedy +20%</span><span class="meta">Lv 2 · 5.8 🪙/min</span><div class="act"><span class="btn gold">Hire · 230</span></div></div>
+          <div class="idb"><header>CASHIER</header><div class="ph">👓</div><b>Mo</b><span class="trait">Frugal −20% wage</span><span class="meta">Lv 1 · 4.8 🪙/min</span><div class="act"><span class="btn gold">Hire · 192</span></div></div>
+          <div class="idb"><header>PACKER</header><div class="ph">🎀</div><b>Juniper</b><span class="trait">Careful</span><span class="meta">Lv 3 · 6.6 🪙/min</span><div class="act"><span class="btn off">Full: T2</span></div></div>
+        </div>
+        <div class="next">New candidates in 6:12 · wages are paid every minute</div>
+      </div>
+
+      <!-- trade -->
+      <div class="win" aria-label="Trade window mockup">
+        <div class="wsign">Trade with Sam</div>
+        <div class="crates">
+          <div class="crate">
+            <h5>You offer</h5>
+            <div class="items"><div class="it">🎃<small>×3</small></div><div class="it" title="Shocked Corn">🌽<small>⚡</small></div><div class="it">🪙<small>1.5k</small></div><div class="it mt"></div><div class="it mt"></div><div class="it mt"></div><div class="it mt"></div><div class="it mt"></div></div>
+            <div class="tot"><span>value</span><b class="num">3,765</b></div>
+            <div class="ready y">✓ Ready</div>
+          </div>
+          <div class="crate">
+            <h5>Sam offers</h5>
+            <div class="items"><div class="it">🍇<small>seed</small></div><div class="it mt"></div><div class="it mt"></div><div class="it mt"></div><div class="it mt"></div><div class="it mt"></div><div class="it mt"></div><div class="it mt"></div></div>
+            <div class="tot"><span>value</span><b class="num">4,000</b></div>
+            <div class="ready n">waiting…</div>
+          </div>
+        </div>
+        <div class="next">When both are ready: a 5 s countdown, then both confirm. A red warning shows if one side gives 3× what it gets.</div>
+      </div>
+
+      <!-- busted -->
+      <div class="win" aria-label="Arrest card mockup">
+        <div class="wsign">Police · Case 0427</div>
+        <div class="busted">
+          <div class="mug">
+            <div class="hc">6'<br>5'<br>4'<br>3'</div>
+            <svg viewBox="0 0 60 70" aria-hidden="true"><rect x="18" y="4" width="24" height="22" rx="4" fill="#d79c6b" stroke="#3a2a1c" stroke-width="1.4"/><circle cx="25" cy="14" r="1.6" fill="#3a2a1c"/><circle cx="35" cy="14" r="1.6" fill="#3a2a1c"/><path d="M25 21 Q30 18 35 21" fill="none" stroke="#3a2a1c" stroke-width="1.4"/><rect x="12" y="28" width="36" height="42" rx="3" fill="#555"/><rect x="14" y="40" width="32" height="15" fill="#3a2a1c"/><text x="30" y="51" text-anchor="middle" font-size="7" fill="#fff4dc" font-family="Courier Prime, monospace">CPD 0427</text></svg>
+          </div>
+          <div class="case">
+            <span class="stamp">BUSTED!</span>
+            <div class="row"><span>Charge</span><span>Crop theft: 1 Pumpkin</span></div>
+            <div class="row"><span>Fine</span><span>960 🪙</span></div>
+            <div class="row"><span>Worked out as</span><span>8% of 12,000 earned last hour</span></div>
+            <div class="row"><span>Paid to</span><span>Alex</span></div>
+            <div class="row"><span>Debt left</span><span>0</span></div>
+            <span class="muted" style="font-size:.85rem">Sending you to the Police Station porch…</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="kit">
+      <div class="intro"><h3>The kit</h3><p>Colours, rarity badges, buttons and location chips. Every rarity has its own badge shape, so colour is never the only clue.</p></div>
+      <div class="swatches">
+        <div class="swatch"><i style="background:#C8452D"></i><div><b>Barn Red</b><code>#C8452D</code><br>headers, danger, alarm</div></div>
+        <div class="swatch"><i style="background:#F2B33D"></i><div><b>Hay Gold</b><code>#F2B33D</code><br>coins, buy buttons</div></div>
+        <div class="swatch"><i style="background:#4E9F3D"></i><div><b>Leaf Green</b><code>#4E9F3D</code><br>confirm, your farm</div></div>
+        <div class="swatch"><i style="background:#6B4A2F"></i><div><b>Soil Brown</b><code>#6B4A2F</code><br>wood, outlines</div></div>
+        <div class="swatch"><i style="background:#D9B98A"></i><div><b>Kraft</b><code>#D9B98A</code><br>window body</div></div>
+        <div class="swatch"><i style="background:#FFF4DC"></i><div><b>Cream</b><code>#FFF4DC</code><br>cards, text on wood</div></div>
+        <div class="swatch"><i style="background:#3A2A1C"></i><div><b>Ink</b><code>#3A2A1C</code><br>body text</div></div>
+        <div class="swatch"><i style="background:#5BB6F0"></i><div><b>Sky Blue</b><code>#5BB6F0</code><br>info, travel</div></div>
+        <div class="swatch"><i style="background:#E8352B"></i><div><b>Alarm Red</b><code>#E8352B</code><br>Suspect, red edge</div></div>
+      </div>
+      <div class="kitbox">
+        <h4>Rarity badges</h4>
+        <div class="rarities">
+          <span class="rb"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7" fill="#B8B8B8" stroke="#fff4dc" stroke-width="1.2"/></svg>Common</span>
+          <span class="rb"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2 C16 5 17 12 10 18 C3 12 4 5 10 2 Z" fill="#5CC75C" stroke="#fff4dc" stroke-width="1.2"/></svg>Uncommon</span>
+          <span class="rb"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2 L17 10 L10 18 L3 10 Z" fill="#3E8EF0" stroke="#fff4dc" stroke-width="1.2"/></svg>Rare</span>
+          <span class="rb"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2 L12.4 7.2 L18 7.6 L13.7 11.2 L15 16.8 L10 13.8 L5 16.8 L6.3 11.2 L2 7.6 L7.6 7.2 Z" fill="#A05CF0" stroke="#fff4dc" stroke-width="1.1"/></svg>Epic</span>
+          <span class="rb"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 15 L3 6 L7 10 L10 4 L13 10 L17 6 L17 15 Z" fill="#F5B323" stroke="#fff4dc" stroke-width="1.1"/></svg>Legendary</span>
+          <span class="rb"><svg viewBox="0 0 20 20" aria-hidden="true"><g fill="#F04FA8" stroke="#fff4dc" stroke-width=".9"><circle cx="10" cy="4.6" r="3.3"/><circle cx="15.2" cy="8.4" r="3.3"/><circle cx="13.2" cy="14.4" r="3.3"/><circle cx="6.8" cy="14.4" r="3.3"/><circle cx="4.8" cy="8.4" r="3.3"/></g><circle cx="10" cy="10" r="2.6" fill="#fff4dc"/></svg>Mythic</span>
+        </div>
+        <h4>Buttons</h4>
+        <div class="rowflex"><span class="btn green">Confirm</span><span class="btn gold">Buy · 400</span><span class="btn red">Steal</span><span class="btn blue">🏠 Home</span><span class="btn robux">R$ 79</span><span class="btn off">Locked</span></div>
+        <h4>Location chip</h4>
+        <div class="rowflex"><span class="lchip g">🟢 Your Farm</span><span class="lchip a">🟡 Visiting Sam's farm</span><span class="lchip r">TRESPASSING</span><span class="lchip w">⚪ Town</span></div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <span>Farm Heist · design map v0.3 · 30 Oct 2026</span>
+    <span>Full rules and numbers: <code>docs/GameDesign.md</code></span>
+  </footer>
+</div>
+
+<script>
+(function(){
+  /* tabs, with #map #flow #world #ui links */
+  var tabs=[].slice.call(document.querySelectorAll('[role="tab"]'));
+  function show(id,focus){
+    var found=false;
+    tabs.forEach(function(t){var on=t.getAttribute('aria-controls')===id; if(on)found=true;
+      t.setAttribute('aria-selected',on?'true':'false'); t.tabIndex=on?0:-1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden=!on; if(on&&focus)t.focus();});
+    if(!found)show('map');
+  }
+  tabs.forEach(function(t,i){
+    t.addEventListener('click',function(){show(t.getAttribute('aria-controls'));});
+    t.addEventListener('keydown',function(e){var d=e.key==='ArrowRight'?1:e.key==='ArrowLeft'?-1:0; if(!d)return;
+      e.preventDefault(); var n=tabs[(i+d+tabs.length)%tabs.length]; show(n.getAttribute('aria-controls'),true);});
+  });
+  function fromHash(){var h=(location.hash||'').replace('#',''); if(['map','flow','world','ui'].indexOf(h)>=0)show(h);}
+  fromHash(); window.addEventListener('hashchange',fromHash);
+
+  /* HUD states */
+  var hud=document.getElementById('hud'), note=document.getElementById('hud-note');
+  var notes={
+    home:"At home: the bat is in slot 1 because you're inside your own farm, and the big button does whatever is in front of you.",
+    alarm:"Theft alarm: the screen edge pulses red, the card names the thief and the crop, and an arrow points at them. Away from the farm, the card offers Home (3 s) instead.",
+    trespass:"Raiding: the red TRESPASSING chip, no bat, the sack meter (3 of 5 weight) and the Steal hold ring. Home and Town stay locked until the sack is emptied at your own barn.",
+    ko:"Knocked out: 5 seconds, greyed out and anchored. Suspects are told they can be arrested and that leaving now counts as fleeing."
+  };
+  var segBtns=[].slice.call(document.querySelectorAll('.seg button'));
+  segBtns.forEach(function(b){b.addEventListener('click',function(){
+    var s=b.getAttribute('data-state'); hud.setAttribute('data-state',s);
+    segBtns.forEach(function(o){o.setAttribute('aria-pressed',o===b?'true':'false');});
+    [].slice.call(hud.querySelectorAll('[data-s]')).forEach(function(el){
+      el.toggleAttribute('hidden',el.getAttribute('data-s').split(' ').indexOf(s)<0);});
+    note.textContent=notes[s];
+  });});
+
+  /* shop demand: shopper buys if price <= ref * w, w log-normal (sigma 0.2), x rating bonus (4 stars = +18.75%) */
+  function erf(x){var t=1/(1+0.3275911*Math.abs(x));var y=1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-x*x);return x>=0?y:-y;}
+  function phi(z){return 0.5*(1+erf(z/Math.SQRT2));}
+  var BONUS=1.1875, FLOW=5;
+  [].slice.call(document.querySelectorAll('.prow')).forEach(function(row){
+    var ref=+row.getAttribute('data-ref'), inp=row.querySelector('input'), pv=row.querySelector('.pv'),
+        pct=row.querySelector('.pc-pct'), fc=row.querySelector('.fc'), fs=row.querySelector('.fs');
+    function upd(){var p=+inp.value, prob=1-phi(Math.log(p/(ref*BONUS))/0.2), d=Math.round((p/ref-1)*100);
+      pv.textContent=p.toLocaleString('en-US'); pct.textContent=(d>0?'+':d<0?'−':'')+Math.abs(d)+'%';
+      fc.textContent=prob>0.7?'😀':prob>0.45?'🙂':prob>0.2?'😐':'😟';
+      fs.textContent='~'+(FLOW*prob).toFixed(1)+' / min';}
+    inp.addEventListener('input',upd); upd();
+  });
+
+  /* auction demo: escrow, anti-snipe, a rival who sometimes answers */
+  var WALLET=12450, a={bid:7350,lead:'Sam',t:24,sold:false};
+  var $=function(id){return document.getElementById(id);};
+  var bidBtns=[].slice.call(document.querySelectorAll('[data-raise]'));
+  function fmt(n){return n.toLocaleString('en-US');}
+  function render(){
+    $('au-bid').textContent=fmt(a.bid);
+    $('au-lead').textContent=a.sold?('SOLD to '+a.lead+'!'):('leading: '+a.lead);
+    var m=Math.floor(Math.max(a.t,0)/60), s=Math.max(a.t,0)%60;
+    $('au-t').textContent=m+':'+(s<10?'0':'')+s;
+    $('au-timer').style.setProperty('--p',Math.max(a.t,0)/24);
+    var esc=a.lead==='You'?a.bid:0; $('au-esc').textContent=fmt(esc); $('au-wal').textContent=fmt(WALLET-esc);
+    bidBtns.forEach(function(b){var nb=next(+b.getAttribute('data-raise')); b.textContent='+'+Math.round(+b.getAttribute('data-raise')*100)+'% · '+fmt(nb);
+      b.disabled=a.sold||nb>WALLET||a.lead==='You';});
+  }
+  function next(r){return Math.ceil(a.bid*(1+r)/10)*10;}
+  var rival=null;
+  function place(by,r){a.bid=next(r);a.lead=by;
+    if(a.t<10){a.t=10;$('au-flash').textContent='Late bid: the clock goes back to 10 s.';}else{$('au-flash').textContent=by==='You'?'Your bid is held in escrow.':'Sam raised! Your coins came back.';}
+    render();}
+  bidBtns.forEach(function(b){b.addEventListener('click',function(){
+    if(a.sold)return; place('You',+b.getAttribute('data-raise'));
+    clearTimeout(rival); if(a.bid<11000&&Math.random()<0.6){rival=setTimeout(function(){if(!a.sold&&a.lead==='You'&&a.t>0)place('Sam',0.05);},1800+Math.random()*1500);}
+  });});
+  setInterval(function(){
+    if(a.sold)return; a.t--;
+    if(a.t<=0){a.sold=true;$('au-flash').textContent=a.lead==='You'?'Won! The seed is in your barn.':'Going once, going twice… SOLD.';render();
+      setTimeout(function(){a={bid:7350,lead:'Sam',t:24,sold:false};$('au-flash').textContent='';render();},3500);return;}
+    render();
+  },1000);
+  render();
+})();
+</script>
