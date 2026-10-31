@@ -19,6 +19,36 @@ Follow-ups: <what to test next time>
 
 ## Sessions
 
+### 2026-10-31 · week 2 smoke test (selling) · build: this session's week 2
+Testers: Claude, driving Studio (keyboard and mouse, the chat's dev commands, the command bar for camera views) · Setup: solo Play, desktop and iPhone 17 Pro emulation · Lag: 0 · Screenshots: [playtest/2026-10-31-week2/](playtest/2026-10-31-week2/)
+
+| Check | Result | OK? | Notes |
+|---|---|---|---|
+| Bench | E at the bench opens it; each stack shows 🚚 Truck and 🏪 Stand with today's prices (Pumpkin 573 / 592, Carrot 19 / 19) | ✓ | |
+| Wash | let go at 1.1 s → gold "A" rosette; at 0.3 s → "Grade B" tag | ✓ | the server's timing agreed with the meter every time |
+| Carry and load | crate in the arms (carrots on top), "Load crate" at the dock: Pickup 1/4 → 2/4 | ✓ | |
+| Set down | travelling to town with a crate: "You set the crate down at the dock"; later "Load crate" took it from the pile | ✓ | |
+| Send | Send now in the Market window from town: receipt slip (each crate, its locked price, 464 total); the lever too | ✓ | |
+| Drive | out through the boom gate (it lifts and drops), round the ring road, up the highway into the tunnel; back down the highway, backing up to the dock | ✓ | from Farm 1 the trip to the tunnel takes about 12 s |
+| Payout | +464 coins as it reached the City (30 s), "back at the dock" at 60 s | ✓ | |
+| Exchange board | 22 crops, split-flap prices, ▲/▼, readable from the plaza | ✓ | long names wrap to two lines |
+| Market window | prices, ▲/▼, sparklines, the Glut with its countdown | ✓ | the next hour's Hot Crop wasn't shown once this hour's was over: fixed |
+| Stand | "Stock shelves" fills the baskets; price tags everyone can read ("🎃 595"); shoppers walk the sidewalk, buy grade A at ×1.15 (684 for a 595 Pumpkin); bubbles "🧺 🥕×2 +46" and "😟 🥕 too dear!"; "sold out" note | ✓ | four things fixed, below |
+| Prices | − / + move the price a step (17 → 20); the face and "% buy · ~N a minute" follow | ✓ | |
+| Sales XP | selling a crate of grade A Pumpkins took a new save to Farm Level 2 | ✓ | |
+| Phone | the purse, ticker, signposts and windows fit | ✓ | the side bar's third crate sat on the thumbstick: fixed |
+
+Bugs found and fixed in the session:
+1. The stand's "Stock shelves" prompt said "Stockroom: 0" after crates arrived from the bench (it only refreshed on stocking): the bench now refreshes it.
+2. A stand with only Carrots put them on one basket and left the other empty (one crop per shelf, no repeats): the rest now fills the empty basket; the window's sales estimate counts a crop's baskets.
+3. The rating jumped from 3★ to 2★ on the first unlucky shopper: a new stand counts 10 shoppers at 3★ that real ones replace (`Shop.RATING_SETTLE`).
+4. The Stand window cut off its notes (the empty-stockroom line, the "Truck or stand?" tip): notes use the whole row.
+5. The Market window had nothing to say once the hour's Hot Crop had ended: it shows the next hour's.
+6. On a phone the side bar's third crate sat on the thumbstick: smaller crates on phones (58×52).
+
+Not covered: 8 players, saving across sessions (API access is off), a new tester (C1–C3 want real people), offline selling (week 3).
+Follow-ups: Stage B and Stage C with testers. Testing note: a client-side teleport from the command bar gets you sent back by MovementService (as it should), and the dock then refuses; walk or use `/tp`.
+
 ### 2026-10-30 · week 1 smoke test (not Stage B yet) · build: this session's week 1
 Testers: Claude, driving Studio (keyboard, the chat's dev commands, the command bar) · Setup: solo Play, desktop and iPhone emulation · Lag: 0 · Screenshots: [playtest/2026-10-30-week1/](playtest/2026-10-30-week1/)
 

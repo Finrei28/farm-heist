@@ -126,12 +126,18 @@ Front to back:
 
 ## 11. Build order: the look pass
 
-Each step is checked in Studio from the viewpoints above, against this doc.
+Each step has a week (design doc §9) and is checked in Studio from the viewpoints above, against this doc, **and by eye**: does it look right and make sense next to a character, close up and from across the farm, on a phone? Believable proportions, parts that meet (nothing floating, clipping or flickering), a shape that reads as what it is, this doc's colours. What looks off gets fixed before the step counts as done.
 
 1. ✅ **Light and sky** (§4): `World/LightingSetup` (week 1).
-2. **Fences, hedges and the gate arch:** pickets and slats instead of the greybox's rails, rounded hedges, the arch with the name plate (§7). (Done so far: 8-stud rails you can see through, cream rails on brown posts.)
+2. **Fences, hedges and the gate arch** (week 3, with the store: the farm's front): pickets instead of the greybox's rails, rounded hedges, the arch with the name plate (§7). The back fence's slats come with its climb in week 5. (Done so far: 8-stud rails you can see through, cream rails on brown posts.)
 3. ✅ **The field** (week 1, `World/FarmArt`): rounded soil rows, block edging, overgrowth with a stump, rock, weeds and bush on each locked block, crops at 4 stages (Carrot, Corn and Pumpkin modelled; the rest a bush with fruit in their colour), ripe glow rings and sparkles. The other crops' own models come later from a crop-art tool (design doc §11 step 7).
-4. **The valley:** Terrain hills, woods in the gaps, back-trail cover, the tunnel mouth (§5).
-5. **Farm colours** and name plates (§7).
-6. **The town:** plaza, clocktower, signposts, building façades (§6).
-7. **Markers:** the Suspect **!** and outline, the sack (§9). These come with the stealing week.
+4. **The valley** (week 8, before the 50-player test): Terrain hills, woods in the gaps, back-trail cover, the tunnel mouth (§5).
+5. **Farm colours** and name plates (week 3, §7), including the pickup and the store's awning in the farm colour.
+6. **The town** (week 7, with the Auction House; the Police Station's front in week 5 with arrests): plaza, clocktower, signposts, building façades (§6).
+7. **Markers** (week 5, with stealing): the Suspect **!** and outline, the sack (§9), and the back fence's slats with the climb.
+8. **Selling, tier 0** (week 2, `World/YardArt`): the Packing Shed (open shed, barn-red gable roof, painted sign, the bench with a wash tub and tape), a low dock with the dispatch lever, the pickup (barn red, cream roof and tailgate, crates in the bed), a striped boom gate across the driveway, the Farm Stand (a counter in the front fence, striped awning, two wicker baskets with price tags, an honour box), the Exchange's split-flap price board, a paved sidewalk round the ring road, and blocky shoppers in varied colours. Checked in Studio on 2026-10-31 ([playtest/2026-10-31-week2/](playtest/2026-10-31-week2/)): all of it reads at a glance. Left for the farm-colour step: the pickup and the stand's awning in the farm colour. The Exchange board wraps long names (Golden Apple Tree, Phoenix Pepper) to two lines. The warehouse site is gravel with a sign until Warehouse Level 5.
+9. **Your store** (week 3, design doc §4.8): the four buildings (Corner Store, Farm Shop, Market Hall, Supermarket), every catalog item (displays, checkouts, decor, wall items) at the 4-stud grid's scale next to a character, the taped-off floor, decorate mode's chalk grid and blueprint look, shoppers with baskets.
+10. **The warehouse and workers** (week 4, design doc §4.6, §4.9): the four buildings, the stations and conveyors, the truck for each stage (pickup, box truck, semis, reefers), workers in their outfits (§8).
+11. **Defences** (week 6): the scarecrow, guard dog, floodlights, cloches, camera, the tall back fence.
+12. **Weather, day and night** (week 7, §4): rain, storms, the 24-minute day, the Harvest Moon night sky.
+13. **Interface polish, thumbnails and the Roblox page art** (week 9).

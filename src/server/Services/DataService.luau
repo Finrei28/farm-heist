@@ -19,6 +19,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local Shared = ReplicatedStorage.Shared
 local Remotes = require(Shared.Remotes)
 local Settings = require(Shared.Config.Settings)
+local FineRules = require(Shared.FineRules)
 local LandRules = require(Shared.LandRules)
 local ProgressionRules = require(Shared.ProgressionRules)
 local ProfileStore = require(ServerScriptService.Server.Packages.ProfileStore)
@@ -187,6 +188,23 @@ function DataService.AddXp(player, amount: number)
 		end
 	end
 	DataService.NotifyState(player)
+end
+
+-- Sales income (truck runs, the Farm Stand): the coins, the last hour's
+-- earnings (fines are a share of them, shared/FineRules), and sales XP when
+-- the sale happens while you're playing (live), never for sales settled
+-- while you were away. (Paying off debts from it comes with the payout
+-- queue in week 4, when there can first be debts.)
+function DataService.Earn(player, coins: number, sku: string, live: boolean)
+	local data = profiles[player]
+	if not data or not (coins > 0) then
+		return
+	end
+	FineRules.addEarnings(data.crime, os.time(), coins)
+	DataService.AddCoins(player, coins, Analytics.GAMEPLAY, sku)
+	if live then
+		DataService.AddXp(player, ProgressionRules.salesXp(coins))
+	end
 end
 
 -- Calls callback(player, data, oldLevel, newLevel) after every level-up.

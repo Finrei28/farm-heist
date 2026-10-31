@@ -12,6 +12,7 @@ local BarnRules = require(Shared.BarnRules)
 local Crops = require(Shared.Config.Crops)
 local Land = require(Shared.Config.Land)
 local LandRules = require(Shared.LandRules)
+local MarketPrice = require(Shared.MarketPrice)
 local Rarities = require(Shared.Config.Rarities)
 local Remotes = require(Shared.Remotes)
 
@@ -76,7 +77,7 @@ local function cropsTab(state)
 		local crop = Crops.ById[cropId]
 		if crop then
 			local name = `{if giant then "Giant " else ""}{if mutation then mutation .. " " else ""}{crop.name}`
-			row(i, crop.icon or "🌱", name, `{crop.rarity} · about {UI.formatNumber(crop.value)} coins each (selling comes with the warehouse)`,
+			row(i, crop.icon or "🌱", name, `{crop.rarity} · the truck pays {UI.formatNumber(MarketPrice.price(cropId, workspace:GetServerTimeNow()))} each now · pack it at the Packing Shed`,
 				`×{inventory.crops[key]}`, Rarities.ById[crop.rarity].color)
 		end
 	end

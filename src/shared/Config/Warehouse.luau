@@ -2,6 +2,11 @@
 -- rarity are in Config/Rarities (`crate`). Index 1 = T0.
 return {
 	GRADE_A = 1.15, -- value of a grade A batch
+	-- Washing by hand (the Packing Shed bench sorts and packs in one go):
+	-- hold to spray, and the meter fills in `fill` seconds. Let go with it in
+	-- the green (greenMin–greenMax of full) for grade A. The server times the
+	-- hold itself and allows `slack` seconds either side for lag.
+	WASH = { fill = 1.6, greenMin = 0.6, greenMax = 0.85, slack = 0.08 },
 	TIERS = {
 		{ id = "PackingShed", name = "Packing Shed", cost = 0, level = 1, buildSeconds = 0,
 			trucks = 1, truckCrates = 4, roundTrip = 60, premium = 0 },

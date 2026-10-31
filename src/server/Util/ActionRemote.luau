@@ -2,8 +2,9 @@
 -- a per-player cooldown and a { ok, reason? } response.
 --
 -- Each action is action(player, data, arg) where arg is a string or nil, and
--- returns nil on success or a failure reason string. A successful action
--- triggers a state sync to the client.
+-- returns nil on success or a failure reason string; on success it may also
+-- return a result for the client ({ ok = true, result }). A successful
+-- action triggers a state sync to the client.
 local Players = game:GetService("Players")
 
 return function(remote: RemoteFunction, actions, DataService, cooldown: number)
@@ -24,12 +25,12 @@ return function(remote: RemoteFunction, actions, DataService, cooldown: number)
 			return { ok = false, reason = "NotLoaded" }
 		end
 
-		local failure = actions[actionName](player, data, arg)
+		local failure, result = actions[actionName](player, data, arg)
 		if failure then
 			return { ok = false, reason = failure }
 		end
 		DataService.NotifyState(player)
-		return { ok = true }
+		return { ok = true, result = result }
 	end
 
 	Players.PlayerRemoving:Connect(function(player)

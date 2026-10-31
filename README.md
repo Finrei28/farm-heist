@@ -9,7 +9,7 @@ A farming game for Roblox. Grow crops on your own plot (which gets bigger as you
 
 ## Status
 
-Week 1 of the MVP plan (design doc §9) is in: you get a farm, plant, water and harvest, buy seeds from Barley, level up, clear land with Land Permits, and travel Home and to Town, all in Farm Heist's own "Kraft & Crate" interface. The world has its first look pass (light, the field, crops). Selling (the warehouse, the truck, the Farm Stand) is week 2. The rules are tested (203 tests), the XP curve is tuned with a progression sim, and Cloverdale is built from one layout file. Play-test Stage A passed in Studio on 2026-10-30; Stage B (the farming loop, with a real tester) is next.
+Weeks 1–2 of the MVP plan (design doc §9) are in. Week 1: you get a farm, plant, water and harvest, buy seeds from Barley, level up, clear land with Land Permits, and travel Home and to Town, all in Farm Heist's own "Kraft & Crate" interface, with a first look pass (light, the field, crops). Week 2, selling: pack crates at the Packing Shed, truck them to the City at the global market price (it locks when the pickup leaves), or sell them at your Farm Stand at your own price to NPC shoppers; the Exchange board in town and the Market window show where prices are heading. The rules are tested (239 tests), the XP curve is tuned with a progression sim, and Cloverdale is built from one layout file. Play-test Stage A passed in Studio on 2026-10-30. Week 2 was played in Studio on 2026-10-31 (docs/PlaytestLog.md). Next: week 3, your own store (decorated with displays and decor, Store Levels 1–20, replacing the Farm Stand), then week 4, Warehouse Levels 1–20 and workers with Levels 1–10 (design doc §4.6, §4.8, §4.9).
 
 ## One-time setup (Windows)
 
@@ -30,7 +30,9 @@ The same as Tide Market:
 
 **Playing:** stand on a tile and press **E** or tap the round stamp at the bottom right: it plants the seed packet picked in the hotbar (1–9), waters, or harvests, whatever the tile needs. Hold it and walk to do a whole row. Shift runs. The **Barn** crate on the left shows your crops, seeds and land. **Barley** sells seeds at his counter in town (the **TOWN** signpost takes you there in 3 s). From Farm Level 2 you get Land Permits: walk to a yellow "Clear here" sign on your field.
 
-**Dev commands** (Studio, typed in chat): `/coins 5000` · `/level 5` · `/xp 60` · `/grow 60` · `/grow ripe` · `/away 2` · `/restock` · `/restock full` · `/seeds Pumpkin 10` · `/seeds all 5` · `/tp town` · `/tp barley` · `/tp porch` · `/tp home` · `/tp 3` · `/wipe`. The full list is at the top of `src/server/Services/DevCommandService.luau`.
+**Selling:** at the **Packing Shed** bench (by the driveway) pick a crop and 🚚 Truck or 🏪 Stand, each showing what it pays now, then hold the stamp and let go in the green for grade A (+15%). A truck crate goes into your arms: carry it to the dock and press E to load it, then pull the lever (or **Send now** in the Market window) to send the pickup. Prices lock as it leaves and you're paid when it reaches the City. A stand crate goes to the stockroom: hold E behind your **Farm Stand**'s counter to stock its two baskets, and set prices in the **Stand** crate's window. Shoppers come along the sidewalk while you're in the server.
+
+**Dev commands** (Studio, typed in chat): `/coins 5000` · `/level 5` · `/xp 60` · `/grow 60` · `/grow ripe` · `/away 2` · `/restock` · `/restock full` · `/seeds Pumpkin 10` · `/seeds all 5` · `/crops Pumpkin 40` · `/truck` · `/shoppers 5` · `/tp town` · `/tp barley` · `/tp exchange` · `/tp porch` · `/tp home` · `/tp shed` · `/tp stand` · `/tp 3` · `/wipe`. The full list is at the top of `src/server/Services/DevCommandService.luau`.
 
 ### Walking the greybox
 
@@ -69,9 +71,10 @@ lune run tests/run
 | `workers` | wages, speeds, fees, station caps |
 | `pipeline` | the farm running while you're away, with nothing lost or made up |
 | `progression` | the XP curve, harvest and sales XP, level-ups bringing Land Permits |
-| `layout` | nothing in Cloverdale overlaps, the distances in the doc, the raid race outcome (with at least 1 s to spare) |
-| `world` | builds the greybox for real with Lune's Roblox instances and checks it matches the layout; every crop at every stage; the field following a save's land |
+| `layout` | nothing in Cloverdale overlaps, the distances in the doc, the raid race outcome (with at least 1 s to spare), the truck's road and the shoppers' sidewalk keeping out of every farm |
+| `world` | builds the greybox for real with Lune's Roblox instances and checks it matches the layout; the front boundary walled except the gate; the shed, dock, pickup and Farm Stand where the services look; every crop at every stage; the field following a save's land |
 | `barn`, `plot` | crop stacks and barn capacity; which farm a joining player gets |
+| `crate`, `truck`, `shop` | packing and washing to grade A; loading, the price locking at dispatch, paying once on arrival (even after you've left); the Farm Stand's shelves, prices, shoppers buying as often as `demand` says, the rating |
 | `movement` | the anti-teleport check |
 | `config`, `savedata` | the tables agree with each other and with the design doc; saves are DataStore-safe |
 
@@ -86,13 +89,14 @@ lune run tests/run
 ```
 src/shared/   Config/ (Crops, Rarities, Land, Barn, Crime, Market, Shop, Warehouse, Workers, Auction, Growth, Progression, Settings)
               Rules: GrowthRules · SeedStock · BarnRules · PlotRules · MarketPrice · DemandModel · LandRules · ProgressionRules
-                     CrimeRules · FineRules · TravelRules · ZoneRules · AuctionRules · WorkerRules · PipelineRules · MoveRules · Remotes
+                     CrateRules · TruckRules · ShopRules · CrimeRules · FineRules · TravelRules · ZoneRules · AuctionRules
+                     WorkerRules · PipelineRules · MoveRules · Remotes
               PlotLayout (where everything in the valley and in a farm is)
-src/server/   Services/ Data · Movement · Plot · Field · SeedShop · Land · Travel · DevCommand
-              World/ WorldBuilder · FarmArt (the field and crops) · Parts (palette) · LightingSetup
+src/server/   Services/ Data · Movement · Plot · Field · SeedShop · Land · Travel · Market · Warehouse · Truck · Shop · DevCommand
+              World/ WorldBuilder · FarmArt (the field and crops) · YardArt (shed, dock, pickup, Farm Stand) · Parts (palette) · LightingSetup
               Util/ SaveData · Analytics · ActionRemote · Notice · Staff     Packages/ ProfileStore
 src/client/   UI (the Kraft & Crate kit) · PlayerState · Reasons
-              Controllers/ Hud · Hotbar · Field · SeedRack · Barn · Prompt · Sprint
+              Controllers/ Hud · Hotbar · Field · SeedRack · Barn · Shed · Market · Shop · Truck · Shopper · Prompt · Sprint
 tests/        *.test.luau, lib/ (harness, spec, raidrace)
 tools/        check.luau · progression.luau · raidrace.luau · designmap.luau
 docs/         GameDesign.md · ArtDirection.md · PlaytestPlan.md · PlaytestLog.md (+ playtest/ screenshots)

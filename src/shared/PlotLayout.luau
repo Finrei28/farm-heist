@@ -54,7 +54,19 @@ PlotLayout.PLOT = {
 	path = { min = Vector3.new(-8, 0, 0), max = Vector3.new(-2, 0.2, 126) }, -- gate to field
 	gatehouse = { min = Vector3.new(6, 0, 4), max = Vector3.new(15, 9, 13) },
 	driveway = { min = Vector3.new(20, 0, 0), max = Vector3.new(38, 0.2, 48) },
-	warehouse = { min = Vector3.new(14, 0, 48), max = Vector3.new(76, 22, 114) },
+	warehouse = { min = Vector3.new(14, 0, 48), max = Vector3.new(76, 22, 114) }, -- the site; T1 and up fill it
+	-- The Packing Shed (warehouse T0) at the front of the site: one bench
+	-- that washes and packs, by the dock at the top of the driveway where
+	-- the pickup backs in. Crates for the truck are carried bench → dock.
+	shed = { min = Vector3.new(14, 0, 48), max = Vector3.new(46, 12, 72) },
+	bench = Vector3.new(30, 0, 58),
+	dock = { min = Vector3.new(18, 0, 41), max = Vector3.new(42, 0.8, 48) }, -- the loading platform (low enough to step onto)
+	truck = Vector3.new(29, 0, 29), -- the parked pickup's middle, nose to the road, tailgate at the dock
+	lever = Vector3.new(40.5, 0, 44.5), -- the dispatch lever, on the dock
+	dockPile = Vector3.new(21, 0, 44.5), -- where dropped crates wait
+	-- The Farm Stand (shop T0): a counter in the front fence, served over
+	-- from the yard; shoppers stand on the verge outside.
+	stand = { across = -46, width = 20 },
 	stations = { -- inside the warehouse, from the dock back
 		{ id = "Load", z = 57 },
 		{ id = "Pack", z = 73 },
@@ -174,6 +186,91 @@ end
 -- Where arrested players appear: the Police Station porch.
 function PlotLayout.policePorchWorld(): Vector3
 	return PlotLayout.polar(PlotLayout.building("Police").angle, PlotLayout.TOWN.policePorch)
+end
+
+------------------------------------------------------------------------
+-- Routes: the truck to the City, shoppers along the sidewalk
+
+PlotLayout.SIDEWALK = { radius = 235.5, width = 5 } -- between the ring road and the farms' fronts
+local TRUCK_LANE = PlotLayout.RING_ROAD.radius + 4
+
+-- Degrees from north of a world point.
+local function bearing(point: Vector3): number
+	return math.deg(math.atan2(point.X, point.Z)) % 360
+end
+
+-- Points every `step` degrees along a circle, from one bearing to another
+-- (either way round), not including the first.
+local function arc(from: number, to: number, radius: number, step: number)
+	local points = {}
+	local steps = math.max(1, math.ceil(math.abs(to - from) / step))
+	for i = 1, steps do
+		table.insert(points, PlotLayout.polar(from + (to - from) * i / steps, radius))
+	end
+	return points
+end
+
+-- The pickup's road to the City, in world space: out through the truck
+-- gate, round the ring road the short way to the highway, north into the
+-- tunnel. The first leg (dock to gate) is the one it backs up on the way
+-- home.
+function PlotLayout.truckRoute(index: number): { Vector3 }
+	local P = PlotLayout.PLOT
+	local parked = PlotLayout.toWorld(index, P.truck)
+	local out = PlotLayout.toWorld(index, Vector3.new(P.truck.X, 0, -6))
+	local points = { parked, out }
+	local from = bearing(out)
+	local to = if from < 180 then 0 else 360
+	for _, point in arc(from, to, TRUCK_LANE, 6) do
+		table.insert(points, point)
+	end
+	table.insert(points, Vector3.new(0, 0, PlotLayout.HIGHWAY.to + 12))
+	return points
+end
+
+-- A shopper's walk: in along the sidewalk from the woods on the stand's
+-- side, up to the stand's counter, then on past the gate into the woods on
+-- the other side. Returns the points and which one is the counter.
+function PlotLayout.shopperRoute(index: number, lane: number?): ({ Vector3 }, number)
+	local P = PlotLayout.PLOT
+	local axis = PlotLayout.angle(index)
+	local radius = PlotLayout.SIDEWALK.radius + (lane or 0)
+	local counter = PlotLayout.toWorld(index, Vector3.new(P.stand.across + (lane or 0) * 2, 0, -3))
+	local standBearing = bearing(counter)
+	local points = { PlotLayout.polar(axis - 21, radius) }
+	for _, point in arc(axis - 21, standBearing, radius, 4) do
+		table.insert(points, point)
+	end
+	table.insert(points, counter)
+	local at = #points
+	table.insert(points, PlotLayout.polar(standBearing, radius))
+	for _, point in arc(standBearing, axis + 21, radius, 4) do
+		table.insert(points, point)
+	end
+	return points, at
+end
+
+-- Length of a path of points (studs), up to point `upTo` (default: all).
+function PlotLayout.pathLength(points: { Vector3 }, upTo: number?): number
+	local length = 0
+	for i = 2, upTo or #points do
+		length += (points[i] - points[i - 1]).Magnitude
+	end
+	return length
+end
+
+-- The point `distance` studs along a path, and the direction it's heading.
+function PlotLayout.along(points: { Vector3 }, distance: number): (Vector3, Vector3)
+	for i = 2, #points do
+		local a, b = points[i - 1], points[i]
+		local span = (b - a).Magnitude
+		if distance <= span or i == #points then
+			local direction = if span > 0 then (b - a) / span else Vector3.new(0, 0, 1)
+			return a + direction * math.clamp(distance, 0, span), direction
+		end
+		distance -= span
+	end
+	return points[#points], Vector3.new(0, 0, 1)
 end
 
 return PlotLayout

@@ -41,10 +41,15 @@ Build them in `DevCommandService` (Studio only, plus `Util/Staff` in live server
 | `/coins N` ✅ | add coins | Stage B |
 | `/level N` ✅ · `/xp N` ✅ | set XP to reach level N (and its Land Permits) · add XP | Stage B |
 | `/grow S` ✅ · `/grow ripe` ✅ | fast-forward your field S seconds online · ripen everything | Stage B |
-| `/away H` ✅ | settle H hours offline (growth now; workers and the Welcome back card in week 3) | Stage B–C |
+| `/away H` ✅ | settle H hours offline (growth now; workers and the Welcome back card in week 4) | Stage B–C |
+| `/store N` · `/warehouse N` · `/workers N` | set your Store Level, Warehouse Level, or every worker's level (and fill their XP bars) | Stage C |
 | `/restock` ✅ · `/restock full` ✅ | Barley's next restock now · with everything in stock | Stage B |
 | `/seeds Crop N` ✅ · `/seeds all N` ✅ | give seeds | Stage B |
 | `/tp N` ✅ · `/tp town` ✅ · `/tp porch` ✅ · `/tp barley` ✅ · `/tp home` ✅ | teleport (through `MovementService.Teleport`) | Stage A–B |
+| `/crops Crop N` ✅ | put harvested crops in your barn (C2's "tester with 40 Pumpkins") | Stage C |
+| `/truck` ✅ | your pickup reaches the City and comes home now | Stage C |
+| `/shoppers N` ✅ | the next N shoppers come to your stand 1.5 s apart (C3) | Stage C |
+| `/tp exchange` ✅ · `/tp shed` ✅ · `/tp stand` ✅ | to the Exchange desk, your Packing Shed bench, behind your Farm Stand | Stage C |
 | `/stopwatch` | prints server time to Output (for timing from logs instead of a phone) | Stage A |
 | `/shield off` | end your Sprout Shield and arrival grace now | Stage D |
 | `/ko` · `/suspect` | knock yourself out / mark yourself a Suspect | Stage D |
@@ -85,22 +90,25 @@ If A3 is off by more than 0.7 s, or A4 fails, fix `PlotLayout` before week 1 and
 | B8 | Offline growth | Plant a 2 h crop, `/away 2` | progress | 25% (`Growth.OFFLINE_RATE`) |
 | B9 | 8 players | Clients and Servers × 8, all farming | server heartbeat (Ctrl+F6 MicroProfiler / Stats), client FPS, Network → data in/out | server ≥ 55 Hz, clients ≥ 50 FPS, < 50 KB/s per client |
 
-## Stage C: selling, workers, coming back (after weeks 2–3)
+## Stage C: selling, your store, workers, coming back (after weeks 3–4)
 
-**Question:** do players understand and enjoy the truck vs shop choice, and do workers feel worth it?
+**Question:** do players understand and enjoy the truck vs store choice, do they enjoy building their store, and do workers feel worth levelling?
 
 | # | Case | Steps | Measure | Pass |
 |---|---|---|---|---|
 | C1 | Truck | Pack 2 crates, load, dispatch | understood the locked price? | tester explains "the price locks when it leaves" |
 | C2 | Truck vs shop | Tester with 40 Pumpkins; market shows ▼; ask "where would you sell?" | their choice and reason | ≥ 2 of 3 testers pick the shop *because* the market is low |
-| C3 | Shop pricing | Set a price, watch shoppers for 3 min | sales/min vs the window's estimate | within ±30% of `DemandModel` |
-| C4 | Bottleneck | T1 warehouse, 1 Packer, lots of Sorters | do they spot the orange station and fix it? | yes, within 2 min |
-| C5 | Workers offline | Hire a full T1 crew, `/away 8` | Welcome back numbers vs `PipelineRules.settle` with the same state | within ±5% (it's the same code: a big gap is a service bug) |
+| C3 | Store pricing | Set a price, watch shoppers for 3 min | sales/min vs the window's estimate | within ±30% of `DemandModel` |
+| C4 | Bottleneck | Warehouse Level 5, 1 Packer, lots of Sorters | do they spot the orange station and fix it? | yes, within 2 min |
+| C5 | Workers offline | Hire a full Level 5 crew, `/away 8` | Welcome back numbers vs `PipelineRules.settle` with the same state | within ±5% (it's the same code: a big gap is a service bug) |
 | C6 | Economy pace | Two testers play 45 min from fresh | level and coins at 15 / 30 / 45 min | within ±30% of `tools/progression` (daily profile, first day) |
 | C7 | Wages strike | Run coins to 0 with workers | strike shows and is understood | tester says why they stopped |
-| C8 | Farm Guide | Fresh save, new tester, follow the Guide card to the end (moved from Stage B: its steps need the truck and the Farm Stand) | time per step; where they stalled | Guide done in ≤ 15 min; no step stalls > 60 s |
+| C8 | Farm Guide | Fresh save, new tester, follow the Guide card to the end (moved from Stage B: its steps need the truck and the store) | time per step; where they stalled | Guide done in ≤ 15 min; no step stalls > 60 s |
+| C9 | Decorate on a phone | Phone, Store Level 5 (`/store 5`), "add a shelf and two decorations, and keep it selling" | time; refused placements; did they read why? | done in ≤ 4 min; every refusal understood without help |
+| C10 | Worker levels | A worker with a full XP bar; ask "what does Train do, and is it worth it?" | their answer | tester mentions faster *and* cheaper per job |
+| C11 | Upgrade ladders | Ask "what does the next Warehouse Level give you?" | their answer | read straight off the Upgrade tab |
 
-## Stage D: raids, the big one (after weeks 4–5)
+## Stage D: raids, the big one (after weeks 5–6)
 
 **Question:** are raids fun and fair from both sides, and is every way of dodging an arrest really closed?
 
@@ -138,7 +146,7 @@ If A3 is off by more than 0.7 s, or A4 fails, fix `PlotLayout` before week 1 and
 | A thief can say what made them a Suspect | ≥ 4 of 5 testers |
 | Bonked innocents who felt picked on | 0 who'd quit over it |
 
-## Stage E: auction, weather, trading, scale (after weeks 6–7)
+## Stage E: auction, weather, trading, scale (after weeks 7–8)
 
 | # | Case | Pass |
 |---|---|---|
@@ -171,7 +179,7 @@ Before launch, also check Creator Analytics is receiving the onboarding funnel (
 |---|---|---|
 | A | week 1 | A3 and A4 pass |
 | B | week 2 | B1, B7, B9 pass |
-| C | week 4 | C2 and C6 pass (or the sim is retuned to match) |
-| D | week 6 | every D-dodge case passes; D-fun averages ≥ 4.0; arrest rate 30–55% |
+| C | week 5 | C2, C6 and C9 pass (or the sim is retuned to match) |
+| D | week 7 | every D-dodge case passes; D-fun averages ≥ 4.0; arrest rate 30–55% |
 | E | launch prep | E5 passes |
 | F | launch | all Stage F bars met |

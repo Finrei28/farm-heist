@@ -34,7 +34,12 @@ local TEMPLATE = {
 	},
 	seedStock = { index = -1, bought = {} }, -- packs bought in the current Barley's restock (shared/SeedStock)
 
-	warehouse = { tier = 0, buildingUntil = 0, queues = {}, routes = {}, trucks = {} }, -- trucks: saved TruckRuns
+	-- The warehouse (shared/TruckRules): crates in the truck's bed, crates set
+	-- down at the dock, and truck runs on the road (paid when they reach the
+	-- City, even if you've left by then).
+	warehouse = { tier = 0, buildingUntil = 0, queues = {}, routes = {}, bed = {}, dock = {}, trucks = {} },
+	-- Your shop (shared/ShopRules): shelves ["1"] = { crop, units, a }, the
+	-- stockroom's crates, your prices, the last shoppers' scores.
 	shop = { tier = 0, shelves = {}, stockroom = {}, prices = {}, rating = { scores = {} } },
 	workers = {}, -- ["uid"] = { type, level, trait, hiredAt } (shared/WorkerRules)
 	freeHireUsed = false,

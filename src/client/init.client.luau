@@ -59,7 +59,10 @@ end
 PlayerState.Start()
 
 local Controllers = script.Controllers
-for _, name in { "HudController", "HotbarController", "FieldController", "SeedRackController", "BarnController", "PromptController", "SprintController" } do
+for _, name in {
+	"HudController", "HotbarController", "FieldController", "SeedRackController", "BarnController", "ShopController", "MarketController",
+	"ShedController", "TruckController", "ShopperController", "PromptController", "SprintController",
+} do
 	task.spawn(function() -- (one waiting on the world doesn't hold up the rest)
 		local ok, err = pcall(function()
 			require(Controllers[name]).Start()

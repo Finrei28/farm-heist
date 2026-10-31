@@ -57,6 +57,11 @@ local PUMPKIN = Color3.fromRGB(240, 127, 30)
 local CORN = Color3.fromRGB(245, 211, 61)
 local SPARKLE = "rbxasset://textures/particles/sparkles_main.dds"
 
+-- The colour a crop's produce shows in (crates, shelves).
+function FarmArt.cropColor(cropId: string): Color3
+	return if cropId == "Carrot" then ORANGE elseif cropId == "Pumpkin" then PUMPKIN elseif cropId == "Corn" then CORN else FRUIT[cropId] or ORANGE
+end
+
 -- The stage a tile shows.
 function FarmArt.stage(tile): string
 	if GrowthRules.isRipe(tile) then

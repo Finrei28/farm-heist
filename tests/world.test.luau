@@ -58,15 +58,33 @@ return function(spec, harness)
 		end)
 		it("walls every fence higher than a jump, leaving only the gate open", function()
 			local plot = world.Plot1
-			local blockers = 0
+			local frame = PlotLayout.frame(1)
+			local front = {} -- the x spans walled along the front boundary
 			for _, child in plot:GetChildren() do
 				if string.match(child.Name, "Blocker$") then
-					blockers += 1
 					expect(child.Size.Y).toBeGreaterThan(7.2 + 1) -- Roblox's default jump is about 7.2 studs
 					expect(child.CanCollide).toBe(true)
+					local centre = frame:PointToObjectSpace(child.CFrame.Position)
+					if math.abs(centre.Z - child.Size.Z / 2 - (-1)) < 1.1 then
+						table.insert(front, { centre.X - child.Size.X / 2, centre.X + child.Size.X / 2 })
+					end
 				end
 			end
-			expect(blockers).toBe(4) -- the back fence and three front stretches; the gate stays open
+			-- the fence, the Farm Stand's counter and the truck gate wall the
+			-- whole front; only the farm gate stays open
+			local gate = PlotLayout.PLOT.gate
+			for x = -PlotLayout.WIDTH / 2 + 0.25, PlotLayout.WIDTH / 2 - 0.25, 0.5 do
+				local walled = false
+				for _, span in front do
+					if x >= span[1] and x <= span[2] then
+						walled = true
+					end
+				end
+				local inGate = math.abs(x - gate.across) < gate.width / 2
+				if walled == inGate then
+					error(`front boundary at x = {x}: {if inGate then "the gate is walled" else "a gap in the wall"}`)
+				end
+			end
 			expect(plot.HedgeLeft.Size.Y).toBeGreaterThan(7.2 + 1)
 			-- a jump hits the fence you see, not the invisible wall above it
 			local top = 0
@@ -74,6 +92,27 @@ return function(spec, harness)
 				top = math.max(top, rail.CFrame.Position.Y + rail.Size.Y / 2)
 			end
 			expect(top).toBeGreaterThan(7.2 + 0.5)
+		end)
+		it("builds each farm's selling side where the services look for it", function()
+			for index = 1, PlotLayout.COUNT do
+				local plot = world[`Plot{index}`]
+				expect(plot.PackingShed:FindFirstChild("Bench") ~= nil).toBe(true)
+				expect(plot:FindFirstChild("LoadSpot") ~= nil).toBe(true)
+				expect(plot:FindFirstChild("LeverBase") ~= nil).toBe(true)
+				expect(plot:FindFirstChild("DockPile") ~= nil).toBe(true)
+				expect(plot.Truck:FindFirstChild("Bed") ~= nil).toBe(true)
+				expect(plot.TruckGate:FindFirstChild("Boom") ~= nil).toBe(true)
+				expect(plot.FarmStand:FindFirstChild("Counter") ~= nil).toBe(true)
+				for shelf = 1, 2 do
+					expect(plot.FarmStand[`Shelf{shelf}`]:FindFirstChild("PriceTag") ~= nil).toBe(true)
+				end
+				-- the truck is parked where its route starts (TruckController drives it from there)
+				local parked = plot.Truck.WorldPivot.Position -- (Lune has no GetPivot; the model has no PrimaryPart, so they agree)
+				local start = PlotLayout.truckRoute(index)[1]
+				expect(math.abs(parked.X - start.X) + math.abs(parked.Z - start.Z)).toBeLessThan(0.01)
+			end
+			expect(world.Town:FindFirstChild("ExchangeDesk") ~= nil).toBe(true)
+			expect(world:FindFirstChild("Sidewalk") ~= nil).toBe(true)
 		end)
 		it("anchors everything (nothing falls when Play starts)", function()
 			for _, descendant in world:GetDescendants() do

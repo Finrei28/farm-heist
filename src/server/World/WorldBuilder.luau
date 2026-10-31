@@ -1,8 +1,9 @@
 -- Builds the greybox of Cloverdale from shared/PlotLayout (docs/GameDesign.md
 -- §3): the valley and hills, the town square and its five buildings, the
--- ring road, the highway and tunnel, the back trail, and the 8 farms with
--- their hedges, fences, gate, shop, warehouse, farmhouse and 8×8 field (the
--- start corner tilled, the rest overgrown: World/FarmArt). Plain blocks and
+-- ring road and its sidewalk, the highway and tunnel, the back trail, and the
+-- 8 farms with their hedges, fences, gate, Farm Stand, Packing Shed, pickup,
+-- farmhouse and 8×8 field (the start corner tilled, the rest overgrown:
+-- World/FarmArt; the selling side: World/YardArt). Plain blocks and
 -- labels, in the art direction's palette (docs/ArtDirection.md): enough to
 -- walk the distances and time a raid until the look pass replaces them.
 --
@@ -14,10 +15,11 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local PlotLayout = require(ReplicatedStorage.Shared.PlotLayout)
 local Parts = require(script.Parent.Parts)
 local FarmArt = require(script.Parent.FarmArt)
+local YardArt = require(script.Parent.YardArt)
 
 local WorldBuilder = {}
 
-WorldBuilder.VERSION = 3
+WorldBuilder.VERSION = 4
 
 local COLORS = Parts.COLORS
 local part, plotBox = Parts.part, Parts.plotBox
@@ -99,8 +101,9 @@ local function buildValley(world: Instance)
 	-- (Nothing flat may sit at the same height as something it overlaps: the
 	-- two surfaces would fight over which one shows and flicker as the
 	-- camera moves. So the ground goes in layers: valley 0, lawn and town
-	-- paths 0.2, roads and trails 0.3, farm paths 0.35, the highway 0.42,
-	-- the plaza 0.4.)
+	-- paths 0.2, roads, trails and the sidewalk 0.3, farm paths 0.35, the
+	-- highway 0.42, the plaza 0.4; in a farm, the warehouse site 0.3, the
+	-- shed floor 0.5, the dock 0.8.)
 	local highway = PlotLayout.HIGHWAY
 	part({
 		Name = "Highway",
@@ -159,6 +162,11 @@ local function buildTown(world: Instance)
 	barley.Parent = town
 	label("Barley", barley.Body, 4.6, 1.4, 90)
 
+	-- The Exchange's desk (MarketService opens the Market window from it);
+	-- the price board on the building's face is drawn by the clients.
+	local deskAt = PlotLayout.frontOf("Exchange", 4) + Vector3.new(0, 1.75, 0)
+	part({ Name = "ExchangeDesk", Size = Vector3.new(12, 3.5, 3), CFrame = CFrame.lookAt(deskAt, Vector3.new(0, deskAt.Y, 0)), Color = COLORS.slate }, town)
+
 	local spawn = Instance.new("SpawnLocation")
 	spawn.Name = "TownSpawn"
 	spawn.Anchored = true
@@ -173,6 +181,7 @@ local function buildTown(world: Instance)
 	spawn.Parent = town
 
 	ring("RingRoad", PlotLayout.RING_ROAD.radius, PlotLayout.RING_ROAD.width, 72, COLORS.road, world)
+	ring("Sidewalk", PlotLayout.SIDEWALK.radius, PlotLayout.SIDEWALK.width, 120, COLORS.plaza, world) -- (shoppers walk it)
 	ring("BackTrail", PlotLayout.BACK_TRAIL.radius, PlotLayout.BACK_TRAIL.width, 120, COLORS.trail, world)
 
 	-- Paths from the square to each farm's gate.
@@ -234,30 +243,26 @@ local function buildPlot(index: number, world: Instance)
 	fence("BackFence", Vector3.new(-W / 2, 0, D), Vector3.new(W / 2, 0, D + 1))
 	local gateLeft = P.gate.across - P.gate.width / 2
 	local gateRight = P.gate.across + P.gate.width / 2
-	fence("FrontFenceShopSide", Vector3.new(-W / 2, 0, -1), Vector3.new(P.shop.min.X, 0, 0))
-	fence("FrontFenceByGate", Vector3.new(P.shop.max.X, 0, -1), Vector3.new(gateLeft, 0, 0))
-	fence("FrontFence", Vector3.new(gateRight, 0, -1), Vector3.new(W / 2, 0, 0)) -- (with the trucks-only gate across the driveway)
+	-- The Farm Stand's counter and the truck gate are part of the front
+	-- fence (World/YardArt): neither is a way in.
+	local standLeft = P.stand.across - P.stand.width / 2
+	local standRight = P.stand.across + P.stand.width / 2
+	fence("FrontFenceShopSide", Vector3.new(-W / 2, 0, -1), Vector3.new(standLeft, 0, 0))
+	fence("FrontFenceByGate", Vector3.new(standRight, 0, -1), Vector3.new(gateLeft, 0, 0))
+	fence("FrontFence", Vector3.new(gateRight, 0, -1), Vector3.new(P.driveway.min.X, 0, 0))
+	fence("FrontFenceFar", Vector3.new(P.driveway.max.X, 0, -1), Vector3.new(W / 2, 0, 0))
 	local gatePost = plotBox("Gate", frame, Vector3.new(gateLeft, 0, -1.5), Vector3.new(gateRight, 0.5, 0.5), { Color = COLORS.hay }, model)
 	label(`Farm {index}: for rent`, gatePost, 8, 3, 200)
 
-	-- Buildings.
-	label("Shop", plotBox("Shop", frame, P.shop.min, P.shop.max, { Color = COLORS.barnRed }, model), 10, 3, 120)
+	-- Buildings. The shop lot behind the Farm Stand stays lawn until the
+	-- Farm Shop (T1) is built on it.
 	plotBox("Gatehouse", frame, P.gatehouse.min, P.gatehouse.max, { Color = COLORS.cream }, model)
 	-- (on the lawn, not level with it)
 	plotBox("Driveway", frame, P.driveway.min + Vector3.new(0, 0.2, 0), P.driveway.max + Vector3.new(0, 0.15, 0), { Color = COLORS.road }, model)
 	plotBox("Path", frame, P.path.min + Vector3.new(0, 0.2, 0), P.path.max + Vector3.new(0, 0.15, 0), { Color = COLORS.trail }, model)
-	-- The warehouse: a roof on posts, so you can walk in to the stations.
-	local wh = P.warehouse
-	plotBox("WarehouseFloor", frame, wh.min, Vector3.new(wh.max.X, 0.4, wh.max.Z), { Color = COLORS.slate }, model)
-	local roof = plotBox("WarehouseRoof", frame, Vector3.new(wh.min.X, wh.max.Y - 1, wh.min.Z), wh.max, { Color = COLORS.slate }, model)
-	label("Warehouse", roof, 4, 3, 120)
-	for _, corner in { { wh.min.X, wh.min.Z }, { wh.max.X - 2, wh.min.Z }, { wh.min.X, wh.max.Z - 2 }, { wh.max.X - 2, wh.max.Z - 2 } } do
-		plotBox("Post", frame, Vector3.new(corner[1], 0, corner[2]), Vector3.new(corner[1] + 2, wh.max.Y - 1, corner[2] + 2), { Color = COLORS.slate }, model)
-	end
-	for _, station in P.stations do
-		local pad = plotBox(station.id, frame, Vector3.new(P.stationAcross - 6, 0, station.z - 5), Vector3.new(P.stationAcross + 6, 3, station.z + 5), { Color = COLORS.cream }, model)
-		label(station.id, pad, 4, 1.5, 45)
-	end
+	-- Selling at tier 0: the Packing Shed and dock, the pickup, the truck
+	-- gate, the Farm Stand (the warehouse's stations come with T1).
+	YardArt.build(model, frame)
 	label("Farmhouse & barn", plotBox("Farmhouse", frame, P.farmhouse.min, P.farmhouse.max, { Color = COLORS.cream }, model), 12, 3, 120)
 	local door = part({
 		Name = "Door", Size = Vector3.new(4, 0.4, 4),

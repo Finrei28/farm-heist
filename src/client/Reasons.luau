@@ -20,6 +20,12 @@ local REASONS = {
 	NoCharacter = nil,
 	Cooldown = nil,
 	NotLoaded = "Still loading your farm...",
+	NoCrops = "None of those left in your barn.",
+	Carrying = "Load the crate you're carrying into the pickup first.",
+	NotWashing = "Hold the stamp a little longer.",
+	TruckAway = "The pickup is out on the road.",
+	TruckFull = "The pickup is full: send it!",
+	TruckEmpty = "Load some crates into the pickup first.",
 }
 
 return function(reason: string?, extra: string?): string?

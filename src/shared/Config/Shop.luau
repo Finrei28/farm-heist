@@ -13,7 +13,17 @@ return {
 	UNITS_PER_SHOPPER = 2.5, -- 1–4 units, on average
 	PATIENCE = 20, -- seconds a shopper waits at the register
 	RATING_WINDOW = 50, -- shoppers the rating averages over
+	START_STARS = 3, -- a shop nobody has visited yet ...
+	RATING_SETTLE = 10, -- ... counts as this many 3★ shoppers until real ones replace them
+	-- What each shopper adds to the rating (1–5): they bought; everything
+	-- they looked at was too dear. (A shop with nothing on its shelves is
+	-- closed, so nobody comes to find it empty: a new farm doesn't sink to
+	-- 1★ before its first harvest. Waiting at a register comes with T1.)
+	SCORE_BOUGHT = 5,
+	SCORE_TOO_DEAR = 2,
 	FLOW_PER_STAR = 0.15, -- shoppers come this much more often per star above 3 (less below)
+	SHOPPER_SPEED = 8, -- studs a second along the sidewalk (shared/PlotLayout.shopperRoute)
+	SHOPPER_BROWSE = 2.5, -- seconds they stand at the counter before walking on
 
 	TIERS = { -- index 1 = T0; interval = seconds between shoppers at 3★
 		{ id = "FarmStand", name = "Farm Stand", cost = 0, level = 1, shelves = 2, shelfUnits = 20, registers = 0, interval = 20 },

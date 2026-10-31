@@ -9,6 +9,12 @@
 --   SeedAction     C→S  ("Buy" "cropId|count") -> { ok, reason? }   Barley's Seeds (shared/SeedStock)
 --   LandAction     C→S  ("Clear" block) -> { ok, reason? }   Land Permits (shared/LandRules; obstacles are server prompts)
 --   TravelAction   C→S  ("Home" | "Town" | "Visit" userId | "Cancel") -> { ok, reason? }   (shared/TravelRules)
+--   WarehouseAction C→S ("Wash" "stackKey|Truck" or "stackKey|Stand" | "Pack") -> { ok, reason?, result? }
+--                        the Packing Shed bench: Wash starts the hold, Pack is letting go (result = { grade, units, crop, to })
+--   TruckAction    C→S  ("Dispatch") -> { ok, reason? }   send the loaded truck (shared/TruckRules)
+--   ShopAction     C→S  ("Price" "cropId|coins" | "TakeDown" shelf) -> { ok, reason? }   (shared/ShopRules)
+--   ShopperEvent   S→C  ("Arrive", { plot, id, at, lane, look }) | ("Done", { plot, id, crop?, units, coins })
+--                        NPC shoppers at the Farm Stands, drawn by the clients
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
@@ -20,6 +26,10 @@ local DEFINITIONS = {
 	SeedAction = "RemoteFunction",
 	LandAction = "RemoteFunction",
 	TravelAction = "RemoteFunction",
+	WarehouseAction = "RemoteFunction",
+	TruckAction = "RemoteFunction",
+	ShopAction = "RemoteFunction",
+	ShopperEvent = "RemoteEvent",
 }
 
 local IS_SERVER = RunService:IsServer()

@@ -193,6 +193,57 @@ return function(spec, harness)
 		end)
 	end)
 
+	describe("routes (week 2)", function()
+		local function inAnyFarm(point)
+			for index = 1, PlotLayout.COUNT do
+				local p = PlotLayout.frame(index):PointToObjectSpace(point)
+				if math.abs(p.X) < PlotLayout.WIDTH / 2 + 3 and p.Z > 0 and p.Z < D then
+					return index
+				end
+			end
+			return nil
+		end
+		it("the pickup leaves through its truck gate, keeps off every farm, and ends in the tunnel", function()
+			for index = 1, PlotLayout.COUNT do
+				local route = PlotLayout.truckRoute(index)
+				local P = PlotLayout.PLOT
+				local gate = PlotLayout.frame(index):PointToObjectSpace(route[2])
+				expect(gate.Z < 0).toBe(true)
+				expect(gate.X > P.driveway.min.X and gate.X < P.driveway.max.X).toBe(true)
+				for i = 2, #route do
+					expect(inAnyFarm(route[i])).toBe(nil)
+				end
+				local last = route[#route]
+				expect(last.Z).toBeGreaterThan(PlotLayout.HIGHWAY.to)
+				expect(math.abs(last.X)).toBeLessThan(PlotLayout.HIGHWAY.width / 2)
+				-- the short way round: at most half the ring
+				expect(PlotLayout.pathLength(route)).toBeLessThan(math.pi * PlotLayout.RING_ROAD.radius + 500)
+			end
+		end)
+		it("shoppers walk the sidewalk to the stand's counter without setting foot in a farm", function()
+			for index = 1, PlotLayout.COUNT do
+				for _, lane in { -1, 0, 1 } do
+					local route, counter = PlotLayout.shopperRoute(index, lane)
+					for _, point in route do
+						expect(inAnyFarm(point)).toBe(nil)
+					end
+					local at = PlotLayout.frame(index):PointToObjectSpace(route[counter])
+					expect(math.abs(at.X - PlotLayout.PLOT.stand.across)).toBeLessThan(PlotLayout.PLOT.stand.width / 2)
+					expect(at.Z > -5 and at.Z < 0).toBe(true)
+				end
+			end
+		end)
+		it("measures and walks a path", function()
+			local path = { Vector3.new(0, 0, 0), Vector3.new(0, 0, 10), Vector3.new(10, 0, 10) }
+			expect(PlotLayout.pathLength(path)).toBe(20)
+			expect(PlotLayout.pathLength(path, 2)).toBe(10)
+			local at, heading = PlotLayout.along(path, 15)
+			expect((at - Vector3.new(5, 0, 10)).Magnitude).toBeLessThan(1e-6)
+			expect((heading - Vector3.new(1, 0, 0)).Magnitude).toBeLessThan(1e-6)
+			expect((PlotLayout.along(path, 99) - Vector3.new(10, 0, 10)).Magnitude).toBeLessThan(1e-6)
+		end)
+	end)
+
 	describe("the raid race (§4.11)", function()
 		local race = raidRace(harness)
 		it("an undefended back-row raid beats an owner who isn't at the field", function()

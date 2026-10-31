@@ -8,7 +8,10 @@
 --   /away 2              as if you'd been away N hours (offline speed, 25%)
 --   /restock [full]      Barley moves to the next restock now (full = every seed in)
 --   /seeds Pumpkin 10    give seeds by crop id (/seeds all 5 = 5 of each)
---   /tp town · /tp porch · /tp barley · /tp home · /tp 3 (a farm's gate)
+--   /crops Pumpkin 40    put harvested crops in your barn (past its capacity)
+--   /truck               your pickup reaches the City and comes home now
+--   /shoppers 5          the next N shoppers come to your stand one after another
+--   /tp town · /tp porch · /tp barley · /tp exchange · /tp home · /tp shed · /tp stand · /tp 3 (a farm's gate)
 --   /wipe                start your save over (in place)
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -31,7 +34,9 @@ local DataService = require(script.Parent.DataService)
 local FieldService = require(script.Parent.FieldService)
 local LandService = require(script.Parent.LandService)
 local PlotService = require(script.Parent.PlotService)
+local ShopService = require(script.Parent.ShopService)
 local TravelService = require(script.Parent.TravelService)
+local TruckService = require(script.Parent.TruckService)
 
 local DevCommandService = {}
 
@@ -143,6 +148,29 @@ function DevCommandService.Start()
 		reply(player, `+{count} seeds`)
 	end)
 
+	register("DevCrops", "/crops", function(player, data, args)
+		local crop = findCrop(args[2])
+		if not crop then
+			reply(player, "Which crop? e.g. /crops Pumpkin 40")
+			return
+		end
+		local count = math.clamp(math.floor(tonumber(args[3]) or 24), 1, 9999)
+		BarnRules.addCrops(data.inventory, BarnRules.key(crop.id), count)
+		DataService.NotifyState(player)
+		reply(player, `+{count} {crop.name} in your barn`)
+	end)
+
+	register("DevTruck", "/truck", function(player)
+		TruckService.Hurry(player)
+		reply(player, "Pickup: there and back")
+	end)
+
+	register("DevShoppers", "/shoppers", function(player, _data, args)
+		local count = math.clamp(math.floor(tonumber(args[2]) or 5), 1, 50)
+		ShopService.Rush(player, count)
+		reply(player, `{count} shoppers on their way (if the stand has stock)`)
+	end)
+
 	register("DevTeleport", "/tp", function(player, _data, args)
 		local where = string.lower(args[2] or "town")
 		local frame
@@ -154,16 +182,26 @@ function DevCommandService.Start()
 		elseif where == "barley" then
 			local at = PlotLayout.frontOf("Seeds", 10) + Vector3.new(0, 3, 0)
 			frame = CFrame.lookAt(at, PlotLayout.frontOf("Seeds", 0) + Vector3.new(0, 3, 0))
+		elseif where == "exchange" then
+			local at = PlotLayout.frontOf("Exchange", 12) + Vector3.new(0, 3, 0)
+			frame = CFrame.lookAt(at, PlotLayout.frontOf("Exchange", 0) + Vector3.new(0, 3, 0))
 		elseif where == "home" then
 			local index = PlotService.plotOf(player)
 			frame = index and PlotService.homeFrame(index)
+		elseif where == "shed" or where == "stand" then
+			local index = PlotService.plotOf(player)
+			if index then
+				local spot = if where == "shed" then PlotLayout.PLOT.bench + Vector3.new(0, 3, -6) else Vector3.new(PlotLayout.PLOT.stand.across, 3, 8)
+				local look = if where == "shed" then PlotLayout.PLOT.bench + Vector3.new(0, 3, 0) else Vector3.new(PlotLayout.PLOT.stand.across, 3, 0)
+				frame = CFrame.lookAt(PlotLayout.toWorld(index, spot), PlotLayout.toWorld(index, look))
+			end
 		elseif tonumber(where) and PlotLayout.COUNT >= tonumber(where) then
 			frame = TravelService.visitFrame(tonumber(where))
 		end
 		if frame then
 			TravelService.Send(player, frame)
 		else
-			reply(player, "Where? /tp town · porch · barley · home · 1–8")
+			reply(player, "Where? /tp town · porch · barley · exchange · home · shed · stand · 1–8")
 		end
 	end)
 

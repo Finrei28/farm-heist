@@ -1,6 +1,6 @@
 # Farm Heist: Game Design Doc
 
-_Status: concept · Last updated 2026-10-30_
+_Status: MVP week 2 built · Last updated 2026-10-31_
 
 ## 1. Pitch
 
@@ -24,10 +24,10 @@ _Status: concept · Last updated 2026-10-30_
 |---|---|---|
 | **Action** | 1–7 s | Plant, water, harvest · steal (hold) · swing the bat · pack a crate |
 | **Crop loop** | 1 min–6 h | Buy seeds → plant → wait (do the warehouse, shop, auction, defence or a raid) → harvest |
-| **Business loop** | 5–15 min | Warehouse: sort → pack → route → truck or shop → coins → workers and upgrades |
+| **Business loop** | 5–15 min | Warehouse: sort → pack → route → truck or store → coins → workers, Warehouse and Store Levels, decor |
 | **Session** | 15–40 min | An auction or two, a weather event, a few raids each way, one upgrade bought |
 | **Daily** | 1–2 visits | Welcome-back summary (offline growth, sales, wages) → daily quests → Harvest Moon event |
-| **Long-term** | weeks | Clear land to 8×8 (by Farm Level) · warehouse T3 · Supermarket · Mythic seeds · Cropdex · Sheriff and Most Wanted boards |
+| **Long-term** | weeks | Clear land to 8×8 (by Farm Level) · Warehouse and Store Level 20 · a decorated Supermarket · a Level 10 crew · Mythic seeds · Cropdex · Sheriff, Most Wanted and Top Store boards |
 
 ```
             ┌──────────── Seeds (Barley's shop · auction · trades) ◀──────────────┐
@@ -88,7 +88,7 @@ A round green valley with hills all round and a tunnel in the north cliff where 
 ```
 
 - **Only two ways in:** the front gate (past the farmhouse, where the owner spawns) or over the back fence (slow and loud, but right by the field). Raids get decided by which one a thief picks. The driveway has a truck gate that only trucks pass through, and the shop's back wall closes it off from the yard, so neither is a third way in.
-- The farm is one zone (`PlotZone`, a server-side box). "In your own plot" means the server's trusted position of your character is inside that box (with 1 stud of hysteresis at the edge).
+- The farm is one zone (`PlotZone`, a server-side box). "In your own plot" means the server's trusted position of your character is inside that box (with 1 stud of hysteresis at the edge). **Your store's building is cut out of it** (§4.8): it's a public place on the road, entered from the sidewalk, and its staff door into the yard only opens for you. The cut-out changes only when the store becomes a bigger building.
 - A plot only exists in the server while its owner is there. When they leave it's packed away (saved) and the plot goes back to "For Rent".
 
 ## 4. Systems
@@ -101,7 +101,7 @@ A skippable checklist card, the same idea as Tide Market's Angler's Guide. Each 
 4. **Pack a crate** at the Packing Shed bench (the pack minigame)
 5. **Load & dispatch** the pickup (the receipt shows the price you locked)
 6. **Buy seeds** from Barley in town (the **Home** button brings you back)
-7. **Stock your Farm Stand** and set a price
+7. **Stock your store**: pack a crate with 🏪 Store, press Fill at a display, set a price
 8. **Hire a Shed Hand** at the Hiring Hall (Patty: "First one's on the house!")
 
 Steps 6–7 need a second harvest, so the card says "Plant your new seeds" in between. Farm Level 2 (needed to hire) comes at 60 XP, which the Guide reaches on its own. It also gives the first Land Permit (§4.1b), and the "all done" card points at the glowing block to clear. Finishing pays **300 coins** once. A marker and an edge arrow point to each spot, and the HUD button you need pulses.
@@ -111,7 +111,7 @@ Steps 6–7 need a second harvest, so the card says "Plant your new seeds" in be
 ### 4.1 Plots
 - One per player, given out on join: the free plot next to a friend if one is in the server, otherwise the nearest free plot to the highway. Your farm is saved *relative to the plot*, so it rebuilds the same on any plot in any server.
 - **You join at your farmhouse door.** The first time, a short fly-over from the town to your farm shows where everything is.
-- **Start:** 100 coins, 5 Carrot seeds, a 4×4 field, the free Packing Shed, a free Farm Stand, the farmhouse, a wooden back fence and an unlocked gate.
+- **Start:** 100 coins, 5 Carrot seeds, a 4×4 field, the Packing Shed (Warehouse Level 1), a Corner Store (Store Level 1) with its starter kit, the farmhouse, a wooden back fence and an unlocked gate.
 - **Land:** the field is an 8×8 grid, but at the start only the 4×4 corner by the farmhouse is cleared. The rest is overgrown and opens up as you level up (§4.1b).
 - **Trusted list:** up to 10 players (friends first in the picker). Trusted players can walk in and out freely, **water and harvest for you** (the crops go to your barn), can't be hit by your bat, and can't steal from you.
 - **Arrival grace:** for 2 minutes after you join a server your field is protected (the same dome as the Sprout Shield), so you can harvest what ripened while you were away. During it you can't steal either.
@@ -139,7 +139,7 @@ Your farm grows with you. The field's 8×8 grid starts with only the 4×4 corner
 - **Clearing:** use a permit on any overgrown block **touching land you've already cleared**. Pay the fee, then clear its 4 obstacles (a stump, a rock, weeds and a bush): each is a 2 s hold with the hoe, with a satisfying pop. A Farmhand clears them in 30 s. Fresh soil gives the first crop planted there +25% growth.
 - **Which block is a real choice.** Blocks towards the back fence are nearer where raiders climb in (see the raid race in §4.11). Blocks beside the farmhouse are safer, but there are only a few of them. The permit card labels each block it can go on: "Safer: near the farmhouse" or "Riskier: near the back fence".
 - **Why level, not coins.** Coins can arrive all at once from a lucky Mythic or a trade. Levels only come from playing: harvesting, shipping, selling, arrests and the Cropdex. Tying land to level keeps the field the size a player has learned to run and defend, so nobody skips the early game with one big trade, and a new player is never left guarding a huge field.
-- **Buildings already work this way:** each warehouse and shop tier needs a Farm Level (§4.6, §4.8). With land on the same ladder, all growth is paced by level.
+- **Buildings already work this way:** each Warehouse and Store Level needs a Farm Level (§4.6, §4.8). With land on the same ladder, all growth is paced by level.
 - **Pacing targets** (to be tuned with a progression sim, like Tide Market's `tools/progression`): permit 1 in the first session (Lv 2 comes during the Farm Guide), permit 6 (Lv 12) around day 3, the full 8×8 around weeks 3–4 for a daily player.
 - Land Permits are never sold for Robux, and you can't trade them.
 
@@ -185,31 +185,50 @@ Your farm grows with you. The field's 8×8 grid starts with only the 4×4 corner
 - **Returns and deposits always fit.** Loot returned to an owner, or emptied from a sack into your own barn, goes in even past capacity. The barn then shows "Over capacity" and harvesting waits until you've sold some.
 - **The Loot Sack is separate.** Stolen crops go in the thief's sack, not their inventory. They become the thief's only when the sack is emptied at the thief's **own barn** (hold E, 1 s). If anything goes wrong before that (§4.12), the loot goes back to the owner.
 
-### 4.6 Distribution Warehouse
-The way to sell in bulk. Crops go through stations, and **each station can be done by hand (a short minigame) or by workers**.
+### 4.6 Warehouse (Warehouse Level 1–20)
+The way to sell in bulk. Crops go through stations, and **each station can be done by hand (a short minigame) or by workers**. The warehouse grows by **Warehouse Level** (1–20). Every level adds one thing you can feel: a bigger truck, a quicker trip, a worker slot, more room, a new tool. Four of them (1, 5, 10, 15) are a new building.
 
 | Step | Station | By hand | What it does |
 |---|---|---|---|
 | 1 | **Intake** | Pick crops and an amount from the barn | Drops them into the intake bin |
 | 2 | **Wash & Sort** | Hold to spray; let go when the meter is in the green | Grades each batch **A** (×1.15 value) or **B** (×1.0). Doing it by hand gives the best chance of an A |
 | 3 | **Pack** | Swipe tape across the crate | Crates by rarity: up to 12 Commons · 10 Uncommons · 6 Rares · 4 Epics · 2 Legendaries · 1 Mythic (in a velvet case). A crate can go out part-full |
-| 4 | **Route** | Set once in the Warehouse window | Each crop goes **→ Truck** or **→ My Shop** (or a split, e.g. 70/30) |
-| 5 | **Load** | Carry the crate to the truck (a hand cart from T1) | Fills the truck bed |
-| 6 | **Dispatch** | Pull the dock lever | The truck leaves. **The price locks now**, and you get a receipt |
+| 4 | **Route** | Set once in the Warehouse window | Each crop goes **→ Truck** or **→ Store** (or a split, e.g. 70/30) |
+| 5 | **Load** | Carry the crate to the truck (a hand cart from Warehouse Level 5) | Fills the truck bed |
+| 6 | **Dispatch** | Pull the dock lever, or **Send now** in the Market window | The truck leaves. **The price locks now**, and you get a receipt |
 
-- **The truck** drives the ring road and the highway into the tunnel. **You're paid when it reaches the City** (half the trip). It comes back empty at the end of the round trip. Each truck run is one `TruckRun` (`{crates, lockedPrices, departAt, arriveAt, returnAt}`) saved in your profile. If you're in the server at `arriveAt` you're paid then; if you've left, it's paid from the saved run the next time you join (any server), shown on the Welcome back card.
-- **At T0 there's no Intake or route rules:** the Packing Shed bench pulls crops straight from the barn, and each crate you pack asks **Truck or Stand?** Intake and route rules come with T1.
-- Crates routed to the shop go to the **Stockroom** (§4.8).
-- **Tiers** (`Config/Warehouse.luau`). Building takes time (construction workers and scaffolding), runs at the same online/offline rates as growth, and the old building keeps working until the new one is done.
+- **The Packing Shed (Levels 1–4) has no Intake or route rules:** its bench pulls crops straight from the barn. Each barn stack has two buttons with what each pays right now, **🚚 Truck 21** (today's market price) and **🏪 Store 24** (your price there), so you choose with both numbers in front of you. Then you **hold to wash** and let go in the green for grade A; the crate packs itself (the tape swipe is the Pack station's job from Level 5; one hold per crate is enough on a phone). A truck crate goes **into your arms**: carry it to the dock and "Load crate". A store crate goes to your store's stockroom (§4.8). (`WarehouseService`, `shared/CrateRules`.)
+- **Nothing gets lost on the way to the truck.** If you leave your farm, travel, respawn or quit while carrying a crate, it's set down at the dock, and "Load crate" takes from that pile too.
+- **The truck** backs up to the dock at the top of the driveway. "Send the pickup" is the lever on the dock, or **Send now** in the Market window from anywhere (so you can watch the prices and send at the right moment). It drives out through a striped boom gate (people can't pass it), round the ring road the short way and up the highway into the tunnel; the crates ride along until they're sold, and it comes back empty. A paper receipt lists each crate and the price it locked. **You're paid when it reaches the City** (half the trip). Each run is a saved `TruckRun`: if you've left by then, it's paid the next time you join (any server), shown on the Welcome back card. (`TruckService`, `shared/TruckRules`; clients drive the truck from its `DepartAt`/`ArriveAt`/`ReturnAt` attributes.)
+- **The Cold Room** holds packed crates waiting for a truck (at the Packing Shed it's the rack on the dock). When it's full, packing pauses. It's what lets you **hold crates for a better price**: wait for ▲ on the board, or give your Driver a price rule (§4.9).
+- **Levelling up:** the Warehouse window's **Upgrade** tab is a blueprint with the level ladder: where you are, the next level's card (cost, Farm Level needed, what it adds) and **Upgrade**. Ordinary levels are instant. The four building levels take time to build (builders and scaffolding, at the same online/offline rates as growth) and the old building keeps working until the new one is done. Levels never go down.
 
-| Tier | Name | Cost · level | Stations | Truck(s) | Worker caps (Sorter / Packer / Loader / Driver) |
-|---|---|---|---|---|---|
-| T0 | Packing Shed | free | one bench (sort + pack together), a ramp | Pickup: 4 crates, 60 s round trip | 1 Shed Hand does all three |
-| T1 | Distribution Warehouse | 5,000 · Lv 5 · builds in 2 min | Intake, Wash & Sort, Pack, Load, conveyors between them | Box Truck: 12 crates, 90 s | 1 / 2 / 1 / 1 |
-| T2 | Big Warehouse | 40,000 · Lv 12 · 5 min | + Cold Room (holds 40 crates), second dock | 2 × Semi: 30 crates, 120 s | 2 / 3 / 2 / 2 |
-| T3 | Distribution Center | 200,000 · Lv 20 · 10 min | belts ×1.5 speed; Premium contracts (Legendary and Mythic crates +10%) | 2 × Reefer: 40 crates, 100 s | 3 / 4 / 2 / 2 |
+| Lv | Cost | Farm Lv | Truck(s) | New at this level |
+|---|---|---|---|---|
+| 1 | free | 1 | Pickup: 4 crates, 60 s | **Packing Shed**: the bench, the dock, the lever, a dock rack for 6 crates (the Shed Hand stacks crates there while the pickup is out; a crate you set down always fits); 1 Shed Hand |
+| 2 | 800 | 2 | 5 crates | |
+| 3 | 2,000 | 3 | 50 s round trip | dock rack holds 10 |
+| 4 | 3,500 | 4 | 6 crates | 2 Shed Hands |
+| 5 | 8,000 | 5 | Box Truck: 12 crates, 90 s | **Distribution Warehouse** (builds in 2 min): Intake, Wash & Sort, Pack and Load stations on conveyors, a hand cart, route rules, Cold Room 20 crates. Sorter 1 · Packer 1 · Loader 1 · Driver 1 (Shed Hands become Packers) |
+| 6 | 12,000 | 6 | 14 crates | Packer 2 |
+| 7 | 18,000 | 7 | | conveyors ×1.1 · Cold Room 30 |
+| 8 | 26,000 | 8 | 75 s round trip | Sorter 2 |
+| 9 | 36,000 | 10 | 16 crates | Loader 2 |
+| 10 | 60,000 | 12 | 2 × Semi: 24 crates, 120 s | **Big Warehouse** (5 min): a second dock and truck · Driver 2 · Packer 3 · Cold Room 50 |
+| 11 | 80,000 | 13 | 26 crates | |
+| 12 | 105,000 | 14 | | conveyors ×1.2 · Sorter 3 · **Wash Line**: Sorters' grade A chance +5% |
+| 13 | 135,000 | 16 | 28 crates | Packer 4 · Cold Room 70 |
+| 14 | 175,000 | 18 | 30 crates, 110 s | |
+| 15 | 250,000 | 20 | 2 × Reefer: 34 crates, 100 s | **Distribution Center** (10 min): **Premium contracts** (Legendary and Mythic crates +10%) · conveyors ×1.35 · Loader 3 · Cold Room 100 |
+| 16 | 340,000 | 22 | | Packer 5 |
+| 17 | 450,000 | 24 | 38 crates | |
+| 18 | 600,000 | 26 | 80 s round trip | **Express lane** · Sorter 4 |
+| 19 | 780,000 | 28 | 40 crates | conveyors ×1.5 · Cold Room 150 |
+| 20 | 1,000,000 | 30 | 3 × Reefer | a third truck and Driver 3 · gold trim on the building |
 
-- **The Warehouse window is a clipboard** showing the pipeline: each station is a box with its queue count, worker slots (filled or empty, "2/3") and a throughput figure. **The slowest station is highlighted orange** with a tip ("Packing is your bottleneck: hire a Packer or upgrade"). Trucks show a fill bar, an ETA, and the Dispatch button with the price it would lock.
+The whole ladder costs about 4.1 million. In the progression sim (§6.2) a daily player reaches Level 5 on day 2, Level 10 around day 12 and Level 15 around day 30; Level 20 is a goal for the second month.
+
+- **The Warehouse window is a clipboard** with three tabs. **Pipeline:** each station is a box with its queue, worker slots (filled or empty, "2/3", greyed ones saying which level opens them) and a throughput figure. **The slowest station is highlighted orange** with a tip ("Packing is your bottleneck: hire a Packer or upgrade"). Each truck shows a fill bar, an ETA and **Send** with the price it would lock. **Routes:** crop → Truck / Store / split. **Upgrade:** the level ladder above.
 
 ### 4.7 Global market price (the Cloverdale Exchange)
 Every crop's truck price is the same on every server at any moment:
@@ -219,51 +238,141 @@ Every crop's truck price is the same on every server at any moment:
 - **wave(t)**: `1 + 0.12·sin(2πt/45min + φ₁) + 0.08·sin(2πt/3h + φ₂)`, with φ from a hash of the crop id. Smooth ups and downs (0.8–1.2) that are the same on every server without any messaging.
 - **event(t)**: a deterministic schedule from the hour index. Each hour has one **Hot Crop** (×1.5 from :10 to :25) and one **Glut** (×0.75 from :40 to :55), two different crops and never Mythics, announced 2 minutes ahead. Seasonal festivals too (e.g. a Pumpkin Festival in October: pumpkins ×1.3 all week).
 - **supply(t)**: player-driven. Each server adds the units it sold to MemoryStore counters (`Market_<crop>_<window>_<shard 1–8>`, 10-minute windows, written in batches every 30 s). `supply = clamp(1 − 0.12·log₂(1 + sold/expected), 0.7, 1.0)`. If everyone dumps carrots, carrots drop everywhere, so it pays to grow different things. If MemoryStore fails it falls back to 1.0.
-- **The Exchange board** in town and the **Market** window show each crop's price, a ▲/▼ trend, a 3-hour sparkline and the current events. A scrolling ticker across the top of the HUD shows the biggest movers.
+- **The Exchange board** in town (a split-flap board on the grain elevator's face) and the **Market** window (a chalkboard, from the side bar or the Exchange desk) show each crop's price, a ▲/▼ trend over the last 10 minutes, a 3-hour sparkline and this hour's events. A chalk ticker under the purse cycles through the live events and the crops in your barn. The clients work all of it out from `shared/MarketPrice` and the server clock: the same numbers the server locks. Until the supply factor arrives (week 7) supply counts as 1.
 - **The price locks at dispatch.** The skill is choosing *when* to send the truck (or giving a Driver a rule for it, §4.9).
+- **You never have to go to town to see prices.** The **📈 Market** crate on the side bar opens the Market window anywhere (and so does tapping the ticker under the purse), with **Send now** for your truck. The Exchange board and desk in town are there for the look and for players passing by. (Built in week 2.)
 
-### 4.8 Own shop
-Your storefront on the ring road. NPC shoppers walk in, browse your shelves and pay **the prices you set**.
+### 4.8 Your Store (Store Level 1–20)
+Every farm has its own store on the road, from the first minute: NPC shoppers walk in from the sidewalk, browse what you've put out and pay **the prices you set**. You lay it out and decorate it yourself, staff it, and grow it from a little corner store into a supermarket. (It replaces the Farm Stand of week 2, which was the plan's tier 0; the old plan's four fixed tiers had a set number of shelves and no decorating.)
 
-| Tier | Name | Cost · level | Shelves | Checkout | Worker caps (Stocker / Cashier) |
+**The building.** It stands on the shop lot at the front of the farm (56 × 40 studs, the storefront on the sidewalk). Inside is a grid of **4-stud floor cells** that opens up level by level, inside a building that's rebuilt bigger at Levels 5, 10 and 15:
+
+| Store Levels | Building | Floor (cells) | Looks like |
+|---|---|---|---|
+| 1–4 | **Corner Store** | 5×3 → 6×5 | a timber shop with a striped awning and a hand-painted sign with your store's name |
+| 5–9 | **Farm Shop** (builds in 2 min) | 7×5 → 9×7 | a barn-style shop with a big window |
+| 10–14 | **Market Hall** (5 min) | 10×7 → 12×8 | brick and timber, arched windows, a clock |
+| 15–20 | **Supermarket** (10 min) | 12×8 | a glass front, a rooftop sign, a billboard on the ring road |
+
+Floor not open yet is taped off with "Next level!" boxes, so the next expansion is right there to see. The part of the lot the building doesn't cover yet is yard, behind the front fence. At 12×8 (48 × 32 studs, plus the walls and a 6-stud back room for the stockroom) the building fills the lot. When a new building goes up, anyone standing where its walls will be is moved out to the sidewalk or the yard first. **Each new building comes with a free display, already placed in the new space** (Farm Shop: a Tiered Produce Rack · Market Hall: a Glass Showcase · Supermarket: a Self-checkout), so a store grows even for players who never decorate.
+
+**Whose space it is.** The store is a public place on the road, **not part of your farm's zone** (§3): anyone can walk in from the sidewalk and look around (a nice way to show off your store), the bat doesn't come out in it, and nothing in it can be stolen. Only NPC shoppers buy; players swap goods by trading (§4.13). A **staff door** at the back leads to your yard, and it only opens for you (and Trusted friends, §4.11): it's a wall to everyone else, so the store is never a way into the farm. The location chip says "🏪 Sam's Corner Store". You name your store in the Store window (filtered for everyone with Roblox's text filter; if the filter fails, it keeps the default "Sam's Corner Store").
+
+**Decorating.** **Decorate** in the Store window (on your farm or in your store) lifts the camera to a top-down view of the floor with the grid in chalk. A drawer of item cards (Displays · Checkouts · Decor · Wall · My items) slides up from the bottom. Tap a card, then a cell: the item shows green where it fits and red where it doesn't (with why). ⟳ rotates, ✓ buys and places it. Tap a placed item to move, rotate, put it away (it stays yours) or sell it back for half. On a computer: drag with the mouse, R rotates.
+- **The rules** (`shared/StoreLayout`, the same check on the client and the server): items sit inside the open floor and don't overlap. Every display and checkout has a front, and the cell in front of it must be free. **Every one of those front cells must be reachable from the door** through free cells, and each checkout needs 2 free cells for its queue. A move that would cut something off is refused: "This would block the aisle to your Pumpkin shelf". Wall items go on wall cells, never over a door.
+- While you decorate, the store hangs a **"Back soon"** sign: shoppers already inside finish, and no new ones come in until you're done, so nobody walks through moving furniture. Leaving your farm or 5 idle minutes ends it.
+- **Your store starts furnished:** an Honour Box, 2 Produce Crates, a Wooden Shelf and a Potted Plant, already placed. Decorating is never required to sell. (5×3 is the smallest floor that holds that kit with an aisle and a checkout queue: the shelf and crates along the back, the aisle in front of them, the Honour Box by the door with its queue.)
+- At most 80 floor items and 40 wall items, which keeps a full store's parts in check on phones.
+
+**The catalog** (`Config/Store`). Items are bought once with coins and kept ("My items"). Selling one back pays half. Free items (the starter kit and each new building's gift) can be put away but not sold.
+
+| Displays | Size | Holds (slots × units) | Crops | Shoppers pay | Cost | Store Lv |
+|---|---|---|---|---|---|---|
+| Produce Crate | 1×1 | 1 × 12 | Common–Uncommon | ×1.00 | 150 | 1 |
+| Wooden Shelf | 2×1 | 2 × 15 | Common–Rare | ×1.00 | 600 | 1 |
+| Bulk Bin | 1×1 | 1 × 40 | Common | ×0.95 | 900 | 3 |
+| Tiered Produce Rack | 2×1 | 3 × 15 | Common–Rare | ×1.05 | 2,500 | 5 |
+| Chiller Cabinet | 2×1 | 2 × 12 | Uncommon–Epic | ×1.10 | 8,000 | 8 |
+| Glass Showcase | 1×1 | 1 × 4 | Rare–Mythic | ×1.15 | 25,000 | 10 |
+| Velvet Pedestal | 1×1 | 1 × 1 | Legendary–Mythic | ×1.25 | 120,000 | 15 |
+
+"Shoppers pay" is the display's presentation: it multiplies what shoppers are willing to pay for what's on it (§4.8 shoppers). A slot holds one crop.
+
+| Checkouts | Size | Serves | Needs | Cost | Store Lv |
 |---|---|---|---|---|---|
-| T0 | Farm Stand | free | 2 shelves × 20 units | honour box (shoppers pay themselves) | – / – |
-| T1 | Farm Shop | 2,500 · Lv 3 | 6 | 1 register | 1 / 1 |
-| T2 | Market Hall | 25,000 · Lv 10 | 12 | 2 registers | 2 / 2 |
-| T3 | Supermarket | 150,000 · Lv 18 | 20 | 2 registers + self-checkout, a billboard on the ring road (+30% shoppers) | 3 / 2 |
+| Honour Box | 1×1 | a shopper every 6 s (they pay themselves) | nothing | free (a second: 500) | 1 |
+| Register | 2×1 | a Cashier's speed (§4.9), or a shopper every 3 s while you stand behind it | a Cashier or you | 3,000 | 3 |
+| Self-checkout | 1×1 | a shopper every 4 s | nothing | 60,000 | 15 |
 
-- **Stock** arrives as crates in the Stockroom (routed from the warehouse). Stockers (or you, tapping a shelf) unpack them onto shelves. A shelf holds one crop.
-- **Setting prices:** for each crop you set the price of one standard (grade B, no mutation) unit. Grade A and mutated units scale automatically (shown on the price tag). The allowed range is 50–300% of the reference price.
-- **The shopper's decision** (`shared/DemandModel.luau`):
-  - `ref = 0.5 × base + 0.5 × marketPrice(now)`: shoppers half-remember the usual price, so **when the market crashes, your shop is the better place to sell**, and when it spikes the truck is.
-  - Each shopper rolls a willingness `w` (log-normal, σ = 0.2) × the rating bonus (+0% at 1★ up to +25% at 5★) × 1.15 for grade A. They buy if `yourPrice ≤ ref × w`, picking 1–4 units of 1–2 crops.
-  - In practice: at the reference price ~50% of shoppers buy at 1★ and ~85% at 5★; at 1.2× the reference, ~18% at 1★ and ~58% at 5★. The window shows this as a **demand face** (😀 / 🙂 / 😐 / 😟) and "~N sales/min".
-- **Shopper flow:** at 3★, one every 20 s (Farm Stand), 12 s, 8 s, then 5.2 s (Supermarket). Each star above 3 brings them 15% more often (each star below, 15% less), so a 5★ Supermarket gets one every 4 s. Buyers queue at a register. Nobody served within 20 s (patience) means they leave grumpy.
-- **Shop Rating** (1–5★): a rolling score over the last 50 shoppers. Up when they buy and get served quickly; down when shelves are empty, nothing is affordable, or they wait too long. Shop decorations add up to +0.5★.
-- Only NPC shoppers buy from shops. Players swap goods by trading (§4.13).
-- The shop is the slow, high-margin outlet. The truck is the fast, bulk one at the market price.
+Checkouts allowed: 1 (Levels 1–2), 2 (from 3), 3 (from 10), 4 (from 15). Each has a queue of 4; a shopper who waits 20 s puts their basket back and leaves.
+
+| Decor (Charm) | Size | Charm | Cost | Store Lv |
+|---|---|---|---|---|
+| Potted Plant · Hay Bale Seat | 1×1 | 2 | 200 · 400 | 1 |
+| Flower Barrel | 1×1 | 3 | 500 | 2 |
+| Pumpkin Pile | 1×1 | 3 | 800 | 3 |
+| Painted Sign · Chalk Board · Clock (wall) | wall | 3 | 1,000 · 600 · 2,000 | 4 |
+| Lamp Post · Rug | 1×1 | 4 · 3 | 1,500 · 1,200 | 5 |
+| Fairy Lights (wall) · Fruit Cart (2×1) | | 5 · 6 | 3,000 · 5,000 | 6 |
+| Bench (2×1) · Mural (wall, 2 wide) | | 4 · 8 | 2,500 · 20,000 | 9 |
+| Fountain (2×2) | 2×2 | 12 | 40,000 | 10 |
+| Flower Arch (2×1) · Neon Sign (wall) | | 10 · 8 | 30,000 · 25,000 | 12 |
+| Golden Scarecrow statue | 1×1 | 20 | 250,000 | 17 |
+
+**Charm** is your decor added up: each item's Charm, but a second copy of the same item counts half, a third a third and so on (so 10 Potted Plants are worth about 6, not 20: variety wins). **Every 10 Charm adds +0.1★ to your Store Rating, up to +1★ at 100 Charm.** Displays add a little Charm too (Tiered Rack 1, Showcase 2, Pedestal 4). Decor takes floor cells that could hold displays: that's the trade-off.
+
+**Stock.** Crates you send to the store wait in its **stockroom** (the back room): 6 crates at Level 1, +2 a level, 44 at Level 20. When it's full, the bench and the Route rules send new crates to the truck instead (and say so). Putting goods out:
+- **By hand:** stand at a display and press **Fill** (it tops up each slot from the stockroom). A slot is set to a crop, or **Auto** (the crop with most in the stockroom that the display can hold); **Set crops** at the display or in the Store window changes it.
+- **Stockers** (§4.9) refill any slot below half, the emptiest first.
+- Putting a display away sends its goods back to the stockroom (even past full, like the barn), never lost.
+
+**Prices** are as before: one price per crop for a standard unit (grade A ×1.15, mutations by their multiplier, shown on the tag), 50–300% of the reference `ref = ½ base + ½ market` (`shared/DemandModel`). The Store window shows what shoppers expect, what the truck pays now, the demand face (😀 🙂 😐 😟), the % that buy and about how many sell a minute. A crop going out for the first time is priced at the reference.
+
+**Shoppers** (`shared/ShopRules`, `ShopService`; the clients draw them walking).
+- **How often:** one every `20 × 0.92^(Level − 1)` seconds at 3★: 20 s at Level 1, 14 s at 5, 9 s at 10, 6 s at 15, 4 s at 20. Each star above 3 brings them 15% more often (each below, 15% less). **Variety:** each different crop on display after the first brings 5% more, up to +25%. A Greeter adds up to 25% more (§4.9); the Supermarket's billboard 15%.
+- **What they want:** 1 crop at Levels 1–4, 1–2 at 5–9, 1–3 at 10–14, 2–3 at 15–20 (bigger stores, bigger baskets), each a crop on display (crops on more displays get picked more often).
+- **At most 12 shoppers** are in a store at once (a full store makes the next one wait on the sidewalk), which keeps the NPCs cheap to draw and the queues believable.
+- **The visit:** in through the door, along the aisles (the shortest path on the grid) to a display with each crop they want. There they roll a willingness `w` (log-normal, σ = 0.2) × the rating bonus (0 at 1★ to +25% at 5★) × the display's presentation, and buy 1–4 units if `your price ≤ ref × w` (grade A first, at ×1.15). Then to the shortest checkout queue, pay, and out. Nothing they wanted is affordable → they leave without queueing.
+- **Store Rating** (1–5★): the average of the last 50 shoppers' scores (5 bought · 2 too dear · 1 left the queue), a new store counting 10 shoppers at 3★ until real ones replace them, **plus Charm** (up to +1★), at most 5★. A store with nothing on display is closed: nobody comes to find it empty.
+- **While you're away** shoppers keep coming at 25% (the Honour Box and Self-checkouts serve on their own; Registers need a Cashier; Stockers keep filling), worked out with the warehouse when you return (`shared/PipelineRules`, the Welcome back card).
+
+**Store Levels** (the Store window's **Upgrade** tab: the same level ladder as the warehouse's). Every level opens floor, stockroom space or something new:
+
+| Lv | Cost | Farm Lv | Floor | New at this level |
+|---|---|---|---|---|
+| 1 | free | 1 | 5×3 | **Corner Store**, starter kit, Honour Box, stockroom 6 |
+| 2 | 300 | 1 | 5×4 | Stocker 1 · Flower Barrel |
+| 3 | 900 | 3 | 6×4 | **Register** and Cashier · 2 checkouts · Bulk Bin · Pumpkin Pile |
+| 4 | 2,500 | 4 | 6×5 | wall items: Painted Sign, Chalk Board, Clock |
+| 5 | 6,000 | 5 | 7×5 | **Farm Shop** (+ a free Tiered Produce Rack) · Lamp Post · Rug · shoppers want 1–2 crops |
+| 6 | 10,000 | 6 | 8×5 | Fairy Lights · Fruit Cart |
+| 7 | 16,000 | 7 | 8×6 | |
+| 8 | 24,000 | 8 | 9×6 | **Chiller Cabinet** (Epic crops) · Greeter · Stocker 2 |
+| 9 | 35,000 | 10 | 9×7 | Bench · Mural |
+| 10 | 55,000 | 12 | 10×7 | **Market Hall** (+ a free Glass Showcase) · Fountain · 3 checkouts · shoppers want 1–3 |
+| 11 | 75,000 | 13 | 10×8 | |
+| 12 | 100,000 | 14 | 11×8 | Flower Arch · Neon Sign |
+| 13 | 130,000 | 16 | 12×8 | the whole lot |
+| 14 | 170,000 | 18 | | Stocker 3 |
+| 15 | 240,000 | 20 | | **Supermarket** (+ a free Self-checkout) · Velvet Pedestal · 4 checkouts · billboard (+15% shoppers) · shoppers want 2–3 |
+| 16 | 330,000 | 22 | | |
+| 17 | 440,000 | 24 | | Golden Scarecrow statue |
+| 18 | 580,000 | 26 | | |
+| 19 | 760,000 | 28 | | |
+| 20 | 1,000,000 | 30 | | a gold star on the sign and a Hall of Fame plaque |
+
+Every level also brings shoppers a little more often (the formula above) and 2 more stockroom crates. The ladder costs about 3.9 million, plus whatever you spend on decor. In the progression sim a daily player reaches Level 5 on day 2, 10 around day 11 and 15 around day 29.
+
+- **The Store window** (a shop counter with price tags): **Prices** (above) · **Stock** (each display and slot with its fill, the stockroom's crates, **Fill all** while you're in the store, Set crops) · **Upgrade** (the level ladder) · your store's name, its rating and **why** ("3 shoppers left the queue: open a second checkout"), and a big **Decorate** stamp.
+- **Epics need a Chiller (Level 8)** and Legendaries a Showcase (Level 10): until then those crops go by truck. The Store window says so on the Prices tab, which keeps the store a step behind the field on purpose: a reason to upgrade.
+- The store is the slow, high-margin outlet; the truck is the fast, bulk one at the market price. When the market's down (▼) shoppers still expect the usual price, so the store pays better; when it's up, the truck does.
 
 ### 4.9 Workers
-Hired at the **Hiring Hall** in town or from the Workers window (from Farm Level 2). Each worker is a visible NPC on your farm, walking set routes between stations, carrying crates and waving at visitors.
+Hired at the **Hiring Hall** in town or from the Workers window (from Farm Level 2). Each worker is a visible NPC on your farm or in your store, walking set routes between stations, carrying crates and waving at visitors. **Every worker has a level, 1–10**: a new hire works at **40%** of the job's full speed, and a worker at Level 10 at **100%**.
 
-| Worker | Station | What they do | Cap (by building tier) | Wage / min (Lv 1) |
-|---|---|---|---|---|
-| **Farmhand** | Field | Harvest ripe crops, replant with the seed you chose (same seed · cheapest · don't replant). Skips tiles flagged 🚩 *Leave in field* (§4.2). Out of seeds → stops and shows "Out of Carrot seeds" on the Barn button | 1 per 16 tiles (max 4) | 6 |
-| **Shed Hand** | Packing Shed (T0 only) | Sort + pack + load. Becomes a Packer (same level) when the T1 warehouse is built | 1 | 5 |
-| **Sorter** | Wash & Sort | Grade batches (A chance rises with level) | 1 / 2 / 3 | 5 |
-| **Packer** | Pack | Pack crates | 2 / 3 / 4 | 5 |
-| **Loader** | Load | Move crates to the truck or the Stockroom | 1 / 2 / 2 | 5 |
-| **Driver** | Truck | **Auto-dispatch** when the truck is full, or **only when the price is ≥ X% of base** (your rule) | 1 per truck | 8 |
-| **Stocker** | Shop shelves | Unpack crates onto the emptiest shelves | 1 / 2 / 3 | 5 |
-| **Cashier** | Register | Serve the queue | 1 per register | 6 |
-| **Watchman** | Gatehouse (Lv 8) | Rings the bell when a theft starts, shines a spotlight on the thief and shuts the gate **to Suspects** for 30 s (they have to climb out; everyone else still walks through). **Never knocks anyone out** | 1 | 10 |
+| Worker | Where | What they do | Slots (from) | Full speed (Lv 10) | Full wage / min |
+|---|---|---|---|---|---|
+| **Farmhand** | Field | Harvest ripe crops, replant with the seed you chose (same seed · cheapest · don't replant). Skips tiles flagged 🚩 *Leave in field* (§4.2). Out of seeds → stops and shows "Out of Carrot seeds" on the Barn button | 1 per 16 open tiles (max 4) | 30 tiles | 10.5 |
+| **Shed Hand** | Packing Shed (Warehouse Lv 1–4) | Sort + pack + load. Becomes a Packer (same level and XP) at Warehouse Level 5 | 1, 2 (WH 4) | 8 crates | 8.75 |
+| **Sorter** | Wash & Sort | Grade batches: grade A chance 40% at Lv 1, +5% a level (85% at Lv 10; +5% more with the Wash Line) | 1–4 (WH 5, 8, 12, 18) | 60 units | 8.75 |
+| **Packer** | Pack | Pack crates | 1–5 (WH 5, 6, 10, 13, 16) | 15 crates | 8.75 |
+| **Loader** | Load | Move crates to the truck, the Cold Room or the store's stockroom | 1–3 (WH 5, 9, 15) | 20 crates | 8.75 |
+| **Driver** | Truck | **Auto-dispatch** when the truck is full, or **only when the price is ≥ X% of base** (your rule). Their level shaves up to 10% off the round trip | 1 per truck | – | 14 |
+| **Stocker** | Store | Refill displays from the stockroom, the emptiest first | 1–3 (Store 2, 8, 14) | 80 units | 8.75 |
+| **Cashier** | Store register | Serve the queue | 1 per Register | 12 shoppers | 10.5 |
+| **Greeter** | Store door | Welcome shoppers in: up to +25% shoppers (× their efficiency) | 1 (Store 8) | – | 8.75 |
+| **Watchman** | Gatehouse (Farm Lv 8) | Rings the bell when a theft starts, shines a spotlight on the thief and shuts the gate **to Suspects** (15 s at Lv 1 up to 30 s at Lv 10; they have to climb out; everyone else still walks through). **Never knocks anyone out** | 1 | – | 17.5 |
 
-- **Hiring:** the board shows 3 candidates per type, changing every 10 min. Each has a level (1–3), a trait (**Speedy** +20% speed · **Careful** +grade A chance · **Night Owl** +30% at night · **Frugal** −20% wage) and a hire fee (40× their per-minute wage). Your first hire is free.
-- **Levels 1–5:** train them with coins (60 minutes of their current wage per level). Each level multiplies speed by 1.2 and the wage by 1.15.
-- **Rare workers** come from auction contracts (e.g. *Grandma Rose, Legendary Packer*: ×2 speed, the Careful trait, a unique look).
-- **Wages** come out of your coins every minute (a coin sink: 5–8% of income in the progression sim, at most 8% on any day). If you can't pay, workers **go on strike** (sitting on crates with signs) until you can.
-- **Station caps** limit how many workers each station takes. The Workers window shows each station's slots (e.g. Packer 2/3), and greyed slots say what unlocks them ("T2 warehouse").
-- **Offline:** workers keep going at **25% speed for up to 8 hours**, paid at 25% wages. `shared/PipelineRules.simulate(state, seconds, rate)` runs the whole chain (Farmhands harvest and replant using offline growth → stations → trucks at the deterministic market price with supply = 1 → shop sales at 25% shopper flow; the Farm Stand's honour box sells on its own, bigger shops need a Cashier). It's worked out in one go when you return and shown on the **Welcome back** card.
+**Levels and efficiency.**
+- **Efficiency** = 40% at Level 1, +6.7% a level, 100% at Level 10. Speed = the full speed × efficiency. Wages grow slower than skill: 60% of the full wage at Level 1 up to 100% at Level 10, so a levelled worker is quicker *and* cheaper per job (a new hire costs 1.5× as much per crate as a Level 10).
+- **Experience:** workers earn XP by working: 10 XP a minute of real work (shown as a bar on their badge), 2.5 a minute while you're away. An idle worker (nothing to do) learns nothing, and XP only counts real work (a crate moves on, a shopper is served).
+- **Training:** when the bar is full, the badge says **Ready to train**, and **Train** (coins) takes them up a level. XP needed: 600 × 1.5^(Level − 1) (an hour of work for Level 2, about 26 hours for Level 10; about 75 hours in all). Fee: 250 × (full wage ÷ 8.75) × 1.9^(Level − 1) (250 coins for Level 2, about 42,000 for Level 10; about 89,000 in all for a typical worker). So levelling takes both time and coins, and a full crew is a long-term goal: in the progression sim a daily player's workers average Level 7 by day 14 and 9 by day 28.
+- **Hiring:** the board shows 3 candidates per type, changing every 10 min. Each has a level (1–3), a trait (**Speedy** +20% speed · **Careful** +grade A chance · **Night Owl** +30% at night · **Frugal** −20% wage) and a hire fee (40 minutes of their wage). Your first hire is free.
+- **Rare workers** come from auction contracts at Level 6–8 with a unique trait (e.g. *Grandma Rose, Legendary Packer*: Careful and **Tireless**, working at 50% instead of 25% while you're away).
+- **Wages** come out of your coins every minute (a coin sink: under 13% of income on any day in the progression sim). If you can't pay, workers **go on strike** (sitting on crates with signs) until you can.
+- **Slots** limit how many of each worker you can have; they open with Warehouse and Store Levels. The Workers window shows each station's slots (e.g. Packer 2/3), and greyed slots say what opens them ("Warehouse Level 10").
+- **The Workers window** is a corkboard of ID badges: photo, name, type, level and efficiency (e.g. "Lv 4 · 60%"), the XP bar, the trait, the wage, **Train** when ready, fire, and the Driver's rule.
+- **Offline:** workers keep going at **25% speed for up to 8 hours**, paid at 25% wages. `shared/PipelineRules.simulate(state, seconds, rate)` runs the whole chain (Farmhands harvest and replant using offline growth → stations → trucks at the deterministic market price with supply = 1 → store sales at 25% shopper flow). It's worked out in one go when you return and shown on the **Welcome back** card.
 - Workers can't be hit, stolen or traded.
 
 ### 4.10 Stealing
@@ -372,7 +481,7 @@ It lasts while you're inside that farm and for 60 s after your last suspicious a
 - **In person:** within 20 studs (`TradeRules.NEAR_DISTANCE`), and walking more than 40 apart cancels it. The **Trade** button lists nearby players; or press **T** next to someone.
 - **A structured UI** (no chat needed): each side offers up to **8 stacks** (crops, seeds, auction items) and coins. Both press **Ready** → a **5 s countdown** (any change resets it) → both **Confirm** → an **atomic swap** (all or nothing), saved straight away.
 - **Safety:** unlocks after **1 h of play**. Both sides see the market value of every stack and each side's total, with a red warning when you'd give 3× or more what you get. Every trade is logged (`TradeLog_v1`) and staff can roll one back (`/trades`, `/rollback`, the Tide Market pattern).
-- **Not tradeable:** anything bought with Robux, workers, Land Permits, placed defences, loot still in a sack, and coins while in debt.
+- **Not tradeable:** anything bought with Robux, workers, Land Permits, placed defences, loot still in a sack, coins while in debt, and store items bought with coins (selling back pays half; trading them would undercut that). Decor won at the auction can be traded once it's put away.
 - ProfileStore session locking, so server hopping can't duplicate items.
 
 ### 4.14 Weather, day and night, events
@@ -397,13 +506,13 @@ Shared by the whole server (`Config/Weather.luau`). A 24-minute day (16 min day,
   - **Selling** (truck or shop, while online): 1 XP per 50 coins.
   - **Arrests:** +50 (only arrests that count for the Sheriff board). **Cropdex:** +25 per new entry.
   - The progression sim (`lune run tools/progression`) plays the game with the real rules. A daily player (1.5 h a day) reaches Lv 12 on day 3 and Lv 32 (the full 8×8) on day 23; a casual player (45 min) has 11 of 12 permits by day 35; a keen one (3 h) finishes the land on day 12. It unlocks seed tiers in Barley's shop (Uncommon Lv 2 · Rare Lv 5 · Epic Lv 10 · Legendary Lv 16 · planting Mythics Lv 20), **Land Permits** (12, from Lv 2 to Lv 32, §4.1b), buildings, defences and worker types.
-- **Upgrades:** clearing land, the Silo, warehouse and shop tiers, truck paint, defences, worker training.
+- **Upgrades:** clearing land, the Silo, Warehouse Levels and Store Levels (1–20 each), store decor, truck paint, defences, worker training (Levels 1–10).
 - **Cropdex:** every crop × every mutation, with Giant records (the biggest of each). Rewards for each rarity tier (coins, a free seed), a badge per mutation set.
 - **Leaderboards** (OrderedDataStores, weekly and all-time; boards at the police station and the Exchange):
   - **Net Worth**: coins + the value of inventory and buildings
   - **Sheriff**: arrests made this week (only arrests with loot worth ≥ 50, at most 3 per thief–owner pair per day; the same rule applies to arrest XP)
   - **Most Wanted**: crop value stolen this week (a cartoon wanted poster of #1)
-  - **Top Shop**: the best rating with at least 200 shoppers
+  - **Top Store**: the best Store Rating with at least 200 shoppers this week
 - **Server announcements:** a Mythic ripening ("✨ A Crystal Rose just ripened on Alex's farm!": the owner gets a private 60 s warning first), a Mythic harvested, a Giant crop, an arrest of the server's Most Wanted.
 
 ### 4.16 Quests, streaks and the Farm Log
@@ -471,9 +580,9 @@ The UI looks like things you'd find on a farm: kraft paper, crate labels, seed p
   - 🔴 **TRESPASSING** (red, pulsing, once you're a Suspect)
   - ⚪ **Town**
   It's at the top centre, not top left, because Roblox's chat window lives top left on computers (found in week 1). The top right is Roblox's player list.
-- **Beside it:** the clock, the weather and the next event's countdown; under them the **market ticker** (from the weather and market weeks).
+- **Beside it:** the clock, the weather and the next event's countdown (weather week). **Under the purse:** the market ticker, a chalk strip (week 2).
 - **Top right:** the alert stack (theft alarms, auction starting, truck paid, Hot Crop).
-- **Left side bar:** Barn · Warehouse · Shop · Workers · Market · More (Cropdex, Trade, Trusted, Farm Log, Store, Settings). Badges show counts (crates waiting, crops ripe).
+- **Left side bar:** Barn · Warehouse · Store · Workers · Market · More (Cropdex, Trade, Trusted, Farm Log, Robux shop, Settings). Badges show counts (crates waiting, crops ripe, a worker ready to train, an upgrade you can afford). On phones the crates are smaller (58×52) and sit in **2 columns of 3**, above the thumbstick (play-test 2026-10-31). (Built so far: Barn · Stand · Market.)
 - **Bottom:** the hotbar of **seed packets** (the picked one stands up). The bat 🏏 joins it as slot 1, only inside your farm. There's no watering-can slot: the context stamp waters. The **Home** and **Town** signposts sit above it.
 - **Bottom right:** the **context stamp**, with a chalkboard above saying what's on the tile and how long it has left. It changes to whatever you can do right now: Plant · Water · Harvest · Steal (red, hold) · Swing · Arrest (red, hold) · Deposit · Pack. One press does one action. Hold it and walk to repeat that same action on every tile you cross (plant a row, harvest a row), never a different one.
 
@@ -481,11 +590,13 @@ The UI looks like things you'd find on a farm: kraft paper, crate labels, seed p
 
 | Window | Theme | Main parts |
 |---|---|---|
+| **Packing Shed bench** | crate labels, then the wash | Each barn stack with 🚚 Truck and 🏪 Stand buttons showing what each pays now. Then a crate, a water meter with the green band, and a big **HOLD TO WASH** stamp; grade A wins a gold rosette |
 | **Seed Rack** (Barley) | wooden rack of seed packets | Tabs by rarity. Each packet: picture, grow time, sell value, stock "×3", price tag, Buy ×1/×5. A restock countdown on a chalkboard. Locked packets say "Lv 10" |
 | **Barn** | barn doors open | Crops · Seeds · Items · Workers · Land tabs; a capacity bar; Send to warehouse; Hold (for planting). The Land tab shows the 4×4 block map, permits waiting, and each clearable block marked Safer or Riskier |
-| **Warehouse** | a clipboard | Pipeline: Intake → Sort → Pack → Route → Load → Truck as a row of station cards (queue, worker slots, speed). The bottleneck is orange. A truck card with a fill bar, the price it would lock and **Dispatch**. A Routes tab (crop → Truck / Shop / split). An Upgrade tab. On phones the pipeline wraps into 2 rows of 3 |
-| **Shop** | shop counter with price tags | Each crop: shelf stock, the reference price, **your price** (slider + − buttons), the demand face, ~sales/min. Shop Rating stars and why ("3 shoppers left: empty shelves"). Stockroom count. Upgrade tab |
-| **Workers / Hiring Hall** | ID badges on a corkboard | Station slots ("Packer 2/3"). Candidate badges: photo, name, type, level, trait, wage, hire fee, **Hire**. Your workers: train, fire, assign, the Driver's rule |
+| **Warehouse** | a clipboard | **Pipeline:** Intake → Sort → Pack → Route → Load → Truck as a row of station cards (queue, worker slots, speed). The bottleneck is orange. Truck cards with a fill bar, the price it would lock and **Send**. **Routes** (crop → Truck / Store / split). **Upgrade**: the level ladder on blueprint paper, the next level's card and **Upgrade**. On phones the pipeline wraps into 2 rows of 3 |
+| **Store** | a shop counter with price tags | Your store's name, rating and why ("3 shoppers left the queue: open a second checkout"). **Prices:** each crop's reference, the truck price now, **your price** (− +), the demand face, % that buy, ~sales/min. **Stock:** each display's slots and fill, the stockroom, **Fill all**, Set crops. **Upgrade:** the level ladder. A big **Decorate** stamp |
+| **Decorate** | blueprint paper over your store | Top-down view with the chalk grid; the drawer of item cards (Displays · Checkouts · Decor · Wall · My items) with price, size and what each does; green/red placing with the reason; ⟳ move, put away, sell back; the "Back soon" sign is up while you're here |
+| **Workers / Hiring Hall** | ID badges on a corkboard | Station slots ("Packer 2/3", greyed ones saying which level opens them). Candidate badges: photo, name, type, level and efficiency, trait, wage, hire fee, **Hire**. Your workers: level and efficiency ("Lv 4 · 60%"), the XP bar, **Train** when it's full, fire, the Driver's rule |
 | **Market** (Exchange) | a chalkboard | Each crop: price, ▲/▼, a 3 h sparkline, events (Hot Crop, Glut, festivals) with timers. Main button: **Dispatch truck now** (if one is loaded) at the prices shown |
 | **Auction** | red velvet with a gold frame | The lot's 3D picture, its estimated value, the current bid and leader, a timer ring (it flashes on anti-snipe), **+5% / +10% / +25%** bid buttons, your escrow, the next lots |
 | **Trade** | two crates side by side | Your offer and theirs (8 slots + coins), the value of each side, a red warning bar, Ready → countdown → Confirm |
@@ -550,7 +661,8 @@ Before the market wave (0.8–1.2), events, grade A (×1.15), mutations (×1.3�
 |---|---|
 | Truck sales (global price) | Seeds |
 | Shop sales (your price) | Worker hire fees, wages and training |
-| Fines received (moved from thieves, never created) | Land clearing fees (once a permit is earned) and buildings: the Silo, warehouse and shop tiers |
+| Fines received (moved from thieves, never created) | Land clearing fees (once a permit is earned), the Silo, **Warehouse and Store Levels** (about 4 million each for the whole ladder) |
+| | **Store decor and displays** (open-ended; selling back pays half) |
 | Quests, streak, Cropdex rewards | Defences |
 | | Auction wins (the coins are spent) |
 | | Auction Board 5% fee (v1.1) |
@@ -559,7 +671,7 @@ Before the market wave (0.8–1.2), events, grade A (×1.15), mutations (×1.3�
 - Robux never buys stealing power or defence power (§7).
 - Fines only move coins between players. Debts expire after 7 days rather than creating coins.
 - Watch weekly: total coins, median Net Worth, Mythics in circulation, average fine, raids per hour per server, % of raids ending in an arrest (aim for 35–50%).
-- **Open: late-game sinks.** In the progression sim a daily player has bought all the land and buildings by day 23, then piles up coins (about 4 million by day 35, earning 500,000–700,000 a day). The sim leaves out auctions, defences and the shop, which use some of that, but not enough. Before launch the game needs long-term coin sinks (see §11).
+- **Late-game sinks, mostly solved by levels.** Before the store and level ladders, a daily player had bought all the land and buildings by day 23 and piled up about 4 million coins by day 35 (earning 500,000–700,000 a day). With Warehouse and Store Levels and worker training (a scratch run of the progression sim with the §4.6, §4.8 and §4.9 numbers, 2026-10-31): a daily player sinks about 3.5 million by day 35 and holds about 0.5 million; reaches Warehouse and Store Level 5 on day 2, Level 10 on days 11–12 and Level 15 on days 29–30; workers average Level 7 by day 14 and 9 by day 28; wages stay under 13% of income; the land targets still pass (the full 8×8 on day 24). A casual player ends day 35 one Farm Level lower than before (27, not 28). Not in the run: store sales (they'd speed it up) and decor (it slows it down). Level 20 of both ladders is a second-month goal. What's still open is the very long tail after that (§11 step 6).
 
 ## 7. Monetization
 Rule: **no paid power in the PvP**. Robux buys comfort, shared moments, space and looks.
@@ -570,9 +682,9 @@ Rule: **no paid power in the PvP**. Robux buys comfort, shared moments, space an
 | Bigger Barn | Pass | 99 | Barn capacity ×2.5 |
 | Rain Dance / Thunderstorm / Golden Hour / Harvest Moon | Product | 49 / 79 / 99 / 149 | That weather **for the whole server** for 5 min (Tide Market totem rules: one at a time, never over a better weather, never into the scheduled Harvest Moon). A Harvest Moon bought is a Heist Night for everyone |
 | Growth Boost | Product | 79 | Your field grows ×2 for 30 min (online only) |
-| Cosmetics | Products | 25–249 | Bat skins (Golden Bat, Baguette, Carrot Club: **same stats**), truck paint jobs, shop signs and awnings, farmhouse styles, scarecrow skins, sack skins, funny mugshot frames |
+| Cosmetics | Products | 25–249 | Bat skins (Golden Bat, Baguette, Carrot Club: **same stats**), truck paint jobs, store decor sets and awnings (**looks only**: a Robux item's Charm is the same as the cheapest coin item of its size, and it can't be sold back for coins), farmhouse styles, scarecrow skins, sack skins, funny mugshot frames |
 
-- **Never sold:** Land Permits (land opens by level only), defences, steal speed, sack size, bat reach, knockout length or immunity, more worker slots than a station's cap.
+- **Never sold:** Land Permits (land opens by level only), defences, steal speed, sack size, bat reach, knockout length or immunity, more worker slots than a station's cap, Warehouse or Store Levels, worker XP or training.
 - Nothing bought with Robux can be traded (so regional pricing can't be resold).
 - Receipts de-duplicated by PurchaseId and saved before granting (the Tide Market pattern).
 
@@ -583,12 +695,14 @@ src/shared/   Config/  Crops · Rarities · Growth · Land · Warehouse · Shop 
                        Crime · Progression · Settings   (to come: Weather · Mutations · Defences · Monetization)
               Rules:   GrowthRules · SeedStock · MarketPrice · DemandModel · LandRules · ProgressionRules
                        CrimeRules · FineRules · TravelRules · ZoneRules · AuctionRules · WorkerRules
-                       PipelineRules · MoveRules   (to come: TradeRules)
+                       PipelineRules · MoveRules · BarnRules · PlotRules · CrateRules · TruckRules
+                       ShopRules   (to come: TradeRules)
 src/server/   Services/ Data · Plot · Field · SeedShop · Auction · Market · Warehouse · Truck
                         Shop · Shopper · Worker · Crime (steal, sack, bat, knockout, arrest)
                         Police · Payout · Movement · Trade · Weather · Quest · Leaderboard
                         Analytics · DevCommand
-              World/    WorldBuilder · PlotLayout · TownBuilder
+              World/    WorldBuilder · Parts · FarmArt (the field) · YardArt (shed, dock, pickup,
+                        Farm Stand) · LightingSetup   (PlotLayout lives in shared/)
 src/client/   UI (Kraft & Crate theme, HUD in code) · Controllers/ Field · Warehouse · Shop
               Workers · Market · Auction · Crime (alarm, KO, mugshot) · Trade · Weather
 ```
@@ -603,9 +717,13 @@ src/client/   UI (Kraft & Crate theme, HUD in code) · Controllers/ Field · War
   field = { [tile] = { seedId, progress, lastUpdate, harvestsLeft, mutation?, giant? } },
   land = { cleared = { blockNumbers }, clearing? }, silo, -- permits are worked out from the level, never stored
   inventory = { crops = { [stackKey] = count }, seeds = { [seedId] = n }, items = {...} },
-  warehouse = { tier, buildingUntil?, queues = {...}, routes = {...}, trucks = { TruckRun? } },
-  shop = { tier, shelves = {...}, stockroom = {...}, prices = { [cropId] = coins }, rating = {...} },
-  workers = { [uid] = { type, level, trait, station, hiredAt } },
+  warehouse = { level, buildingUntil?, bed = { crate }, dock = { crate }, coldRoom = { crate },
+                routes = { [cropId] = share }, trucks = { TruckRun } },
+  store = { level, buildingUntil?, name,
+            layout = { ["id"] = { item, cell = "x,y", rot, slots = { { crop?, auto, units, a } } } },
+            owned = { [itemId] = count }, stockroom = { crate }, prices = { [cropId] = coins },
+            rating = { scores = { 1–5 } } },
+  workers = { [uid] = { type, level, xp, trait, station, hiredAt } },
   defences = { placed = {...}, owned = {...} }, trusted = { userIds },
   crime = { earnBuckets = {12}, arrests = {timestamps}, debts = { {ownerId, amount, createdAt} },
             lastArrestAt, fled? },
@@ -623,18 +741,21 @@ src/client/   UI (Kraft & Crate theme, HUD in code) · Controllers/ Field · War
   - **Logging (no auto-bans):** Analytics custom events `StealStarted`, `StealDeposited`, `Knockout`, `Arrest`, `FledArrest`, `HitRejected`, `MovementRejected`.
 - **Tests** with Lune, like Tide Market (`lune run tests/run`): growth (online/offline), market price (wave, events, clamp), demand model, pipeline simulate, crime state machine (every bypass in the §4.12 table), fines and debt, land permits (level gates, blocks must touch cleared land), auction rules (anti-snipe, escrow, leader leaves), trade rules.
 
-## 9. MVP plan (8 weeks)
+## 9. MVP plan (9 weeks)
+
+Each week builds its features *and* their look ([ArtDirection.md](ArtDirection.md) §11 has every look step with its week). Art counts as done only once it looks right to the eye and makes sense in Studio: next to a character, close up and from across the farm, on a phone.
 
 | Week | Build | Done when |
 |---|---|---|
 | 1 ✅ | Plots and zones, field (plant, water, grow, harvest), Barn inventory, Barley's shop with restocks, saving, offline growth. Farm Level and XP, Land Permits and clearing (moved up from week 2: their rules were done, and Stage B tests them). Travel (Home, Town, Visit), dev commands, the Kraft & Crate HUD, the first look pass. Greybox Cloverdale | 8 players can farm for 15 min without bugs (Stage B9) |
-| 2 | Packing Shed and the pickup truck, the market price (wave + events), Exchange board, Farm Stand with shoppers and pricing | Players argue about truck vs shop |
-| 3 | T1 warehouse and Farm Shop, all worker types, wages and strikes, offline growth and worker settlement, Welcome back card | Testers come back the next day to collect |
-| 4 | Stealing, the sack, deposit, bat, knockout, Suspect, arrest, Police Station, fines and debt, every bypass counter + tests | Raids feel fun on both sides; nobody can dodge an arrest |
-| 5 | Defences, theft alarm, Home, Sprout Shield, arrival grace, raid caps, Trusted list, MovementService | A defended farm catches most raids; an undefended one still survives |
-| 6 | Auction House, weather and mutations, Harvest Moon, Cropdex, quests | Auction rooms fill up on the bell |
-| 7 | Trading with logs and rollback, the MemoryStore supply factor, leaderboards, the Farm Guide | 50-player test with no duplication or lost items |
-| 8 | Kraft & Crate UI polish, mobile layout, analytics, monetization, store art, thumbnails | Launch with a small sponsored-ad budget |
+| 2 ✅ | Packing Shed and the pickup truck, the market price (wave + events), Exchange board, Farm Stand with shoppers and pricing. Also the Market window with Send now, the ticker, the receipt, and dev commands for selling (built and played in Studio 2026-10-31) | Players argue about truck vs shop |
+| 3 | **Your Store** (§4.8): the building and its 4 stages, Store Levels 1–20, Decorate mode with the catalog and `shared/StoreLayout`, the stockroom, Fill and Set crops, shoppers walking the aisles, checkouts and queues, the rating with Charm, the store's name, the store cut out of the farm zone. The Farm Stand's code becomes the displays. **Look:** the store's buildings and items, farm colours and name plates, the gate arch, picket fences | Testers decorate a store on a phone and get it selling without help |
+| 4 | **Warehouse Levels 1–20** (§4.6: stations, conveyors, Cold Room, routes, the second and third truck), **every worker type with Levels 1–10** (§4.9: XP, training, efficiency), wages and strikes, the Hiring Hall, offline settlement with the store and the Welcome back card; the progression sim updated with the real tables. **Look:** the warehouse's buildings and trucks, worker outfits | Testers come back the next day to collect, and level a worker on purpose |
+| 5 | Stealing, the sack, deposit, bat, knockout, Suspect, arrest, Police Station, fines and debt, every bypass counter + tests. **Look:** Suspect markers, the sack, the back fence's slats and climb, the Police Station's front | Raids feel fun on both sides; nobody can dodge an arrest |
+| 6 | Defences, theft alarm, Home, Sprout Shield, arrival grace, raid caps, Trusted list (and the staff door for Trusted friends), MovementService. **Look:** the defences | A defended farm catches most raids; an undefended one still survives |
+| 7 | Auction House, weather and mutations, Harvest Moon, Cropdex, quests. **Look:** the town (plaza, clocktower, building fronts), weather, day and night | Auction rooms fill up on the bell |
+| 8 | Trading with logs and rollback, the MemoryStore supply factor, leaderboards (Top Store), the Farm Guide. **Look:** the valley (Terrain hills, woods, back-trail cover, the tunnel mouth) | 50-player test with no duplication or lost items |
+| 9 | Kraft & Crate UI polish, mobile layout, analytics, monetization, thumbnails and the Roblox page art | Launch with a small sponsored-ad budget |
 
 ## 10. Design review log
 
@@ -790,6 +911,61 @@ Built: `PlotService` (farms handed out, spawn at the door, the InFarm zone), `Fi
 
 Left for later weeks, as planned: the Farm Guide (week 7), the Welcome back card (week 3, a note for now), the Sprout Shield dome and arrival grace (week 5), Trusted friends (week 5), a farm closing on its visitors when the owner leaves (week 4). A half-cleared block shows its last obstacles after a rejoin, which may not be the ones that were left (cosmetic).
 
+### MVP week 2: selling
+
+Built: `MarketService` (prices, Hot Crop and Glut announcements, the Exchange desk), `WarehouseService` (the Packing Shed bench, carrying crates, the dock pile), `TruckService` (loading, sending, the receipt, payouts, saved runs), `ShopService` (stocking, prices, shoppers, the rating), `World/YardArt` (the shed, dock and lever, the pickup, the boom gate, the Farm Stand), a sidewalk round the ring road, and `DataService.Earn` (sales income: coins, the last hour's earnings for fines, sales XP). Shared: `CrateRules`, `TruckRules`, `ShopRules`, `PlotLayout.truckRoute` / `shopperRoute`. The client: the bench window, the Market window, the Exchange's flip-board, the ticker, the Farm Stand window, the receipt slip, trucks driving and shoppers walking. Dev commands `/crops`, `/truck`, `/shoppers`, `/tp exchange · shed · stand`. 239 tests. Played in Studio on 2026-10-31 (desktop and phone emulation, [PlaytestLog](PlaytestLog.md)): packing, washing, carrying, loading, sending, the drive, the payout, the board, the windows and the shoppers all worked. The review and the play-test found:
+
+| # | Found | Fix |
+|---|---|---|
+| 1 | §4.6 had each crate ask "Truck or Stand?" after packing: a crate with nowhere to go if the window closed, and the choice made without the numbers | You pick 🚚 Truck or 🏪 Stand on the stack's row, each button showing what it pays right now, then wash (§4.6) |
+| 2 | At T0 the bench would have needed two minigames per crate (spray, then the tape swipe) | One hold per crate: washing grades it and it packs itself; the swipe is the T1 Pack station's (§4.6) |
+| 3 | A crate being carried could vanish if you walked out, travelled, respawned or quit | It's set down at the dock, and "Load crate" takes from that pile (§4.6) |
+| 4 | Empty-shelf visits scoring 1★ would sink every new stand before its first harvest | A stand with nothing on its shelves is closed: no shoppers, no score (§4.8, `Config/Shop`) |
+| 5 | "1–4 units of 1–2 crops" didn't match `PipelineRules` and `DemandModel.salesPerMinute`, which assume one crop per shopper | One crop per shopper; a test checks the live buy rate against `DemandModel` (play-test C3's bar) |
+| 6 | The price could only be locked at the dock, so timing the market meant standing at your farm | **Send now** in the Market window works anywhere (§5.3 already listed it) |
+| 7 | The truck had no way out (the front fence crossed the driveway) and the Farm Stand opened a gap in the fence | A striped boom gate across the driveway and a counter with an invisible wall behind it: still only the gate and the back fence get you in (`tests/world.test.luau` checks the whole front) |
+| 8 | Sending the truck cleared its bed at once, so it drove off empty | The crates ride along until they're sold in the City; it comes back empty |
+| 9 | A run arriving while you're away would have given XP | Coins only: nothing earns XP while you're offline (§4.15) |
+| 10 | Play-test: a stand with only Carrots filled one basket and left the other empty | The rest fills the empty basket (a different crop on each while there are different ones) |
+| 11 | Play-test: one unlucky first shopper took a new stand from 3★ to 2★ | A new stand counts 10 shoppers at 3★ that the real ones replace (`Shop.RATING_SETTLE`) |
+| 12 | Play-test: the stand's prompt showed a stale stockroom count; the Stand window cut off its notes; the Market window went quiet after the hour's Hot Crop | Fixed (PlaytestLog 2026-10-31) |
+| 13 | Play-test: on a phone the side bar's third crate sat on the thumbstick | Smaller crates on phones; with more buttons coming (Warehouse, Workers, More) the side bar will need two columns or a "More" crate on phones |
+
+Left for later, as planned: shoppers and Driver runs while you're away (week 3, `PipelineRules.settle` with the Welcome back card), paying debts from sales income (`FineRules.garnish`, week 4 with the payout queue: there can't be debts before then), the MemoryStore supply factor (week 7), festivals such as the Pumpkin Festival (week 6, with the events), the Farm Guide steps for packing and the stand (week 7), the pickup in your farm colour (look pass step 5).
+
+### Change after review: your own store, and levels for the warehouse, the store and workers (2026-10-31)
+
+The user asked for four things: their own store instead of the stand, decorated freely with racks and shelves, with workers and a way to grow it; workers that level from low to high efficiency; a warehouse that levels up for more capacity and features; and market prices on a button instead of only in town. What the plan had: the Farm Stand was the shop's tier 0 (not a test stand), followed by three fixed shop tiers with a set number of shelves and no decorating; four warehouse tiers, all bought by day 10 in the sim; worker levels 1–5 bought with coins only; and the Market window already on the side bar (built in week 2). What changed:
+- **§4.8 Your Store:** a store from the first minute, laid out and decorated on a grid (displays that differ by size, crops and presentation; checkouts; decor with Charm; wall items), Store Levels 1–20 inside 4 buildings, stock, shoppers walking the aisles, queues, the rating with Charm, a public building cut out of the farm zone.
+- **§4.6 Warehouse Levels 1–20** inside the same 4 buildings as before, with the Cold Room for holding crates for a better price.
+- **§4.9 worker Levels 1–10:** efficiency 40% → 100%, XP from real work, training with coins when the bar is full, wages that grow slower than skill; a Greeter for the store.
+- **§4.7:** says plainly that the Market window opens anywhere (and from the ticker).
+- **§9:** the MVP is 9 weeks (the store is week 3; warehouse levels and workers week 4; raids move to week 5).
+
+Three review passes, as in the first design:
+
+| Pass | Found | Fix |
+|---|---|---|
+| Journey | A 4×3 starter floor couldn't hold the starter kit plus an aisle and a checkout queue | Level 1 is 5×3 (worked out cell by cell); every floor size moved up a step (§4.8) |
+| Journey | A player who never decorates would get empty floor and nothing better from each new building | Each new building comes with a display already placed (§4.8) |
+| Journey | The Guide's "stock your store" step needed a store crate the earlier steps don't make | The step says to pack a crate with 🏪 Store first (§4.0) |
+| Journey | New rarities would outrun the store | On purpose: Epics need a Chiller (Store Level 8), Legendaries a Showcase (10); the truck sells them until then, and the Prices tab says so |
+| Exploits | Visitors browsing a store inside the farm zone could be bonked, and a store open to the road could be a way into the farm | The store is cut out of the farm zone (no bat, nothing to steal); its staff door only opens for the owner and Trusted friends (§3, §4.8) |
+| Exploits | Furniture moving under walking shoppers | "Back soon" while decorating: no new shoppers until you're done (§4.8) |
+| Exploits | Spamming one cheap decoration for Charm | Each extra copy counts less (1/2, 1/3...); Charm caps at +1★; Robux decor has the Charm of the cheapest coin item its size and can't be sold for coins (§4.8, §7) |
+| Exploits | Selling the free starter kit and the new buildings' gifts for coins | Free items can be put away but not sold |
+| Exploits | A stockroom with no limit would be a second barn; putting a display away could lose goods | The stockroom has a size per level; goods from a display put away always fit (§4.8) |
+| Exploits | Worker XP farmed by busywork | XP only for real work (a crate moves on, a shopper is served); idle workers learn nothing (§4.9) |
+| Exploits | A new building's walls appearing on top of a player | Anyone in the way is moved out first (§4.8) |
+| Balance | Old Sorter numbers (+8% grade A a level) reach 112% over 10 levels | +5% a level, 85% at Level 10 (§4.9) |
+| Balance | With every bonus stacked, a Level 20 store would bring ~46 shoppers a minute | Slower curve (4 s at Level 20) and at most 12 shoppers inside (§4.8) |
+| Balance | Costs had to fit the economy | A scratch run of the progression sim with all three ladders: Level 5 of both on day 2, Level 10 on days 11–12, Level 15 on days 29–30 for a daily player; coins level off (0.5 million on day 35 instead of 4 million); land pacing still passes (§6.2) |
+| UI | 6 side-bar crates don't fit a phone's left edge in one column (the week 2 play-test already hit 3) | 2 columns of 3 on phones (§5.2) |
+| UI | Two level systems could look different | One blueprint level ladder in both the Warehouse and Store windows (§5.3) |
+| Names | "Shop" and "Store" were both used | Players see **Store** (Store Level, Store Rating, Top Store); the code can keep `shop` |
+
+Left open: the very long tail once both ladders are done (§11 step 6), and whether players can visit and "like" each other's stores (a Coziest Store board): a v1.1 idea, since likes from alt accounts would need guarding.
+
 ### Checklist against the original brief
 
 | Requirement | Where |
@@ -809,6 +985,10 @@ Left for later weeks, as planned: the Farm Guide (week 7), the Welcome back card
 | Counters to quitting before an arrest, and other bypasses | §4.12 table |
 | Trading | §4.13 |
 | The game's own GUI and UI design | §5 |
+| Your own store, decorated with racks and shelves, with workers and upgrades (added 2026-10-31) | §4.8 |
+| Workers level up from low to high efficiency (added) | §4.9 |
+| The warehouse levels up for more capacity and features (added) | §4.6 |
+| Market prices from a button anywhere, not only in town (added; built in week 2) | §4.7, §5.2 |
 
 ## 11. Next steps
 
@@ -818,6 +998,6 @@ In order. Each one makes the next one cheaper. Every step ends with a review aga
 2. ✅ **Write the shared rules with Lune tests.** `GrowthRules`, `SeedStock`, `MarketPrice`, `DemandModel`, `LandRules`, `CrimeRules` (every bypass in the §4.12 table), `FineRules`, `TravelRules`, `ZoneRules`, `AuctionRules`, `WorkerRules`, `PipelineRules.simulate`, plus config checks: 155 tests, all passing (`lune run tools/check`).
 3. ✅ **Build a progression sim.** `lune run tools/progression`: the XP curve is tuned so every permit target is met, and wages stay at 5–8% of income. It also showed that coins pile up late (see step 6).
 4. ✅ **Greybox Cloverdale and time the raid race.** The layout, the greybox and the race from real distances are done and tested (5.8 s without defences, 11.4 s with them; the tall fence went to 3.5 s). Walked in Studio on 2026-10-30 (play-test Stage A, §10): the distances hold. Still open from Stage A: A7 (finding your way) needs a new tester.
-5. **MVP weeks 1–4 (§9)**, play-tested as they land (PlaytestPlan Stages A–D). ✅ Week 1 (the farming loop, with its dev commands and the first look pass: light, fences, the field and crops). Next: Stage B with a tester, then week 2 (selling). The look pass ([ArtDirection.md](ArtDirection.md) §11) carries on alongside. The raid stage measures the arrest rate (target 35–50%) and whether raids feel fun from both sides before defences are built in week 5.
-6. **Late-game coin sinks** (found by the sim). Ideas to choose from: bigger auction lots and a weekly "Grand Auction", worker training past level 5, farm decorations that raise the Shop Rating cap, a coin-bought prestige ("Harvest Festival") that resets land for a permanent bonus, and costly seasonal seeds. Re-run the sim to see coins level off.
+5. **MVP weeks 1–4 (§9)**, play-tested as they land (PlaytestPlan Stages A–D). ✅ Week 1 (the farming loop, with its dev commands and the first look pass: light, fences, the field and crops). ✅ Week 2 (selling: the Packing Shed, the pickup, the market, the Farm Stand), played in Studio on 2026-10-31. Next: Stage B with testers, then week 3 (your store) and week 4 (Warehouse Levels, workers with levels), then Stage C. The look pass ([ArtDirection.md](ArtDirection.md) §11) carries on alongside. The raid stage measures the arrest rate (target 35–50%) and whether raids feel fun from both sides before defences are built in week 6.
+6. **Late-game coin sinks** (found by the sim). Mostly answered by Warehouse and Store Levels, store decor and worker Levels 1–10 (§6.2): coins now level off through the first month. Still open: the very long tail once both ladders are done (around day 50 for a daily player). Ideas: bigger auction lots and a weekly "Grand Auction", a coin-bought prestige ("Harvest Festival") that resets land for a permanent bonus, seasonal decor sets, costly seasonal seeds. Decide with live data after launch.
 7. **Content and policy checks before launch.** Run the maturity questionnaire with the bonk and arrest content (aim for *Mild*), name the crops and NPCs, and plan the low-poly crop mesh pipeline (like Tide Market's `tools/plant_art`).

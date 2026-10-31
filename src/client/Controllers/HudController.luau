@@ -7,7 +7,8 @@
 --   left:     the side bar, a stack of crates (Barn, ...)
 --   bottom:   Home and Town signposts above the hotbar, with the 3 s
 --             travel bar and their cooldowns
---   and the server's notes (UI.toast) and the level-up rosette.
+--   and the server's notes (UI.toast), the level-up rosette and the truck
+--   receipt.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -133,16 +134,35 @@ local sideBar = make("Frame", {
 	Parent = UI.screen,
 }, { make("UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }) })
 
+local crates = {}
+
+-- Phones get smaller crates, so the column stays above the thumbstick.
+local function sizeCrate(crate: Frame)
+	crate.Size = if UI.compact then UDim2.fromOffset(58, 52) else UDim2.fromOffset(72, 68)
+	crate.Icon.TextSize = if UI.compact then 20 else 26
+	crate.Icon.Size = UDim2.new(1, 0, 0, if UI.compact then 22 else 30)
+	crate.Icon.Position = UDim2.fromOffset(0, if UI.compact then 5 else 7)
+	crate.Label.Size = UDim2.new(1, -8, 0, if UI.compact then 15 else 18)
+	crate.Label:FindFirstChildOfClass("TextLabel").TextSize = if UI.compact then 11 else 13
+end
+
 -- A crate in the side bar. Returns its button.
 function HudController.sideButton(icon: string, name: string, order: number)
-	local _, button = UI.crate({ name = name, icon = icon, text = name, size = UDim2.fromOffset(72, 68), order = order, parent = sideBar })
+	local crate, button = UI.crate({ name = name, icon = icon, text = name, size = UDim2.fromOffset(72, 68), order = order, parent = sideBar })
+	table.insert(crates, crate)
+	sizeCrate(crate)
 	return button
 end
 
 UI.onLayout(function()
-	-- (phones: higher up, out of the thumbstick's way)
+	-- (phones: higher up and smaller, out of the thumbstick's way)
 	sideBar.AnchorPoint = if UI.compact then Vector2.zero else Vector2.new(0, 0.5)
 	sideBar.Position = if UI.compact then UDim2.fromOffset(14, 64) else UDim2.new(0, 14, 0.55, 0)
+	sideBar.Size = UDim2.fromOffset(if UI.compact then 58 else 72, 0)
+	sideBar.UIListLayout.Padding = UDim.new(0, if UI.compact then 6 else 8)
+	for _, crate in crates do
+		sizeCrate(crate)
+	end
 end)
 
 ------------------------------------------------------------------------
@@ -299,6 +319,81 @@ local function showLevelUp(notice)
 end
 
 ------------------------------------------------------------------------
+-- The truck receipt: a paper slip with a torn bottom edge, listing each
+-- crate and the price it locked, slid in from the right.
+
+local receipt = make("Frame", {
+	Name = "Receipt",
+	AnchorPoint = Vector2.new(0, 0.5),
+	Position = UDim2.new(1, 20, 0.5, 0),
+	Size = UDim2.fromOffset(270, 0),
+	AutomaticSize = Enum.AutomaticSize.Y,
+	BackgroundColor3 = C.white,
+	Rotation = 1.5,
+	Visible = false,
+	ZIndex = 32,
+	Parent = UI.screen,
+}, { UI.stroke(C.stitch, 1.5), make("UIPadding", { PaddingTop = UDim.new(0, 12) }),
+	make("UIListLayout", { Padding = UDim.new(0, 3), SortOrder = Enum.SortOrder.LayoutOrder, HorizontalAlignment = Enum.HorizontalAlignment.Center }) })
+local tear = make("Frame", { -- the torn edge: the last line, with teeth hanging off the paper's bottom
+	Name = "Tear", Size = UDim2.new(1, 0, 0, 14), BackgroundTransparency = 1,
+	LayoutOrder = 1000, ZIndex = 32, Parent = receipt,
+})
+for i = 1, 18 do
+	make("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new((i - 0.5) / 18, 0, 1, 0), Size = UDim2.fromOffset(11, 11),
+		Rotation = 45, BackgroundColor3 = C.white, BorderSizePixel = 0, ZIndex = 32, Parent = tear,
+	})
+end
+local receiptToken = 0
+
+local function receiptLine(order: number, left: string, right: string?, props)
+	local holder = make("Frame", { Size = UDim2.new(1, -28, 0, props.height or 22), BackgroundTransparency = 1, LayoutOrder = order, ZIndex = 33, Parent = receipt })
+	UI.fit(UI.label({ Size = UDim2.new(1, if right then -64 else 0, 1, 0), Font = props.font or UI.HAND, TextSize = props.size or 19,
+		TextXAlignment = props.align or Enum.TextXAlignment.Left, TextWrapped = props.wrap, Text = left, ZIndex = 33, Parent = holder }), 10)
+	if right then
+		UI.label({ AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(1, 0), Size = UDim2.new(0, 64, 1, 0), Font = props.font or UI.HEAD,
+			TextSize = props.size or 17, TextXAlignment = Enum.TextXAlignment.Right, Text = right, ZIndex = 33, Parent = holder })
+	end
+end
+
+local function rule(order: number)
+	UI.label({ Size = UDim2.new(1, -28, 0, 10), Font = UI.BODY, TextSize = 12, TextColor3 = C.stitch, TextXAlignment = Enum.TextXAlignment.Center,
+		Text = string.rep("- ", 30), LayoutOrder = order, ZIndex = 33, Parent = receipt })
+end
+
+local function showReceipt(notice)
+	receiptToken += 1
+	local token = receiptToken
+	for _, child in receipt:GetChildren() do
+		if child:IsA("Frame") and child ~= tear or child:IsA("TextLabel") then
+			child:Destroy()
+		end
+	end
+	receiptLine(1, "CLOVERDALE EXCHANGE", nil, { font = UI.HEAD, size = 18, align = Enum.TextXAlignment.Center })
+	receiptLine(2, notice.text, nil, { size = 18, align = Enum.TextXAlignment.Center })
+	rule(3)
+	for i, line in notice.lines or {} do
+		receiptLine(3 + i, line.text, UI.formatNumber(line.coins), {})
+	end
+	rule(50)
+	receiptLine(51, "TOTAL", UI.formatNumber(notice.total or 0), { font = UI.HEAD, size = 20, height = 26 })
+	receiptLine(52, notice.footer or "", nil, { size = 16, height = 38, wrap = true })
+	receipt.Visible = true
+	receipt.Position = UDim2.new(1, 20, 0.5, 0)
+	TweenService:Create(receipt, TweenInfo.new(0.35, Enum.EasingStyle.Back), { Position = UDim2.new(1, -290, 0.5, 0) }):Play()
+	task.delay(6.5, function()
+		if receiptToken == token then
+			TweenService:Create(receipt, TweenInfo.new(0.3), { Position = UDim2.new(1, 20, 0.5, 0) }):Play()
+			task.wait(0.3)
+			if receiptToken == token then
+				receipt.Visible = false
+			end
+		end
+	end)
+end
+
+------------------------------------------------------------------------
 
 function HudController.Start()
 	PlayerState.observe(updateState)
@@ -314,6 +409,8 @@ function HudController.Start()
 	Remotes.event("Notify").OnClientEvent:Connect(function(notice)
 		if notice.kind == "LevelUp" then
 			showLevelUp(notice)
+		elseif notice.kind == "Receipt" then
+			showReceipt(notice)
 		else
 			UI.toast(notice.text, notice.kind)
 		end
