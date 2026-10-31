@@ -26,6 +26,16 @@ local REASONS = {
 	TruckAway = "The pickup is out on the road.",
 	TruckFull = "The pickup is full: send it!",
 	TruckEmpty = "Load some crates into the pickup first.",
+	StockroomFull = "Your store's stockroom is full and your arms are too: load the pickup first.",
+	NotInStore = "Walk into your store first.",
+	NothingToFill = "Nothing to put out: the displays are full, or the stockroom has nothing they can hold.",
+	CantHold = "That display can't hold that crop.",
+	Building = "Your new building is still going up.",
+	MaxLevel = "Your store is at the top level.",
+	NeedsFarmLevel = "Your store's next level needs a higher Farm Level.",
+	BadName = "A store's name needs 3 to 24 letters.",
+	FilterFailed = "That name couldn't be checked right now: try again in a moment.",
+	CantSell = "You can't sell that (free items stay yours).",
 }
 
 return function(reason: string?, extra: string?): string?

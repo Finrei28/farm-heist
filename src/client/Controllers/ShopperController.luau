@@ -1,15 +1,15 @@
--- Draws the NPC shoppers at every Farm Stand (docs/ArtDirection.md §8) from
--- the ShopperEvent remote (ShopService decides what they do). Each one walks
--- the sidewalk to the stand (shared/PlotLayout.shopperRoute), waits at the
--- counter until the server says how it went, shows it (a basket and the
--- coins they paid, or a face at the price), then walks on and fades away.
--- Blocky people in varied colours, made of local parts: nothing here
--- matters to the game.
+-- Draws the NPC shoppers in every store (docs/ArtDirection.md §8) from the
+-- ShopperEvent remote (StoreService decides what they do). Each "Path" is a
+-- walk from server time `at` through world points at Shop.SPEED, replacing
+-- the last one: along the sidewalk, through the door, down the aisles to a
+-- display, into a checkout queue, out again. They say what happened in a
+-- bubble ("🥕×3", "Too dear!"), their basket fills up, and a coin pop shows
+-- when they pay. Blocky people in varied colours, made of local parts:
+-- nothing here matters to the game.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
-local Crops = require(Shared.Config.Crops)
 local PlotLayout = require(Shared.PlotLayout)
 local Remotes = require(Shared.Remotes)
 local Shop = require(Shared.Config.Shop)
@@ -23,6 +23,7 @@ local SHIRTS = {
 local SKIN = { Color3.fromRGB(255, 220, 177), Color3.fromRGB(234, 192, 134), Color3.fromRGB(198, 134, 66), Color3.fromRGB(141, 85, 36), Color3.fromRGB(96, 60, 30) }
 local LEGS = { Color3.fromRGB(58, 72, 110), Color3.fromRGB(70, 60, 50), Color3.fromRGB(40, 44, 48), Color3.fromRGB(120, 100, 80) }
 local FADE = 1
+local CULL = 300 -- studs from the camera: farther shoppers aren't drawn (a busy Supermarket has 24, and there are 8 stores)
 
 local folder = Instance.new("Folder")
 folder.Name = "Shoppers"
@@ -67,9 +68,12 @@ local function build(look: number)
 	local basket = piece(model, "Basket", Vector3.new(1.4, 0.8, 1), Color3.fromRGB(196, 150, 84))
 	basket.Transparency = 1
 	table.insert(parts, { basket, CFrame.new(1.45, 2.3, -0.4) })
+	local goods = piece(model, "Goods", Vector3.new(1.2, 0.3, 0.8), Color3.fromRGB(226, 120, 60))
+	goods.Transparency = 1
+	table.insert(parts, { goods, CFrame.new(1.45, 2.75, -0.4) })
 	local bubble = Instance.new("BillboardGui")
 	bubble.Size = UDim2.fromScale(6, 1.6)
-	bubble.StudsOffsetWorldSpace = Vector3.new(0, 7.4, 0)
+	bubble.StudsOffsetWorldSpace = Vector3.new(0, 4.1, 0) -- (under a Corner Store's 10-stud ceiling)
 	bubble.MaxDistance = 90
 	bubble.Enabled = false
 	bubble.Adornee = parts[3][1]
@@ -85,79 +89,99 @@ local function build(look: number)
 	label.Parent = bubble
 	bubble.Parent = model
 	model.Parent = folder
-	return model, parts, bubble, label, basket
+	return model, parts, bubble, label, basket, goods
 end
 
-local function arrive(event)
-	if shoppers[event.id] then
-		return
-	end
-	local route, counter = PlotLayout.shopperRoute(event.plot, event.lane)
-	local model, parts, bubble, label, basket = build(event.look)
-	shoppers[event.id] = {
-		model = model, parts = parts, bubble = bubble, label = label, basket = basket,
-		route = route, at = event.at, length = PlotLayout.pathLength(route),
-		counterAt = PlotLayout.pathLength(route, counter), leaveAt = nil,
-	}
+local function now(): number
+	return workspace:GetServerTimeNow()
 end
 
-local function done(event)
-	local shopper = shoppers[event.id]
-	if not shopper then
-		return
-	end
-	local t = workspace:GetServerTimeNow()
-	shopper.leaveAt = math.max(t, shopper.at + shopper.counterAt / Shop.SHOPPER_SPEED) + Shop.SHOPPER_BROWSE
-	local crop = event.crop and Crops.ById[event.crop]
-	if crop and event.units > 0 then
-		shopper.label.Text = `🧺 {crop.icon or ""}×{event.units}  +{event.coins}`
-		shopper.basket.Transparency = 0
-		shopper.bubble.Enabled = true
-	elseif crop then
-		shopper.label.Text = `😟 {crop.icon or ""} too dear!`
-		shopper.bubble.Enabled = true
-	end
-	task.delay(Shop.SHOPPER_BROWSE + 1.5, function()
-		shopper.bubble.Enabled = false
+local function say(shopper, text: string, color: Color3?)
+	shopper.label.Text = text
+	shopper.label.BackgroundColor3 = color or Color3.fromRGB(255, 244, 220)
+	shopper.bubble.Enabled = true
+	shopper.sayToken += 1
+	local token = shopper.sayToken
+	task.delay(2.6, function()
+		if shopper.sayToken == token then
+			shopper.bubble.Enabled = false
+		end
 	end)
 end
 
-local function step()
-	local t = workspace:GetServerTimeNow()
+local function path(event)
+	local shopper = shoppers[event.id]
+	if not shopper then
+		local model, parts, bubble, label, basket, goods = build(event.look)
+		shopper = { model = model, parts = parts, bubble = bubble, label = label, basket = basket, goods = goods, plot = event.plot, sayToken = 0 }
+		shoppers[event.id] = shopper
+	end
+	shopper.points = event.points
+	shopper.at = event.at
+	shopper.length = PlotLayout.pathLength(event.points)
+	shopper.face = event.face
+	shopper.leave = event.leave == true
+	local units = event.basket or 0
+	shopper.basket.Transparency = if units > 0 then 0 else 1
+	shopper.goods.Transparency = if units > 0 then 0 else 1
+	shopper.goods.Size = Vector3.new(1.2, 0.15 + math.min(units, 12) * 0.04, 0.8)
+	if event.say then
+		say(shopper, event.say)
+	end
+end
+
+local function paid(event)
+	local shopper = shoppers[event.id]
+	if shopper and event.coins > 0 then
+		say(shopper, `+{event.coins}`, Color3.fromRGB(242, 179, 61))
+	end
+end
+
+local function clear(event)
 	for id, shopper in shoppers do
-		local walked = (t - shopper.at) * Shop.SHOPPER_SPEED
-		local walking = true
-		if shopper.leaveAt then
-			if t < shopper.leaveAt then
-				walked = math.min(walked, shopper.counterAt)
-				walking = walked < shopper.counterAt
-			else
-				walked = shopper.counterAt + (t - shopper.leaveAt) * Shop.SHOPPER_SPEED
-			end
-		elseif walked >= shopper.counterAt then
-			walked, walking = shopper.counterAt, false -- (waiting at the counter for the server)
-		end
-		if walked >= shopper.length + FADE * Shop.SHOPPER_SPEED or t - shopper.at > 120 then
+		if shopper.plot == event.plot then
 			shopper.model:Destroy()
 			shoppers[id] = nil
-		else
-			-- (at the counter this is the way they stepped up to it: facing the stand)
-			local position, direction = PlotLayout.along(shopper.route, walked)
-			local flat = Vector3.new(direction.X, 0, direction.Z)
-			local feet = CFrame.lookAt(position + Vector3.new(0, 0.3, 0), position + Vector3.new(0, 0.3, 0) + (if flat.Magnitude > 0 then flat.Unit else Vector3.zAxis))
-			local swing = if walking then math.sin(t * 9) * math.rad(28) else 0
-			local fade = math.clamp((walked - shopper.length) / (FADE * Shop.SHOPPER_SPEED), 0, 1)
-			for _, entry in shopper.parts do
-				local p, offset, isLeg = entry[1], entry[2], entry[3]
-				local pose = offset
-				if isLeg then
-					local sign = if p.Name == "LegL" then 1 else -1
-					pose = CFrame.new(offset.X, 2.2, 0) * CFrame.Angles(swing * sign, 0, 0) * CFrame.new(0, -1.1, 0)
-				end
-				p.CFrame = feet * pose
-				if p.Name ~= "Basket" or shopper.basket.Transparency < 1 then
-					p.Transparency = fade
-				end
+		end
+	end
+end
+
+local function step()
+	local t = now()
+	local eye = workspace.CurrentCamera and workspace.CurrentCamera.CFrame.Position or Vector3.zero
+	for id, shopper in shoppers do
+		local walked = math.max(0, (t - shopper.at) * Shop.SPEED)
+		local walking = walked > 0 and walked < shopper.length
+		if (shopper.leave and walked >= shopper.length + FADE * Shop.SPEED) or t - shopper.at > 240 then
+			shopper.model:Destroy()
+			shoppers[id] = nil
+			continue
+		end
+		local position, direction = PlotLayout.along(shopper.points, math.min(walked, shopper.length))
+		local near = (position - eye).Magnitude < CULL
+		shopper.model.Parent = if near then folder else nil
+		if not near then
+			continue
+		end
+		local flat = Vector3.new(direction.X, 0, direction.Z)
+		if not walking and shopper.face and not shopper.leave then
+			local toward = shopper.face - position
+			flat = Vector3.new(toward.X, 0, toward.Z)
+		end
+		local heading = if flat.Magnitude > 0.01 then flat.Unit else Vector3.zAxis
+		local feet = CFrame.lookAt(position, position + heading)
+		local swing = if walking then math.sin(t * 9) * math.rad(28) else 0
+		local fade = if shopper.leave then math.clamp((walked - shopper.length) / (FADE * Shop.SPEED), 0, 1) else 0
+		for _, entry in shopper.parts do
+			local p, offset, isLeg = entry[1], entry[2], entry[3]
+			local pose = offset
+			if isLeg then
+				local sign = if p.Name == "LegL" then 1 else -1
+				pose = CFrame.new(offset.X, 2.2, 0) * CFrame.Angles(swing * sign, 0, 0) * CFrame.new(0, -1.1, 0)
+			end
+			p.CFrame = feet * pose
+			if (p.Name ~= "Basket" and p.Name ~= "Goods") or p.Transparency < 1 then
+				p.Transparency = fade
 			end
 		end
 	end
@@ -166,10 +190,12 @@ end
 function ShopperController.Start()
 	folder.Parent = workspace
 	Remotes.event("ShopperEvent").OnClientEvent:Connect(function(kind, event)
-		if kind == "Arrive" then
-			arrive(event)
-		elseif kind == "Done" then
-			done(event)
+		if kind == "Path" then
+			path(event)
+		elseif kind == "Paid" then
+			paid(event)
+		elseif kind == "Clear" then
+			clear(event)
 		end
 	end)
 	RunService.Heartbeat:Connect(step)

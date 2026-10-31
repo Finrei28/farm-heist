@@ -8,6 +8,8 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Settings = require(ReplicatedStorage.Shared.Config.Settings)
+local Store = require(ReplicatedStorage.Shared.Config.Store)
+local StoreLayout = require(ReplicatedStorage.Shared.StoreLayout)
 
 -- New fields added here are filled in automatically for existing saves.
 local TEMPLATE = {
@@ -38,9 +40,15 @@ local TEMPLATE = {
 	-- down at the dock, and truck runs on the road (paid when they reach the
 	-- City, even if you've left by then).
 	warehouse = { tier = 0, buildingUntil = 0, queues = {}, routes = {}, bed = {}, dock = {}, trucks = {} },
-	-- Your shop (shared/ShopRules): shelves ["1"] = { crop, units, a }, the
-	-- stockroom's crates, your prices, the last shoppers' scores.
-	shop = { tier = 0, shelves = {}, stockroom = {}, prices = {}, rating = { scores = {} } },
+	-- Your store (shared/ShopRules, shared/StoreLayout): its level, a new
+	-- building going up (build = { to, left } seconds of work), its name (nil:
+	-- "<you>'s <building>"), the layout (["id"] = item on the floor or a wall),
+	-- the items you own and how many of them were free, the stockroom's
+	-- crates, your prices, the last shoppers' scores. A new store's starter
+	-- kit is laid out by SaveData.migrate (a layout in here would be filled
+	-- back in on every load by reconcile).
+	store = { level = 1, started = false, layout = {}, owned = {}, gifts = {}, nextId = 1,
+		stockroom = {}, prices = {}, rating = { scores = {} } },
 	workers = {}, -- ["uid"] = { type, level, trait, hiredAt } (shared/WorkerRules)
 	freeHireUsed = false,
 
@@ -79,6 +87,50 @@ local function deepCopy(value)
 	return copy
 end
 
+-- Lays out a new store's starter kit (free items, kept forever).
+local function startStore(store)
+	for _, entry in Store.START do
+		local id = tostring(store.nextId)
+		store.nextId += 1
+		store.layout[id] = { item = entry.item, x = entry.x, y = entry.y, rot = entry.rot, slots = StoreLayout.newSlots(entry.item) }
+		store.owned[entry.item] = (store.owned[entry.item] or 0) + 1
+		store.gifts[entry.item] = (store.gifts[entry.item] or 0) + 1
+	end
+	store.started = true
+end
+
+-- Changes an old save's shape to today's, after reconcile: a new store gets
+-- its starter kit, and the Farm Stand's goods, prices and rating (week 2's
+-- `shop`) move into the store, nothing lost.
+local function migrate(data)
+	if not data.store.started then
+		startStore(data.store)
+	end
+	local shop = data.shop
+	if shop then
+		for _, crate in shop.stockroom or {} do
+			table.insert(data.store.stockroom, crate)
+		end
+		for _, shelf in shop.shelves or {} do
+			if shelf.units and shelf.units > 0 then
+				if shelf.a > 0 then
+					table.insert(data.store.stockroom, { crop = shelf.crop, key = `{shelf.crop}||`, units = shelf.a, grade = "A" })
+				end
+				if shelf.units - shelf.a > 0 then
+					table.insert(data.store.stockroom, { crop = shelf.crop, key = `{shelf.crop}||`, units = shelf.units - shelf.a, grade = "B" })
+				end
+			end
+		end
+		for cropId, price in shop.prices or {} do
+			data.store.prices[cropId] = data.store.prices[cropId] or price
+		end
+		if shop.rating and #shop.rating.scores > 0 then
+			data.store.rating.scores = shop.rating.scores
+		end
+		data.shop = nil
+	end
+end
+
 -- Fills in any keys added to TEMPLATE since the player last saved.
 local function reconcile(data, template)
 	for key, default in template do
@@ -94,4 +146,5 @@ return {
 	TEMPLATE = TEMPLATE,
 	deepCopy = deepCopy,
 	reconcile = reconcile,
+	migrate = migrate,
 }

@@ -152,13 +152,17 @@ local function yours(state)
 			set[cropId] = true
 		end
 	end
-	for _, list in { state.warehouse.bed, state.warehouse.dock, state.shop.stockroom } do
+	for _, list in { state.warehouse.bed, state.warehouse.dock, state.store.stockroom } do
 		for _, crate in list do
 			set[crate.crop] = true
 		end
 	end
-	for _, shelf in state.shop.shelves do
-		set[shelf.crop] = true
+	for _, entry in state.store.layout do
+		for _, slot in entry.slots or {} do
+			if slot.crop and slot.units > 0 then
+				set[slot.crop] = true
+			end
+		end
 	end
 	return set
 end

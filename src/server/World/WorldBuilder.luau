@@ -1,9 +1,10 @@
 -- Builds the greybox of Cloverdale from shared/PlotLayout (docs/GameDesign.md
 -- §3): the valley and hills, the town square and its five buildings, the
 -- ring road and its sidewalk, the highway and tunnel, the back trail, and the
--- 8 farms with their hedges, fences, gate, Farm Stand, Packing Shed, pickup,
--- farmhouse and 8×8 field (the start corner tilled, the rest overgrown:
--- World/FarmArt; the selling side: World/YardArt). Plain blocks and
+-- 8 farms with their hedges, picket fences, gate arch, store, Packing Shed,
+-- pickup, farmhouse and 8×8 field (the start corner tilled, the rest
+-- overgrown: World/FarmArt; the selling side: World/YardArt; the store:
+-- World/StoreArt). Plain blocks and
 -- labels, in the art direction's palette (docs/ArtDirection.md): enough to
 -- walk the distances and time a raid until the look pass replaces them.
 --
@@ -16,10 +17,11 @@ local PlotLayout = require(ReplicatedStorage.Shared.PlotLayout)
 local Parts = require(script.Parent.Parts)
 local FarmArt = require(script.Parent.FarmArt)
 local YardArt = require(script.Parent.YardArt)
+local StoreArt = require(script.Parent.StoreArt)
 
 local WorldBuilder = {}
 
-WorldBuilder.VERSION = 4
+WorldBuilder.VERSION = 5
 
 local COLORS = Parts.COLORS
 local part, plotBox = Parts.part, Parts.plotBox
@@ -197,6 +199,63 @@ local function buildTown(world: Instance)
 	end
 end
 
+-- The gate arch (docs/ArtDirection.md §7): two posts and a beam over the
+-- gate, a name plank hanging from it (PlotService writes the owner's name on
+-- it), a flag in the farm's colour, and a mailbox by the road.
+local function buildGateArch(model: Model, frame: CFrame, index: number, left: number, right: number)
+	local arch = Instance.new("Model")
+	arch.Name = "GateArch"
+	local wood = COLORS.post
+	local top = 13
+	for _, x in { left - 0.7, right + 0.7 } do
+		plotBox("ArchPost", frame, Vector3.new(x - 0.7, 0, -1.2), Vector3.new(x + 0.7, top, 0.2), { Color = wood }, arch)
+		plotBox("ArchPostCap", frame, Vector3.new(x - 0.9, top, -1.4), Vector3.new(x + 0.9, top + 0.5, 0.4), { Color = COLORS.edging }, arch)
+	end
+	plotBox("ArchBeam", frame, Vector3.new(left - 1.6, top - 1.6, -1.0), Vector3.new(right + 1.6, top - 0.4, 0.0), { Color = COLORS.edging }, arch)
+	local middle = (left + right) / 2
+	for _, x in { middle - 4.5, middle + 4.5 } do
+		Parts.prop({ Name = "Chain", Size = Vector3.new(0.15, 1.0, 0.15), CFrame = frame * CFrame.new(x, top - 2.1, -0.6), Color = COLORS.dark }, arch)
+	end
+	local plank = Parts.prop({ Name = "NamePlank", Size = Vector3.new(12, 2.6, 0.35), CFrame = frame * CFrame.new(middle, top - 3.9, -0.6),
+		Color = Color3.fromRGB(226, 196, 146) }, arch)
+	Parts.prop({ Name = "NamePlankEdge", Size = Vector3.new(12.4, 3.0, 0.25), CFrame = plank.CFrame * CFrame.new(0, 0, 0.12),
+		Color = Parts.farmColor(index) }, arch)
+	for _, face in { Enum.NormalId.Front, Enum.NormalId.Back } do
+		local gui = Instance.new("SurfaceGui")
+		gui.Name = "NamePlate"
+		gui.Face = face
+		gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+		gui.PixelsPerStud = 24
+		gui.LightInfluence = 0.5
+		local label = Instance.new("TextLabel")
+		label.Name = "Text"
+		label.Size = UDim2.fromScale(1, 1)
+		label.BackgroundTransparency = 1
+		label.Font = Enum.Font.FredokaOne
+		label.TextScaled = true
+		label.TextColor3 = Color3.fromRGB(74, 50, 32)
+		label.Text = `Farm {index}: for rent`
+		local padding = Instance.new("UIPadding")
+		padding.PaddingTop = UDim.new(0.12, 0)
+		padding.PaddingBottom = UDim.new(0.12, 0)
+		padding.PaddingLeft = UDim.new(0.05, 0)
+		padding.PaddingRight = UDim.new(0.05, 0)
+		padding.Parent = label
+		label.Parent = gui
+		gui.Parent = plank
+	end
+	-- the flag on the left post, in the farm's colour
+	local poleX = left - 0.7
+	Parts.prop({ Name = "FlagPole", Size = Vector3.new(0.25, 4.5, 0.25), CFrame = frame * CFrame.new(poleX, top + 2.7, -0.5), Color = COLORS.metal }, arch)
+	Parts.prop({ Name = "Flag", Size = Vector3.new(3.2, 2.0, 0.1), CFrame = frame * CFrame.new(poleX + 1.75, top + 3.8, -0.5), Color = Parts.farmColor(index) }, arch)
+	-- the mailbox, by the road outside the right post
+	local mailX = right + 2.6
+	Parts.part({ Name = "MailPost", Size = Vector3.new(0.4, 3.2, 0.4), CFrame = frame * CFrame.new(mailX, 1.6, -2.6), Color = wood }, arch)
+	Parts.part({ Name = "Mailbox", Size = Vector3.new(1.3, 1.1, 2.0), CFrame = frame * CFrame.new(mailX, 3.7, -2.6), Color = Parts.farmColor(index) }, arch)
+	Parts.prop({ Name = "MailFlag", Size = Vector3.new(0.12, 0.9, 0.35), CFrame = frame * CFrame.new(mailX + 0.71, 4.2, -2.3), Color = COLORS.barnRed }, arch)
+	arch.Parent = model
+end
+
 local function buildPlot(index: number, world: Instance)
 	local frame = PlotLayout.frame(index)
 	local P = PlotLayout.PLOT
@@ -215,11 +274,12 @@ local function buildPlot(index: number, world: Instance)
 	end
 
 	-- Hedges can't be climbed; the back fence can (slowly); the front has the
-	-- gate. Fences are posts and three rails you can see through, as tall as
-	-- PlotLayout.FENCE_HEIGHT, so a jump hits the fence you see. An invisible
-	-- wall up to FENCE_BLOCK is what really stops you: without it a character
-	-- climbs the rails like a ladder (play-test 2026-10-30). Climbing comes
-	-- with week 4 (§4.10). A fence runs across the plot (along X).
+	-- gate. Fences are as tall as PlotLayout.FENCE_HEIGHT, so a jump hits the
+	-- fence you see; an invisible wall up to FENCE_BLOCK is what really stops
+	-- you: without it a character climbs rails like a ladder (play-test
+	-- 2026-10-30). The front is a white picket fence; the back keeps its
+	-- rails until the climb comes (week 5: slats with a "Climb" prompt). A
+	-- fence runs across the plot (along X).
 	local function fence(name: string, min: Vector3, max: Vector3)
 		local rails = Instance.new("Model")
 		rails.Name = name
@@ -237,32 +297,45 @@ local function buildPlot(index: number, world: Instance)
 		plotBox(`{name}Blocker`, frame, min, Vector3.new(max.X, PlotLayout.FENCE_BLOCK, max.Z),
 			{ Transparency = 1, CanQuery = false, CanTouch = false }, model)
 	end
+	local function pickets(name: string, fromX: number, toX: number)
+		Parts.picketFence(frame, Vector3.new(fromX, 0, -1), Vector3.new(toX, 0, 0), model, name, PlotLayout.FENCE_HEIGHT, PlotLayout.FENCE_BLOCK)
+	end
+	-- Hedges: tall, with a rounded top and a few flowers.
 	local H = PlotLayout.HEDGE_HEIGHT
-	plotBox("HedgeLeft", frame, Vector3.new(-W / 2 - 3, 0, 0), Vector3.new(-W / 2, H, D), { Color = COLORS.hedge }, model)
-	plotBox("HedgeRight", frame, Vector3.new(W / 2, 0, 0), Vector3.new(W / 2 + 3, H, D), { Color = COLORS.hedge }, model)
+	for _, side in { -1, 1 } do
+		local x = side * (W / 2 + 1.5)
+		plotBox(if side < 0 then "HedgeLeft" else "HedgeRight", frame, Vector3.new(x - 1.5, 0, 0), Vector3.new(x + 1.5, H, D), { Color = COLORS.hedge }, model)
+		part({ Name = "HedgeTop", Shape = Enum.PartType.Cylinder, Size = Vector3.new(D, 3, 3),
+			CFrame = frame * CFrame.new(x, H, D / 2) * CFrame.Angles(0, math.rad(90), 0), Color = COLORS.hedge }, model)
+		for i = 0, 11 do
+			local z = 8 + i * (D - 16) / 11
+			local inward = -side * (if i % 2 == 0 then 1.55 else 1.5)
+			Parts.ball("HedgeFlower", frame * CFrame.new(x + inward, 4 + (i * 37 % 7), z), 0.7,
+				{ Color = if i % 3 == 0 then COLORS.cream else COLORS.hay }, model)
+		end
+	end
 	fence("BackFence", Vector3.new(-W / 2, 0, D), Vector3.new(W / 2, 0, D + 1))
+	-- The front: pickets from the store to the gate, the gate, then to the
+	-- truck gate and on to the hedge. (The stretch from the hedge to the
+	-- store is the store's: World/StoreArt. The store and the truck gate are
+	-- part of the front too: neither is a way in.)
 	local gateLeft = P.gate.across - P.gate.width / 2
 	local gateRight = P.gate.across + P.gate.width / 2
-	-- The Farm Stand's counter and the truck gate are part of the front
-	-- fence (World/YardArt): neither is a way in.
-	local standLeft = P.stand.across - P.stand.width / 2
-	local standRight = P.stand.across + P.stand.width / 2
-	fence("FrontFenceShopSide", Vector3.new(-W / 2, 0, -1), Vector3.new(standLeft, 0, 0))
-	fence("FrontFenceByGate", Vector3.new(standRight, 0, -1), Vector3.new(gateLeft, 0, 0))
-	fence("FrontFence", Vector3.new(gateRight, 0, -1), Vector3.new(P.driveway.min.X, 0, 0))
-	fence("FrontFenceFar", Vector3.new(P.driveway.max.X, 0, -1), Vector3.new(W / 2, 0, 0))
+	pickets("FrontFenceByGate", P.store.right + P.store.wall, gateLeft)
+	pickets("FrontFence", gateRight, P.driveway.min.X)
+	pickets("FrontFenceFar", P.driveway.max.X, W / 2)
 	local gatePost = plotBox("Gate", frame, Vector3.new(gateLeft, 0, -1.5), Vector3.new(gateRight, 0.5, 0.5), { Color = COLORS.hay }, model)
-	label(`Farm {index}: for rent`, gatePost, 8, 3, 200)
+	buildGateArch(model, frame, index, gateLeft, gateRight)
 
-	-- Buildings. The shop lot behind the Farm Stand stays lawn until the
-	-- Farm Shop (T1) is built on it.
+	-- Buildings.
 	plotBox("Gatehouse", frame, P.gatehouse.min, P.gatehouse.max, { Color = COLORS.cream }, model)
 	-- (on the lawn, not level with it)
 	plotBox("Driveway", frame, P.driveway.min + Vector3.new(0, 0.2, 0), P.driveway.max + Vector3.new(0, 0.15, 0), { Color = COLORS.road }, model)
 	plotBox("Path", frame, P.path.min + Vector3.new(0, 0.2, 0), P.path.max + Vector3.new(0, 0.15, 0), { Color = COLORS.trail }, model)
-	-- Selling at tier 0: the Packing Shed and dock, the pickup, the truck
-	-- gate, the Farm Stand (the warehouse's stations come with T1).
+	-- Selling: the Packing Shed and dock, the pickup, the truck gate (the
+	-- warehouse's stations come with Warehouse Level 5), and your store.
 	YardArt.build(model, frame)
+	StoreArt.build(model)
 	label("Farmhouse & barn", plotBox("Farmhouse", frame, P.farmhouse.min, P.farmhouse.max, { Color = COLORS.cream }, model), 12, 3, 120)
 	local door = part({
 		Name = "Door", Size = Vector3.new(4, 0.4, 4),

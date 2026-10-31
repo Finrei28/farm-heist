@@ -9,7 +9,7 @@ A farming game for Roblox. Grow crops on your own plot (which gets bigger as you
 
 ## Status
 
-Weeks 1–2 of the MVP plan (design doc §9) are in. Week 1: you get a farm, plant, water and harvest, buy seeds from Barley, level up, clear land with Land Permits, and travel Home and to Town, all in Farm Heist's own "Kraft & Crate" interface, with a first look pass (light, the field, crops). Week 2, selling: pack crates at the Packing Shed, truck them to the City at the global market price (it locks when the pickup leaves), or sell them at your Farm Stand at your own price to NPC shoppers; the Exchange board in town and the Market window show where prices are heading. The rules are tested (239 tests), the XP curve is tuned with a progression sim, and Cloverdale is built from one layout file. Play-test Stage A passed in Studio on 2026-10-30. Week 2 was played in Studio on 2026-10-31 (docs/PlaytestLog.md). Next: week 3, your own store (decorated with displays and decor, Store Levels 1–20, replacing the Farm Stand), then week 4, Warehouse Levels 1–20 and workers with Levels 1–10 (design doc §4.6, §4.8, §4.9).
+Weeks 1–3 of the MVP plan (design doc §9) are in. Week 1: you get a farm, plant, water and harvest, buy seeds from Barley, level up, clear land with Land Permits, and travel Home and to Town, all in Farm Heist's own "Kraft & Crate" interface, with a first look pass (light, the field, crops). Week 2, selling: pack crates at the Packing Shed, truck them to the City at the global market price (it locks when the pickup leaves), or sell them at your Farm Stand at your own price to NPC shoppers; the Exchange board in town and the Market window show where prices are heading. The rules are tested (239 tests), the XP curve is tuned with a progression sim, and Cloverdale is built from one layout file. Play-test Stage A passed in Studio on 2026-10-30. Week 2 was played in Studio on 2026-10-31 (docs/PlaytestLog.md). Week 3, your own store (design doc §4.8): it replaces the Farm Stand; you lay it out and decorate it on a grid (displays, checkouts, decor, wall items), fill its displays from the stockroom, set prices, and grow it through Store Levels 1–20 and four buildings, while NPC shoppers walk its aisles and queue to pay (281 tests; played in Studio on 2026-10-31). Next: week 4, Warehouse Levels 1–20 and workers with Levels 1–10 (design doc §4.6, §4.9).
 
 ## One-time setup (Windows)
 
@@ -32,13 +32,13 @@ The same as Tide Market:
 
 **Selling:** at the **Packing Shed** bench (by the driveway) pick a crop and 🚚 Truck or 🏪 Stand, each showing what it pays now, then hold the stamp and let go in the green for grade A (+15%). A truck crate goes into your arms: carry it to the dock and press E to load it, then pull the lever (or **Send now** in the Market window) to send the pickup. Prices lock as it leaves and you're paid when it reaches the City. A stand crate goes to the stockroom: hold E behind your **Farm Stand**'s counter to stock its two baskets, and set prices in the **Stand** crate's window. Shoppers come along the sidewalk while you're in the server.
 
-**Dev commands** (Studio, typed in chat): `/coins 5000` · `/level 5` · `/xp 60` · `/grow 60` · `/grow ripe` · `/away 2` · `/restock` · `/restock full` · `/seeds Pumpkin 10` · `/seeds all 5` · `/crops Pumpkin 40` · `/truck` · `/shoppers 5` · `/tp town` · `/tp barley` · `/tp exchange` · `/tp porch` · `/tp home` · `/tp shed` · `/tp stand` · `/tp 3` · `/wipe`. The full list is at the top of `src/server/Services/DevCommandService.luau`.
+**Dev commands** (Studio, typed in chat): `/coins 5000` · `/level 5` · `/xp 60` · `/grow 60` · `/grow ripe` · `/away 2` · `/restock` · `/restock full` · `/seeds Pumpkin 10` · `/seeds all 5` · `/crops Pumpkin 40` · `/truck` · `/shoppers 5` · `/store 5` · `/tp town` · `/tp barley` · `/tp exchange` · `/tp porch` · `/tp home` · `/tp shed` · `/tp store` · `/tp 3` · `/wipe`. The full list is at the top of `src/server/Services/DevCommandService.luau`.
 
 ### Walking the greybox
 
 Everything is placed by `src/shared/PlotLayout.luau`, so a change there moves the greybox, the zones and the tests together. To check the distances feel right with real movement:
 
-1. Play, and walk from the town spawn to Farm 1's gate (about 15 s; the design doc says 205–265 studs).
+1. Play, and walk from the town spawn to Farm 1's gate (about 20 s; the design doc says 285–345 studs).
 2. Stand on a back-row tile of any field (the tiles furthest from the farmhouse), walk to the back fence: about 24 studs.
 3. From the yellow Door pad in front of the farmhouse, sprint (Shift) to the back fence: the race assumes about 6–7 s.
 

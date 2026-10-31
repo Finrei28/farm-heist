@@ -10,15 +10,17 @@
 -- middle of the plot, +Z (depth) runs away from the town to the back fence,
 -- +Y up, and X runs across: −X is the farmhouse and shop side, +X the
 -- warehouse side.
+local Store = require(script.Parent.Config.Store)
+
 local PlotLayout = {}
 
 ------------------------------------------------------------------------
 -- The valley
 
 PlotLayout.COUNT = 8
-PlotLayout.WIDTH = 160 -- across
-PlotLayout.DEPTH = 240 -- front boundary to back fence
-PlotLayout.FRONT_RADIUS = 240 -- from the town square to a plot's front boundary
+PlotLayout.WIDTH = 220 -- across (wide enough for a Supermarket beside the gate and room for the warehouse to grow on the other side)
+PlotLayout.DEPTH = 252 -- front boundary to back fence
+PlotLayout.FRONT_RADIUS = 320 -- from the town square to a plot's front boundary (the least that keeps the farms beside the highway clear of it)
 PlotLayout.ZONE_HEIGHT = 60
 PlotLayout.FENCE_HEIGHT = 8 -- what you see: taller than a Roblox jump (about 7.2 studs), so a jump hits the fence you see, not thin air (docs/ArtDirection.md §7)
 PlotLayout.FENCE_BLOCK = 11 -- an invisible wall this high over every fence is what really stops you (a character climbs horizontal rails like a ladder): the only ways over are the climb (back fence, locked gate) and the open gate
@@ -38,20 +40,24 @@ PlotLayout.TOWN = {
 	policePorch = 92, -- distance from the centre, on the Police Station's angle (facing the square)
 }
 
-PlotLayout.RING_ROAD = { radius = 222, width = 20 } -- NPC shoppers, trucks
-PlotLayout.HIGHWAY = { width = 24, from = 232, to = 560 } -- north, to the tunnel
-PlotLayout.BACK_TRAIL = { radius = 500, width = 14 }
-PlotLayout.VALLEY_RADIUS = 530 -- hills from here out
-PlotLayout.HILLS_RADIUS = 620
+PlotLayout.RING_ROAD = { radius = 302, width = 20 } -- NPC shoppers, trucks
+PlotLayout.HIGHWAY = { width = 24, from = 312, to = 660 } -- north, to the tunnel
+PlotLayout.BACK_TRAIL = { radius = 596, width = 14 }
+PlotLayout.VALLEY_RADIUS = 630 -- hills from here out
+PlotLayout.HILLS_RADIUS = 720
 
 ------------------------------------------------------------------------
 -- Inside a plot (plot space: x = across, z = depth). From the design map's
 -- "One farm, front to back".
 
 PlotLayout.PLOT = {
-	shop = { min = Vector3.new(-74, 0, 0), max = Vector3.new(-18, 16, 40) },
+	-- The store's lot: from the strip of yard by the gate (kept clear: the
+	-- way to the staff door) toward the hedge, leaving a side yard, and back
+	-- to 8 studs short of the farmhouse. The biggest store (Config/Store: the
+	-- Supermarket's 20 × 14 floor, its walls and the stockroom) fills it.
+	shop = { min = Vector3.new(-103, 0, 0), max = Vector3.new(-20, 20, 64) }, -- (to −20: the gate-side wall at −21 and its trim)
 	gate = { across = -5, width = 18 },
-	path = { min = Vector3.new(-8, 0, 0), max = Vector3.new(-2, 0.2, 126) }, -- gate to field
+	path = { min = Vector3.new(-8, 0, 0), max = Vector3.new(-2, 0.2, 138) }, -- gate to field
 	gatehouse = { min = Vector3.new(6, 0, 4), max = Vector3.new(15, 9, 13) },
 	driveway = { min = Vector3.new(20, 0, 0), max = Vector3.new(38, 0.2, 48) },
 	warehouse = { min = Vector3.new(14, 0, 48), max = Vector3.new(76, 22, 114) }, -- the site; T1 and up fill it
@@ -64,9 +70,13 @@ PlotLayout.PLOT = {
 	truck = Vector3.new(29, 0, 29), -- the parked pickup's middle, nose to the road, tailgate at the dock
 	lever = Vector3.new(40.5, 0, 44.5), -- the dispatch lever, on the dock
 	dockPile = Vector3.new(21, 0, 44.5), -- where dropped crates wait
-	-- The Farm Stand (shop T0): a counter in the front fence, served over
-	-- from the yard; shoppers stand on the verge outside.
-	stand = { across = -46, width = 20 },
+	-- Your store (docs/GameDesign.md §4.8, Config/Store) on the shop lot,
+	-- its front wall on the front boundary. The floor's cells run from
+	-- `right` (the floor's edge at the gate end) toward the hedge, and from
+	-- the front wall (z = 0) back. Walls are `wall` thick; behind the back
+	-- wall is the stockroom, `backRoom` deep, on the farm's side. `floor` is
+	-- the floor's top.
+	store = { right = -22, wall = 1, backRoom = 6, height = 18, floor = 0.6 }, -- (height: the tallest building's walls)
 	stations = { -- inside the warehouse, from the dock back
 		{ id = "Load", z = 57 },
 		{ id = "Pack", z = 73 },
@@ -74,12 +84,12 @@ PlotLayout.PLOT = {
 		{ id = "Intake", z = 105 },
 	},
 	stationAcross = 47,
-	farmhouse = { min = Vector3.new(-70, 0, 60), max = Vector3.new(-26, 18, 102) },
-	door = Vector3.new(-20, 0, 81), -- in front of the farmhouse door: the owner's spawn and the barn's deposit point
-	field = { across = -48, depth = 126, tile = 12, size = 8 }, -- corner (row 1, column 1) and tiles
-	scarecrow = Vector3.new(-58, 0, 174),
-	kennel = Vector3.new(67, 0, 133),
-	backFence = 240,
+	farmhouse = { min = Vector3.new(-70, 0, 72), max = Vector3.new(-26, 18, 114) },
+	door = Vector3.new(-20, 0, 93), -- in front of the farmhouse door: the owner's spawn and the barn's deposit point
+	field = { across = -48, depth = 138, tile = 12, size = 8 }, -- corner (row 1, column 1) and tiles
+	scarecrow = Vector3.new(-58, 0, 186),
+	kennel = Vector3.new(67, 0, 145),
+	backFence = 252,
 }
 
 ------------------------------------------------------------------------
@@ -116,12 +126,84 @@ function PlotLayout.toWorld(index: number, point: Vector3): Vector3
 end
 
 -- The farm's zone (shared/ZoneRules): the whole plot, hedge to hedge, gate
--- to back fence.
-function PlotLayout.zone(index: number)
+-- to back fence, except your store's building (stage 1–4, default the
+-- Corner Store): that's a public place on the road (§3).
+function PlotLayout.zone(index: number, stage: number?)
 	local centre = Vector3.new(0, PlotLayout.ZONE_HEIGHT / 2 - 5, PlotLayout.DEPTH / 2)
 	return {
 		cframe = PlotLayout.frame(index) * CFrame.new(centre),
 		size = Vector3.new(PlotLayout.WIDTH, PlotLayout.ZONE_HEIGHT, PlotLayout.DEPTH),
+		holes = { PlotLayout.storeZone(index, stage) },
+	}
+end
+
+------------------------------------------------------------------------
+-- Your store
+
+-- A point on the store's floor grid in plot space (cell units: cell x, y's
+-- middle is at x, y; y below 0.5 is the front wall and outside it).
+function PlotLayout.storeLocal(cx: number, cy: number, height: number?): Vector3
+	local s = PlotLayout.PLOT.store
+	return Vector3.new(s.right - (cx - 0.5) * Store.CELL, height or 0, (cy - 0.5) * Store.CELL)
+end
+
+function PlotLayout.storeWorld(index: number, cx: number, cy: number, height: number?): Vector3
+	return PlotLayout.toWorld(index, PlotLayout.storeLocal(cx, cy, height))
+end
+
+-- Where a world position is on the store's grid, in cell units (floats).
+function PlotLayout.storeCellAt(index: number, position: Vector3): (number, number)
+	local s = PlotLayout.PLOT.store
+	local p = PlotLayout.frame(index):PointToObjectSpace(position)
+	return (s.right - p.X) / Store.CELL + 0.5, p.Z / Store.CELL + 0.5
+end
+
+-- The store building's floor and walls in plot space, { min, max }, for a
+-- building stage (the stockroom behind it isn't included: it's the farm's).
+function PlotLayout.storeBox(stage: number?)
+	local s = PlotLayout.PLOT.store
+	local cells = Store.BUILDINGS[stage or 1].cells
+	return {
+		min = Vector3.new(s.right - cells[1] * Store.CELL - s.wall, 0, -s.wall),
+		max = Vector3.new(s.right + s.wall, s.height, cells[2] * Store.CELL + s.wall),
+	}
+end
+
+-- Where an item in a store's layout stands (its model's pivot: World/StoreItems),
+-- for the building stage it's in. Floor items stand on the floor turned by
+-- their rot (shared/StoreLayout); wall items hang on the wall's inside face.
+function PlotLayout.storeItemFrame(index: number, entry, stage: number?): CFrame
+	local s = PlotLayout.PLOT.store
+	local def = Store.ITEMS[entry.item]
+	local frame = PlotLayout.frame(index)
+	if def.kind == "Wall" then
+		local cells = Store.BUILDINGS[stage or 1].cells
+		local along = entry.at + (def.size[1] - 1) / 2
+		local y = 7.2
+		if entry.side == "back" then
+			return frame * CFrame.new(PlotLayout.storeLocal(along, 0.5) + Vector3.new(0, y, cells[2] * Store.CELL - 0.02))
+		elseif entry.side == "gate" then
+			return frame * CFrame.new(s.right - 0.02, y, PlotLayout.storeLocal(0.5, along).Z) * CFrame.Angles(0, math.rad(90), 0)
+		end
+		return frame * CFrame.new(s.right - cells[1] * Store.CELL + 0.02, y, PlotLayout.storeLocal(0.5, along).Z) * CFrame.Angles(0, math.rad(-90), 0)
+	end
+	local size = def.size
+	local w, d = size[1], size[2]
+	if (entry.rot or 0) % 2 == 1 then
+		w, d = d, w
+	end
+	local centre = PlotLayout.storeLocal(entry.x + (w - 1) / 2, entry.y + (d - 1) / 2, s.floor)
+	return frame * CFrame.new(centre) * CFrame.Angles(0, math.rad(-90 * (entry.rot or 0)), 0)
+end
+
+-- The store as a zone (shared/ZoneRules): anyone inside it is in the store,
+-- not the farm.
+function PlotLayout.storeZone(index: number, stage: number?)
+	local box = PlotLayout.storeBox(stage)
+	local centre = PlotLayout.centre(box)
+	return {
+		cframe = PlotLayout.frame(index) * CFrame.new(centre.X, PlotLayout.ZONE_HEIGHT / 2 - 5, centre.Z),
+		size = Vector3.new(box.max.X - box.min.X, PlotLayout.ZONE_HEIGHT, box.max.Z - box.min.Z),
 	}
 end
 
@@ -191,7 +273,7 @@ end
 ------------------------------------------------------------------------
 -- Routes: the truck to the City, shoppers along the sidewalk
 
-PlotLayout.SIDEWALK = { radius = 235.5, width = 5 } -- between the ring road and the farms' fronts
+PlotLayout.SIDEWALK = { radius = 315.5, width = 5 } -- between the ring road and the farms' fronts
 local TRUCK_LANE = PlotLayout.RING_ROAD.radius + 4
 
 -- Degrees from north of a world point.
@@ -228,26 +310,22 @@ function PlotLayout.truckRoute(index: number): { Vector3 }
 	return points
 end
 
--- A shopper's walk: in along the sidewalk from the woods on the stand's
--- side, up to the stand's counter, then on past the gate into the woods on
--- the other side. Returns the points and which one is the counter.
-function PlotLayout.shopperRoute(index: number, lane: number?): ({ Vector3 }, number)
-	local P = PlotLayout.PLOT
+-- A shopper's walk along the sidewalk to your store's door, in world
+-- space: from the woods on one side (side −1: the hedge side, 1: past the
+-- gate), along the sidewalk (lane −1 to 1 keeps them from walking in single
+-- file), to just outside the door. Shoppers leave the same way, reversed.
+function PlotLayout.storeApproach(index: number, side: number, lane: number?): { Vector3 }
 	local axis = PlotLayout.angle(index)
 	local radius = PlotLayout.SIDEWALK.radius + (lane or 0)
-	local counter = PlotLayout.toWorld(index, Vector3.new(P.stand.across + (lane or 0) * 2, 0, -3))
-	local standBearing = bearing(counter)
-	local points = { PlotLayout.polar(axis - 21, radius) }
-	for _, point in arc(axis - 21, standBearing, radius, 4) do
+	local outside = PlotLayout.storeWorld(index, Store.DOOR_X + (lane or 0) * 0.1, -0.25)
+	local doorBearing = bearing(outside)
+	local from = axis + (if side < 0 then -21 else 21)
+	local points = { PlotLayout.polar(from, radius) }
+	for _, point in arc(from, doorBearing, radius, 4) do
 		table.insert(points, point)
 	end
-	table.insert(points, counter)
-	local at = #points
-	table.insert(points, PlotLayout.polar(standBearing, radius))
-	for _, point in arc(standBearing, axis + 21, radius, 4) do
-		table.insert(points, point)
-	end
-	return points, at
+	table.insert(points, outside)
+	return points
 end
 
 -- Length of a path of points (studs), up to point `upTo` (default: all).

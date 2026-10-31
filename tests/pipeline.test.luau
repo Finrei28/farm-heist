@@ -148,9 +148,9 @@ return function(spec, harness)
 			expect(fair.shopCoins).toBe(fair.shopUnits * 18)
 			expect(fair.shopUnits <= 40).toBe(true)
 		end)
-		it("a bigger shop needs a Cashier", function()
+		it("a store with only Registers needs a Cashier", function()
 			local state = PipelineRules.newState()
-			state.shop.tier = 1
+			state.shop.staffed = true
 			state.shelves.Carrot = 40
 			state.shop.prices.Carrot = 18
 			local report = PipelineRules.simulate(state, HOUR, 1, NOW, flat(18))

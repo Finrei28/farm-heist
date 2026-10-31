@@ -1,10 +1,10 @@
 -- The Packing Shed bench (docs/GameDesign.md §4.6, §5.3): opens from the
 -- bench's prompt. Each barn stack is a crate label with two choices, each
 -- showing what it pays right now: 🚚 Truck (today's market price, locked
--- when the pickup leaves) or 🏪 Stand (your price there). Picking one
+-- when the pickup leaves) or 🏪 Store (your price there). Picking one
 -- opens the wash: hold the stamp, let go with the meter in the green for
 -- grade A (+15%), and the crate is packed. A truck crate goes into your
--- arms (carry it to the dock); a stand crate goes to the stand's stockroom.
+-- arms (carry it to the dock); a store crate goes to your store's stockroom.
 -- The server times the hold itself (WarehouseService); the meter here is
 -- the same clock as near as lag allows.
 local HttpService = game:GetService("HttpService")
@@ -22,6 +22,8 @@ local MarketPrice = require(Shared.MarketPrice)
 local Rarities = require(Shared.Config.Rarities)
 local Remotes = require(Shared.Remotes)
 local ShopRules = require(Shared.ShopRules)
+local Store = require(Shared.Config.Store)
+local StoreLayout = require(Shared.StoreLayout)
 local TruckRules = require(Shared.TruckRules)
 local Warehouse = require(Shared.Config.Warehouse)
 
@@ -146,7 +148,7 @@ local function showWash(key: string, to: string)
 	chosen = { key = key, to = to }
 	crateIcon.Text = crop.icon or "📦"
 	crateCount.Text = `{crop.name} ×{units}`
-	destination.Text = if to == "Truck" then "🚚 for the pickup" else "🏪 for your Farm Stand"
+	destination.Text = if to == "Truck" then "🚚 for the pickup" else "🏪 for your store"
 	water.Size = UDim2.fromScale(1, 0)
 	resultHolder.Visible = false
 	holdStamp.Visible = true
@@ -170,7 +172,7 @@ local function finish(result)
 		panel.close()
 		UI.toast("Crate in your arms: load it into the pickup at the dock 🚚", nil, 3)
 	else
-		UI.toast(`Crate sent to your Farm Stand's stockroom. Stock the shelves at the stand!`, "Good", 3)
+		UI.toast("Crate sent to your store's stockroom. Fill a display (hold E at it) to put it out!", "Good", 3)
 		showList()
 	end
 end
@@ -231,7 +233,19 @@ local function row(order: number, key: string, units: number, state)
 	local crop = Crops.ById[cropId]
 	local t = now()
 	local truckPrice = MarketPrice.price(cropId, t)
-	local standPrice = state.shop.prices[cropId] or math.floor(ShopRules.reference(cropId, truckPrice) + 0.5)
+	local storePrice = state.store.prices[cropId] or math.floor(ShopRules.reference(cropId, truckPrice) + 0.5)
+	-- (can any display your store has unlocked hold it? is there room in the stockroom?)
+	local holdable, needs = false, nil
+	for itemId, def in Store.ITEMS do
+		if def.kind == "Display" and StoreLayout.holds(itemId, crop.rarity) then
+			if def.level <= state.store.level then
+				holdable = true
+			elseif not needs or def.level < needs then
+				needs = def.level
+			end
+		end
+	end
+	local full = ShopRules.stockroomRoom(state.store) <= 0
 	local frame = make("Frame", {
 		Size = UDim2.new(1, 0, 0, 56), BackgroundColor3 = C.cream, LayoutOrder = order, ZIndex = 22, Parent = panel.list,
 	}, { UI.corner(3), UI.stroke(UI.SEAM, 2) })
@@ -245,7 +259,8 @@ local function row(order: number, key: string, units: number, state)
 	local truckHolder, truckButton = UI.button({ text = `🚚 Truck {truckPrice}`, kind = if carrying then "cream" else "blue", size = UDim2.fromOffset(122, 42),
 		anchor = Vector2.new(1, 0.5), position = UDim2.new(1, -140, 0.5, 2), textSize = 17, zIndex = 23, parent = frame })
 	truckHolder.Name = "Truck"
-	local _, standButton = UI.button({ text = `🏪 Stand {standPrice}`, kind = "green", size = UDim2.fromOffset(122, 42),
+	local storeText = if not holdable then `🏪 Store Lv {needs}` elseif full then "🏪 Full" else `🏪 Store {storePrice}`
+	local _, storeButton = UI.button({ text = storeText, kind = if holdable and not full then "green" else "cream", size = UDim2.fromOffset(122, 42),
 		anchor = Vector2.new(1, 0.5), position = UDim2.new(1, -10, 0.5, 2), textSize = 17, zIndex = 23, parent = frame })
 	truckButton.Activated:Connect(function()
 		if player:GetAttribute("Carrying") then
@@ -254,8 +269,14 @@ local function row(order: number, key: string, units: number, state)
 			showWash(key, "Truck")
 		end
 	end)
-	standButton.Activated:Connect(function()
-		showWash(key, "Stand")
+	storeButton.Activated:Connect(function()
+		if not holdable then
+			UI.toast(`Your store can't show {crop.rarity} crops yet: that comes with Store Level {needs}. Send them by truck.`, "Error", 4)
+		elseif full then
+			UI.toast("Your store's stockroom is full: Fill your displays, or level your store up for more room.", "Error", 4)
+		else
+			showWash(key, "Store")
+		end
 	end)
 end
 
@@ -269,13 +290,9 @@ local function render(force: boolean?)
 	local warehouse = state.warehouse
 	local tier = TruckRules.tier(warehouse)
 	local away = TruckRules.home(warehouse, t) < 1
-	local stockroom = 0
-	for _, crate in state.shop.stockroom do
-		stockroom += crate.units
-	end
 	local pickup = if away then "on the road" else `{#warehouse.bed}/{tier.truckCrates} crates`
 	local arms = if player:GetAttribute("Carrying") then "  ·  carrying a crate" else ""
-	panel.toolbar.Text = `🚚 Pickup {pickup}  ·  🏪 Stockroom {stockroom}{arms}`
+	panel.toolbar.Text = `🚚 Pickup {pickup}  ·  🏪 Stockroom {#state.store.stockroom}/{ShopRules.stockroomSize(state.store)} crates{arms}`
 	-- (prices move every few seconds: the rows redraw with them, but only when one changes)
 	local prices = {}
 	for key in state.inventory.crops do
@@ -284,7 +301,7 @@ local function render(force: boolean?)
 			prices[cropId] = MarketPrice.price(cropId, t)
 		end
 	end
-	local signature = HttpService:JSONEncode({ state.inventory.crops, state.shop.prices, prices, player:GetAttribute("Carrying") or "" })
+	local signature = HttpService:JSONEncode({ state.inventory.crops, state.store.prices, state.store.level, #state.store.stockroom, prices, player:GetAttribute("Carrying") or "" })
 	if signature == shown and not force then
 		return
 	end

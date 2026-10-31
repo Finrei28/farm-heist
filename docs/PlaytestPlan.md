@@ -42,14 +42,14 @@ Build them in `DevCommandService` (Studio only, plus `Util/Staff` in live server
 | `/level N` ✅ · `/xp N` ✅ | set XP to reach level N (and its Land Permits) · add XP | Stage B |
 | `/grow S` ✅ · `/grow ripe` ✅ | fast-forward your field S seconds online · ripen everything | Stage B |
 | `/away H` ✅ | settle H hours offline (growth now; workers and the Welcome back card in week 4) | Stage B–C |
-| `/store N` · `/warehouse N` · `/workers N` | set your Store Level, Warehouse Level, or every worker's level (and fill their XP bars) | Stage C |
+| `/store N` ✅ · `/warehouse N` · `/workers N` | set your Store Level (up only; new buildings done at once), Warehouse Level, or every worker's level (and fill their XP bars) | Stage C |
 | `/restock` ✅ · `/restock full` ✅ | Barley's next restock now · with everything in stock | Stage B |
 | `/seeds Crop N` ✅ · `/seeds all N` ✅ | give seeds | Stage B |
 | `/tp N` ✅ · `/tp town` ✅ · `/tp porch` ✅ · `/tp barley` ✅ · `/tp home` ✅ | teleport (through `MovementService.Teleport`) | Stage A–B |
 | `/crops Crop N` ✅ | put harvested crops in your barn (C2's "tester with 40 Pumpkins") | Stage C |
 | `/truck` ✅ | your pickup reaches the City and comes home now | Stage C |
-| `/shoppers N` ✅ | the next N shoppers come to your stand 1.5 s apart (C3) | Stage C |
-| `/tp exchange` ✅ · `/tp shed` ✅ · `/tp stand` ✅ | to the Exchange desk, your Packing Shed bench, behind your Farm Stand | Stage C |
+| `/shoppers N` ✅ | the next N shoppers come to your store 1.5 s apart (C3) | Stage C |
+| `/tp exchange` ✅ · `/tp shed` ✅ · `/tp store` ✅ | to the Exchange desk, your Packing Shed bench, the sidewalk outside your store's door | Stage C |
 | `/stopwatch` | prints server time to Output (for timing from logs instead of a phone) | Stage A |
 | `/shield off` | end your Sprout Shield and arrival grace now | Stage D |
 | `/ko` · `/suspect` | knock yourself out / mark yourself a Suspect | Stage D |
@@ -65,12 +65,12 @@ There's no sprint key yet. To sprint, switch Studio's command bar to the **clien
 
 | # | Case | Steps | Measure | Pass |
 |---|---|---|---|---|
-| A1 | Town to a farm | Spawn → walk to Farm 1's gate, then Farm 5's | seconds, 3 runs each | 12.5–17 s (layout says 205–265 studs) |
+| A1 | Town to a farm | Spawn → walk to Farm 1's gate, then Farm 5's | seconds, 3 runs each | 17.5–22.5 s (layout says 285–345 studs since the valley grew on 2026-10-31; was 12.5–17 s) |
 | A2 | Back row to the fence | Stand on a back-row tile (furthest from the farmhouse) → walk straight to the back fence | seconds | about 1.5 s walking (24 studs); about 1.8 s at sack speed (13.6) |
 | A3 | Owner's sprint | From the yellow Door pad, sprint (24) to the back fence behind the middle of the field | seconds | 6–7 s (`tools/raidrace`: 160 studs; ±0.7 s is fine) |
 | A4 | Fences | Try to jump the back fence, each front fence stretch, the hedges | did you get over? | **never** (only the open gate lets you in) |
 | A5 | Sightlines | From the farmhouse door and from the warehouse, look at the back row | can you see a player standing there? | yes from both (raid detection needs it) |
-| A6 | Arrest walk | `/tp porch` → walk to the back of the farthest farm; then Visit a farm and walk round its hedge to the back fence | seconds | on foot 37–49 s (round the plots); Visit + walk about 30 s. Note if either feels too long or short |
+| A6 | Arrest walk | `/tp porch` → walk to the back of the farthest farm; then Visit a farm and walk round its hedge to the back fence | seconds | on foot 46–57 s (round the plots); Visit + walk about 34 s. Note if either feels too long or short |
 | A7 | Getting lost | A new tester: "go to Barley's Seeds, then back to Farm 3" | time; wrong turns | finds both in under 60 s without help |
 
 If A3 is off by more than 0.7 s, or A4 fails, fix `PlotLayout` before week 1 and re-run `tools/raidrace`.
@@ -116,7 +116,7 @@ If A3 is off by more than 0.7 s, or A4 fails, fix `PlotLayout` before week 1 and
 
 | Case | Expected (`tools/raidrace`) | Pass |
 |---|---|---|
-| Thief, no defences vs owner at the warehouse | thief safe at ~5.8 s; owner in reach ~7.7 s → thief escapes | escapes ≥ 4 of 5 |
+| Thief, no defences vs owner at the warehouse | thief safe at ~5.8 s; owner in reach ~8.1 s → thief escapes | escapes ≥ 4 of 5 |
 | Thief vs cloche + dog + tall fence, owner at the warehouse | caught | caught ≥ 4 of 5 |
 | Same, owner in town (Home) | caught with ~1 s to spare | caught ≥ 3 of 5 at 0.2 s lag; if not, raise the tall fence climb or the dog's slow |
 

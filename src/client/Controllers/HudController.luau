@@ -104,9 +104,15 @@ end
 
 local function updateChip()
 	local inFarm = player:GetAttribute("InFarm") or 0
+	local inStore = player:GetAttribute("InStore") or 0
 	local mine = player:GetAttribute("Plot")
 	local text, color, textColor = "Cloverdale", C.cream, C.ink
-	if inFarm > 0 and inFarm == mine then
+	if inStore > 0 then
+		-- a store is a public place on the road (§4.8): its own name
+		local name = workspace.World[`Plot{inStore}`]:GetAttribute("StoreName") or "Store"
+		text = if name == "FOR RENT" then `Farm {inStore}'s store: for rent` else `🏪 {name}`
+		color, textColor = if inStore == mine then C.green else C.gold, if inStore == mine then C.cream else C.ink
+	elseif inFarm > 0 and inFarm == mine then
 		text, color, textColor = "Your Farm", C.green, C.cream
 	elseif inFarm > 0 then
 		local owner = workspace.World[`Plot{inFarm}`]:GetAttribute("OwnerName")
@@ -132,7 +138,12 @@ local sideBar = make("Frame", {
 	AutomaticSize = Enum.AutomaticSize.Y,
 	BackgroundTransparency = 1,
 	Parent = UI.screen,
-}, { make("UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }) })
+})
+-- One column on a computer; on phones two columns of smaller crates, so six
+-- of them stay above the thumbstick (§5.2, play-test 2026-10-31).
+local column = make("UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder })
+local grid = make("UIGridLayout", { CellSize = UDim2.fromOffset(58, 52), CellPadding = UDim2.fromOffset(6, 6), FillDirection = Enum.FillDirection.Horizontal,
+	FillDirectionMaxCells = 2, SortOrder = Enum.SortOrder.LayoutOrder })
 
 local crates = {}
 
@@ -158,8 +169,9 @@ UI.onLayout(function()
 	-- (phones: higher up and smaller, out of the thumbstick's way)
 	sideBar.AnchorPoint = if UI.compact then Vector2.zero else Vector2.new(0, 0.5)
 	sideBar.Position = if UI.compact then UDim2.fromOffset(14, 64) else UDim2.new(0, 14, 0.55, 0)
-	sideBar.Size = UDim2.fromOffset(if UI.compact then 58 else 72, 0)
-	sideBar.UIListLayout.Padding = UDim.new(0, if UI.compact then 6 else 8)
+	sideBar.Size = UDim2.fromOffset(if UI.compact then 58 * 2 + 6 else 72, 0)
+	column.Parent = if UI.compact then nil else sideBar
+	grid.Parent = if UI.compact then sideBar else nil
 	for _, crate in crates do
 		sizeCrate(crate)
 	end
@@ -398,6 +410,7 @@ end
 function HudController.Start()
 	PlayerState.observe(updateState)
 	player:GetAttributeChangedSignal("InFarm"):Connect(updateChip)
+	player:GetAttributeChangedSignal("InStore"):Connect(updateChip)
 	player:GetAttributeChangedSignal("Plot"):Connect(updateChip)
 	task.spawn(function()
 		while true do

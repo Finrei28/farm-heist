@@ -19,6 +19,71 @@ Follow-ups: <what to test next time>
 
 ## Sessions
 
+### 2026-10-31 · see-through roofs and the light inside (check by eye) · build: this session's week 3 + the resize
+Testers: Claude, driving Studio (the chat's dev commands; the command bar for the lighting comparisons and to zoom the follow camera out) · Setup: solo Play, desktop · Lag: 0 · Screenshots: [playtest/2026-10-31-roofs/](playtest/2026-10-31-roofs/)
+
+| Check | Result | OK? | Notes |
+|---|---|---|---|
+| Walking in | the roof, the false front and the ceiling lamps fade as you pass the door; the sign's words go with them | ✓ | Corner Store, Farm Shop (its gable too), Market Hall, Supermarket |
+| The camera | zoomed out inside, it rises over the walls and looks down into the room (it stopped at the ceiling before) | ✓ | |
+| Walking out | the roof and signs come back a stud outside the door; the stand-in toward the sun is gone (1 inside, 0 outside); Brightness and OutdoorAmbient never changed | ✓ | |
+| Decorate inside | opens and closes normally; the roof stays hidden while you're still inside; the plan view is shaded, the yard round it sunny | ✓ | |
+| The light | the stores were glaring inside (white walls, 6 bright lamps; then the sun once the roof faded). New inside colours and lamps at 0.45; then the indoor-light mode (it darkened the farm outside: dropped at the user's word); then the roof's stand-in 800 studs toward the sun: each building shaded, close to its roofed look side by side once the Supermarket's colours were warmed | ✓ | the farm through the windows and over the walls in full daylight |
+| The stand-in | its shadow works from 600 to 1,500 studs (not 3,000); at 800 a glowing white one can't be seen even looking straight at the sun, nor at sunset (sun 5.5° up) | ✓ | grey, at 600, it showed in front of the sun |
+| The doorway | the Supermarket's character walked straight in (0.8 s from the sidewalk) | ✓ | it stalled at a plinth across the door before (the user spotted it) |
+
+Bugs found and fixed in the session: the glare (above); the Supermarket's plinth across its doorway (a 1.2-stud ledge), now stopped either side and tested. Tried and dropped: darkening the exposure inside, a nearly invisible roof for its shadow (a 97% invisible part casts none), indoor light on your screen (darkens the outside).
+Not covered: a real phone (lower graphics draw shadows shorter or not at all), the night (§4.14 isn't built yet).
+
+### 2026-10-31 · bigger stores, a bigger valley (check by eye) · build: this session's week 3 + the resize
+Testers: Claude, driving Studio (the chat's dev commands, the command bar for camera views) · Setup: solo Play, desktop · Lag: 0 · Screenshots: [playtest/2026-10-31-store-sizes/](playtest/2026-10-31-store-sizes/)
+
+| Check | Result | OK? | Notes |
+|---|---|---|---|
+| Level 1 | a 6×4 floor in an 8×6 Corner Store (34 studs of frontage): the starter kit on the back wall, the middle of the floor free, the taped-off column and row with the "Next level!" boxes | ✓ | |
+| Level 4 | the whole Corner Store open, the back row moved back to the wall | ✓ | |
+| Farm Shop (Level 9) | the red barn, two windows with the name over them, the barn door and hayloft; inside 11×9 with cord lamps and its free Tiered Rack | ✓ | |
+| Market Hall (Level 14) | four arched windows with flower boxes, the timber storey with little windows either side of the name, the clock parapet; inside 15×11 | ✓ | |
+| Supermarket (Level 20) | 80 studs of glass front, the name band, the canopy, the trolley bay, the billboard and gold star; inside 20×14 under light strips | ✓ | |
+| Fit | from above: the side yard by the hedge, the strip by the gate, the yard before the farmhouse, the stockroom lean-to open to it; the highway clear between Farms 1 and 8 | ✓ | |
+| From town | the farms' fronts and stores along the ring road, a wide green between | ✓ | the green is bare until the town's look pass (ArtDirection §6) |
+| Shoppers | 12 called with `/shoppers`: along the longer sidewalk, in through the door, browsing the back wall, queueing up the side wall at the Honour Box, paying (100 → 604 coins) | ✓ | |
+| Decorate | frames the whole Supermarket; zooms in further on a big building | ✓ | |
+
+Bugs found and fixed in the session: none in the game. The canopy's posts would have stood on the sidewalk, so it hangs from the name band on tie rods instead. Studio crashed once before the session (a graphics driver "device removed" error) and updated itself on reopening.
+
+Not covered: a real phone (the tap size zoomed in, and frame rate with several full Supermarkets in view), 8 players.
+Follow-ups: C9 on a real phone in a Supermarket; the part budget with full stores once streaming is on.
+
+### 2026-10-31 · week 3 smoke test (your store) · build: this session's week 3
+Testers: Claude, driving Studio (keyboard and mouse, the chat's dev commands, the command bar for camera views and walking) · Setup: solo Play, desktop and iPhone 17 Pro emulation · Lag: 0 · Screenshots: [playtest/2026-10-31-week3/](playtest/2026-10-31-week3/)
+
+| Check | Result | OK? | Notes |
+|---|---|---|---|
+| The farm's front | picket fences, rounded hedges, the gate arch with "XD2MUCH's farm" on its plank (both sides), a red flag and mailbox in Farm 1's colour; the Corner Store on the road with its hand-painted name and striped awning | ✓ | |
+| Into the store | through the door from the sidewalk; the chip says "🏪 XD2MUCH's Corner Store"; the shelf, crates, plant, Honour Box, ceiling lamps and the taped-off floor with its "Next level!" boxes | ✓ | the doorway was glazed: fixed (1) |
+| Staff door | out to the yard by the gate (the chip goes back to "Your Farm"); the door swings open as you come and shuts behind you | ✓ | |
+| Stockroom | bench: 🏪 Store with the store's price, "Stockroom 1/6 crates", "Crate sent to your store's stockroom"; the lean-to behind the store shows each crate (crop on top, grade A sticker) | ✓ | |
+| Fill | "Fill all" in the Stock tab put 48 units out (a different crop on each Auto slot); E at a display: "Fill · Produce Crate 0/12 · stockroom 0" | ✓ | |
+| Shoppers | in from the sidewalk, along the aisle to the slot with their crop, bubbles ("🥕×2", "Too dear!"), baskets that fill, a queue at the Honour Box, "+66" when they pay; coins 100 → 845 in a rush of 8 | ✓ | bubbles were inside the ceiling: fixed (2) |
+| Store window | name and Rename, rating with Charm and why, Prices, Stock, Upgrade (the next level on blueprint paper and the ladder) | ✓ | the ✎ glyph didn't draw: "Rename" (3) |
+| Upgrade | Levels 2–4 straight away; Level 5: 6,000 paid, "the builders are on it", scaffolding round the new footprint and a countdown sign by the gate; two minutes later the Farm Shop with its free Tiered Produce Rack, the shelves moved back with the floor | ✓ | an error every second in the countdown stopped every store's shoppers: fixed (4) |
+| Decorate | top-down plan, the drawer with 3D pictures, green/red with why ("That's in front of your Produce Crate", "Leave the space in front of it free"), turn, place, move, put away (refused for the last checkout), DONE refused with too few coins, then "Saved! Spent 150"; a Clock hung on the back wall | ✓ | eight look and feel fixes (5) |
+| Buildings | Corner Store, Farm Shop (red barn, gable roof, barn door, hayloft), Market Hall (brick and timber, arched windows, clock), Supermarket (glass front, name band, rooftop billboard, the Level 20 star) | ✓ | three look fixes (6) |
+| Phone | the side bar in two columns above the thumbstick; the Store window fits; Decorate with the touch buttons hidden | ✓ | the store was too small to tap: zoom and pan added (7) |
+
+Bugs found and fixed in the session:
+1. The wall builder sorted its list of openings in place, so the glass meant for the big window went into the doorway (nobody could get in) and that window had no glass.
+2. Shoppers' bubbles floated 10.75 studs up, inside a Corner Store's 10-stud ceiling: now 7.5, above their heads.
+3. "✎", "⟳" and "✕" don't draw in FredokaOne: the buttons say Rename, Turn and Cancel.
+4. The construction countdown looked for its label in the wrong place and errored every second inside the store loop, which stopped every store's shoppers: fixed, and each store's tick now runs on its own (one store's error is logged, the rest carry on).
+5. Decorate: mouse positions leave out Roblox's top bar, so the ghost sat a row off (now `ScreenPointToRay`); the awning, signs and false front still covered the front row (everything above the doors or in front of the window is hidden, and so are the words on them); the ticker came back over the view; the cards' detail line ran under the price tag; the ghost's Highlight didn't draw (a glowing green or red footprint instead, gold for a picked item); the white grid vanished on white tiles (blueprint blue); DONE sat under the toasts (now bottom right, tools on the left); Esc opens Roblox's menu (the hint no longer offers it); the camera stayed overhead afterwards (it goes back behind your character); the hint hid wall items on the back wall (more room at the top).
+6. Inside the Farm Shop the walls were barn red and the lamps floated under the gable (cream plaster inside, lamps on cords with shades); the Market Hall's striped window awnings hid its name sign (flower boxes in the farm colour instead); the Level 20 star was a plain square (a big gold ★).
+7. On a phone the floor was about 75 points tall: pinch (and the mouse wheel) zooms, a drag (or WASD) moves the view, the touch buttons hide, and the drawer and top margin are smaller.
+
+Not covered: pinch on a real phone (the emulator has no pinch), a Register with you behind it (it needs Store Level 3 and standing at the till), selling an item back, 8 players, saving across sessions (API access is off), new testers (C9 wants real people).
+Follow-ups: Stage B and C with testers; C9 (decorate on a phone) on a real phone.
+
 ### 2026-10-31 · week 2 smoke test (selling) · build: this session's week 2
 Testers: Claude, driving Studio (keyboard and mouse, the chat's dev commands, the command bar for camera views) · Setup: solo Play, desktop and iPhone 17 Pro emulation · Lag: 0 · Screenshots: [playtest/2026-10-31-week2/](playtest/2026-10-31-week2/)
 

@@ -10,8 +10,9 @@
 --   /seeds Pumpkin 10    give seeds by crop id (/seeds all 5 = 5 of each)
 --   /crops Pumpkin 40    put harvested crops in your barn (past its capacity)
 --   /truck               your pickup reaches the City and comes home now
---   /shoppers 5          the next N shoppers come to your stand one after another
---   /tp town · /tp porch · /tp barley · /tp exchange · /tp home · /tp shed · /tp stand · /tp 3 (a farm's gate)
+--   /shoppers 5          the next N shoppers come to your store one after another
+--   /store 5             your store straight to Store Level N (up only; buildings done at once)
+--   /tp town · /tp porch · /tp barley · /tp exchange · /tp home · /tp shed · /tp store · /tp 3 (a farm's gate)
 --   /wipe                start your save over (in place)
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -25,6 +26,7 @@ local Crops = require(Shared.Config.Crops)
 local PlotLayout = require(Shared.PlotLayout)
 local ProgressionRules = require(Shared.ProgressionRules)
 local SeedStock = require(Shared.SeedStock)
+local Store = require(Shared.Config.Store)
 
 local Server = ServerScriptService.Server
 local Analytics = require(Server.Util.Analytics)
@@ -34,7 +36,7 @@ local DataService = require(script.Parent.DataService)
 local FieldService = require(script.Parent.FieldService)
 local LandService = require(script.Parent.LandService)
 local PlotService = require(script.Parent.PlotService)
-local ShopService = require(script.Parent.ShopService)
+local StoreService = require(script.Parent.StoreService)
 local TravelService = require(script.Parent.TravelService)
 local TruckService = require(script.Parent.TruckService)
 
@@ -167,8 +169,18 @@ function DevCommandService.Start()
 
 	register("DevShoppers", "/shoppers", function(player, _data, args)
 		local count = math.clamp(math.floor(tonumber(args[2]) or 5), 1, 50)
-		ShopService.Rush(player, count)
-		reply(player, `{count} shoppers on their way (if the stand has stock)`)
+		StoreService.Rush(player, count)
+		reply(player, `{count} shoppers on their way (if anything's on display)`)
+	end)
+
+	register("DevStore", "/store", function(player, data, args)
+		local to = math.floor(tonumber(args[2]) or data.store.level + 1)
+		if to <= data.store.level then
+			reply(player, `Your store is at Level {data.store.level}; /store only goes up (/wipe starts over)`)
+			return
+		end
+		StoreService.SetLevel(player, to)
+		reply(player, `Store Level {data.store.level}`)
 	end)
 
 	register("DevTeleport", "/tp", function(player, _data, args)
@@ -188,12 +200,18 @@ function DevCommandService.Start()
 		elseif where == "home" then
 			local index = PlotService.plotOf(player)
 			frame = index and PlotService.homeFrame(index)
-		elseif where == "shed" or where == "stand" then
+		elseif where == "shed" then
 			local index = PlotService.plotOf(player)
 			if index then
-				local spot = if where == "shed" then PlotLayout.PLOT.bench + Vector3.new(0, 3, -6) else Vector3.new(PlotLayout.PLOT.stand.across, 3, 8)
-				local look = if where == "shed" then PlotLayout.PLOT.bench + Vector3.new(0, 3, 0) else Vector3.new(PlotLayout.PLOT.stand.across, 3, 0)
+				local spot, look = PlotLayout.PLOT.bench + Vector3.new(0, 3, -6), PlotLayout.PLOT.bench + Vector3.new(0, 3, 0)
 				frame = CFrame.lookAt(PlotLayout.toWorld(index, spot), PlotLayout.toWorld(index, look))
+			end
+		elseif where == "store" then
+			local index = PlotService.plotOf(player)
+			if index then
+				-- on the sidewalk, looking in at the door
+				local at = PlotLayout.storeWorld(index, Store.DOOR_X, -2.5, 3)
+				frame = CFrame.lookAt(at, PlotLayout.storeWorld(index, Store.DOOR_X, 2, 3))
 			end
 		elseif tonumber(where) and PlotLayout.COUNT >= tonumber(where) then
 			frame = TravelService.visitFrame(tonumber(where))
@@ -201,7 +219,7 @@ function DevCommandService.Start()
 		if frame then
 			TravelService.Send(player, frame)
 		else
-			reply(player, "Where? /tp town · porch · barley · exchange · home · shed · stand · 1–8")
+			reply(player, "Where? /tp town · porch · barley · exchange · home · shed · store · 1–8")
 		end
 	end)
 

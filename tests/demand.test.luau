@@ -33,6 +33,7 @@ return function(spec, harness)
 				last = chance
 			end
 			expect(DemandModel.buyChance(120, 100, 3, true)).toBeGreaterThan(DemandModel.buyChance(120, 100, 3))
+			expect(DemandModel.buyChance(120, 100, 3, false, 1.25)).toBeGreaterThan(DemandModel.buyChance(120, 100, 3, false, 1))
 		end)
 		it("matches the Pumpkin on the shop mockup (690 against 618 at 4★: 🙂, ~3 a minute)", function()
 			local chance = DemandModel.buyChance(690, 618, 4)
@@ -42,12 +43,15 @@ return function(spec, harness)
 	end)
 
 	describe("shoppers", function()
-		it("come every 20 s to a Farm Stand at 3★, and every 4 s to a Supermarket at 5★", function()
-			expect(DemandModel.shopperInterval(0, 3)).toBeNear(20, 1e-9)
-			expect(DemandModel.shopperInterval(3, 5)).toBeNear(4, 1e-9)
+		it("come every 20 s at Level 1 and 3★, 14 s at 5, 9 at 10, 6 at 15, 4 at 20 (§4.8)", function()
+			expect(DemandModel.shopperInterval(1, 3)).toBeNear(20, 1e-9)
+			for _, case in { { 5, 14 }, { 10, 9 }, { 15, 6 }, { 20, 4 } } do
+				expect(DemandModel.shopperInterval(case[1], 3)).toBeNear(case[2], 0.5)
+			end
 		end)
-		it("come less often to a 1★ shop", function()
-			expect(DemandModel.shopperInterval(1, 1)).toBeGreaterThan(DemandModel.shopperInterval(1, 3))
+		it("come 15% more often for each star above 3, 15% less below", function()
+			expect(DemandModel.shopperInterval(1, 5)).toBeNear(20 / 1.3, 1e-9)
+			expect(DemandModel.shopperInterval(1, 1)).toBeNear(20 / 0.7, 1e-9)
 		end)
 	end)
 

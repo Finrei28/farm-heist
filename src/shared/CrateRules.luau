@@ -2,7 +2,7 @@
 -- packed from one barn stack, up to the rarity's crate size (a crate can go
 -- out part-full), and washed by hand to grade A (×1.15) or B. A crate is
 --   { crop = cropId, key = barn stack key, units = n, grade = "A" | "B" }
--- and goes to the truck (priced when it leaves) or the Farm Stand's
+-- and goes to the truck (priced when it leaves) or your store's
 -- stockroom (shared/ShopRules). tests/crate.test.luau.
 local BarnRules = require(script.Parent.BarnRules)
 local Crops = require(script.Parent.Config.Crops)

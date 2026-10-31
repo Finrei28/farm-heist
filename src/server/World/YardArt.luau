@@ -1,9 +1,9 @@
--- How a farm's selling side looks at tier 0 (docs/ArtDirection.md §7): the
--- Packing Shed with its bench, the dock and dispatch lever, the pickup
--- truck and the striped truck gate, and the Farm Stand in the front fence.
--- WorldBuilder builds them empty; WarehouseService, TruckService and
--- ShopService call the rest to show crates, the bed, the shelves and their
--- price tags. Positions come from shared/PlotLayout.PLOT.
+-- How a farm's warehouse side looks at Warehouse Level 1 (docs/ArtDirection.md
+-- §7): the Packing Shed with its bench, the dock and dispatch lever, the
+-- pickup truck in the farm's colour and the striped truck gate. (Your store
+-- is World/StoreArt.) WorldBuilder builds them empty; WarehouseService and
+-- TruckService call the rest to show crates and the bed. Positions come from
+-- shared/PlotLayout.PLOT.
 --
 -- The pickup is a Model named "Truck" whose pivot is its parked spot (on
 -- the ground, nose to the road). Clients drive it to the City and back from
@@ -11,7 +11,6 @@
 -- server never moves it.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Crops = require(ReplicatedStorage.Shared.Config.Crops)
 local PlotLayout = require(ReplicatedStorage.Shared.PlotLayout)
 local Parts = require(script.Parent.Parts)
 local FarmArt = require(script.Parent.FarmArt)
@@ -23,7 +22,6 @@ local YardArt = {}
 
 local P = PlotLayout.PLOT
 local CRATE = Vector3.new(3.2, 1.8, 3.2)
-local WICKER = Color3.fromRGB(196, 150, 84)
 local GLASS = Color3.fromRGB(170, 214, 236)
 local TYRE = Color3.fromRGB(46, 42, 40)
 
@@ -196,6 +194,7 @@ end
 -- The pickup and the truck gate
 
 local function buildTruck(model: Model, frame: CFrame)
+	local paint = Parts.farmColor(model:GetAttribute("PlotIndex") or 1)
 	local truck = Instance.new("Model")
 	truck.Name = "Truck"
 	local base = frame * CFrame.new(P.truck + Vector3.new(0, 0.35, 0)) -- on the driveway, nose toward the road (−Z)
@@ -216,8 +215,8 @@ local function buildTruck(model: Model, frame: CFrame)
 		end
 	end
 	box("Chassis", Vector3.new(0, 2.2, 0), Vector3.new(8.2, 1, 20), COLORS.dark)
-	box("Hood", Vector3.new(0, 3.6, -7.7), Vector3.new(8.4, 2, 4.6), COLORS.barnRed)
-	box("Cab", Vector3.new(0, 4.9, -3.4), Vector3.new(8.4, 4.6, 4.2), COLORS.barnRed)
+	box("Hood", Vector3.new(0, 3.6, -7.7), Vector3.new(8.4, 2, 4.6), paint)
+	box("Cab", Vector3.new(0, 4.9, -3.4), Vector3.new(8.4, 4.6, 4.2), paint)
 	box("Windshield", Vector3.new(0, 5.6, -5.55), Vector3.new(7.4, 2.4, 0.15), GLASS, { Reflectance = 0.2 })
 	for _, x in { -4.25, 4.25 } do
 		box("Window", Vector3.new(x, 5.6, -3.4), Vector3.new(0.15, 2.2, 3), GLASS, { Reflectance = 0.2 })
@@ -230,9 +229,9 @@ local function buildTruck(model: Model, frame: CFrame)
 	end
 	box("BedFloor", Vector3.new(0, 2.85, 4.2), Vector3.new(8.2, 0.3, 11.6), COLORS.edging)
 	for _, x in { -3.95, 3.95 } do
-		box("BedSide", Vector3.new(x, 3.9, 4.2), Vector3.new(0.4, 1.8, 11.6), COLORS.barnRed)
+		box("BedSide", Vector3.new(x, 3.9, 4.2), Vector3.new(0.4, 1.8, 11.6), paint)
 	end
-	box("BedFront", Vector3.new(0, 3.9, -1.4), Vector3.new(8.2, 1.8, 0.4), COLORS.barnRed)
+	box("BedFront", Vector3.new(0, 3.9, -1.4), Vector3.new(8.2, 1.8, 0.4), paint)
 	box("Tailgate", Vector3.new(0, 3.9, 9.8), Vector3.new(8.2, 1.8, 0.4), COLORS.cream)
 	local bed = Instance.new("Folder")
 	bed.Name = "Bed"
@@ -281,96 +280,12 @@ local function buildTruckGate(model: Model, frame: CFrame)
 end
 
 ------------------------------------------------------------------------
--- The Farm Stand
 
-local function buildStand(model: Model, frame: CFrame)
-	local stand = Instance.new("Model")
-	stand.Name = "FarmStand"
-	stand.Parent = model
-	local x0 = P.stand.across - P.stand.width / 2
-	local x1 = P.stand.across + P.stand.width / 2
-	plotBox("Counter", frame, Vector3.new(x0, 0, -0.5), Vector3.new(x1, 3.5, 3.5), { Color = COLORS.edging }, stand)
-	plotBox("CounterTop", frame, Vector3.new(x0 - 0.4, 3.5, -1), Vector3.new(x1 + 0.4, 3.9, 4), { Color = COLORS.post }, stand)
-	for _, x in { x0 + 0.4, x1 - 0.4 } do
-		plotBox("Post", frame, Vector3.new(x - 0.4, 3.9, 3), Vector3.new(x + 0.4, 10.4, 3.8), { Color = COLORS.post }, stand)
-	end
-	-- A striped awning sloping toward the road.
-	local stripes = 6
-	for i = 0, stripes - 1 do
-		local x = x0 - 0.6 + (i + 0.5) * (P.stand.width + 1.2) / stripes
-		part({
-			Name = "Awning", Size = Vector3.new((P.stand.width + 1.2) / stripes, 0.3, 6.4),
-			CFrame = frame * CFrame.new(x, 9.6, 0.9) * CFrame.Angles(math.rad(-14), 0, 0),
-			Color = if i % 2 == 0 then COLORS.barnRed else COLORS.cream,
-		}, stand)
-	end
-	sign("StandSign", "FARM STAND", frame * CFrame.new(P.stand.across, 11.7, 3.4), Vector3.new(12, 2.4, 0.4), stand)
-	-- Two baskets (the shelves) and the honour box between them.
-	for i, x in { P.stand.across - 5.5, P.stand.across + 5.5 } do
-		local basket = part({ Name = `Shelf{i}`, Size = Vector3.new(6, 1.4, 3.2), CFrame = frame * CFrame.new(x, 4.6, 1.5), Color = WICKER }, stand)
-		basket:SetAttribute("Shelf", tostring(i))
-		local gui = Instance.new("BillboardGui")
-		gui.Name = "PriceTag"
-		gui.Size = UDim2.fromScale(5, 1.6)
-		gui.StudsOffsetWorldSpace = Vector3.new(0, 2.6, 0)
-		gui.MaxDistance = 70
-		gui.Adornee = basket
-		local label = Instance.new("TextLabel")
-		label.Name = "Text"
-		label.Size = UDim2.fromScale(1, 1)
-		label.BackgroundColor3 = COLORS.cream
-		label.Font = Enum.Font.FredokaOne
-		label.TextScaled = true
-		label.TextColor3 = Color3.fromRGB(58, 42, 28)
-		label.Text = "Empty"
-		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(0.2, 0)
-		corner.Parent = label
-		label.Parent = gui
-		gui.Parent = basket
-		local produce = Instance.new("Folder")
-		produce.Name = "Produce"
-		produce.Parent = basket
-	end
-	local box = part({ Name = "HonourBox", Size = Vector3.new(2.4, 2, 2), CFrame = frame * CFrame.new(P.stand.across, 4.9, 1.8), Color = COLORS.hay }, stand)
-	prop({ Name = "Slot", Size = Vector3.new(1.2, 0.1, 0.3), CFrame = box.CFrame * CFrame.new(0, 1.02, 0), Color = COLORS.dark }, stand)
-	-- Nobody climbs over the counter into the yard.
-	plotBox("StandBlocker", frame, Vector3.new(x0, 0, -0.5), Vector3.new(x1, PlotLayout.FENCE_BLOCK, 3.5),
-		{ Transparency = 1, CanQuery = false, CanTouch = false }, model)
-end
-
--- Fills a shelf's basket in its crop's colour (fuller with more units) and
--- writes its price tag ("🥕 24"), or empties it.
-function YardArt.showShelf(model: Model, key: string, shelf, price: number?)
-	local stand = model:FindFirstChild("FarmStand")
-	local basket = stand and stand:FindFirstChild(`Shelf{key}`)
-	if not basket then
-		return
-	end
-	basket.Produce:ClearAllChildren()
-	local label = basket.PriceTag.Text
-	if not shelf or shelf.units <= 0 then
-		label.Text = "Empty"
-		return
-	end
-	local crop = Crops.ById[shelf.crop]
-	label.Text = `{crop.icon or ""} {price or "?"}`
-	local balls = math.clamp(math.ceil(shelf.units / 3), 1, 7)
-	for i = 1, balls do
-		local x = ((i - 1) % 4 - 1.5) * 1.3
-		local z = if (i - 1) // 4 == 0 then -0.5 else 0.6
-		ball("Produce", basket.CFrame * CFrame.new(x, 0.9, z), 1.3, { Color = FarmArt.cropColor(shelf.crop) }, basket.Produce)
-	end
-end
-
-------------------------------------------------------------------------
-
--- Builds the tier-0 selling side of a farm.
+-- Builds the warehouse side of a farm at Warehouse Level 1.
 function YardArt.build(model: Model, frame: CFrame)
 	buildShed(model, frame)
 	buildTruck(model, frame)
 	buildTruckGate(model, frame)
-	buildStand(model, frame)
 end
 
 return YardArt

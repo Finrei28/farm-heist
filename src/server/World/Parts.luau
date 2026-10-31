@@ -37,6 +37,23 @@ Parts.COLORS = {
 	leafDark = Color3.fromRGB(56, 128, 48),
 }
 
+-- Each farm's own colour (docs/ArtDirection.md §3, §7), by plot number: the
+-- gate flag, the store's awning and trim, the pickup.
+Parts.FARM_COLORS = {
+	Color3.fromRGB(232, 83, 63), -- Tomato
+	Color3.fromRGB(242, 145, 61), -- Tangerine
+	Color3.fromRGB(245, 200, 66), -- Sunflower
+	Color3.fromRGB(92, 191, 74), -- Clover
+	Color3.fromRGB(47, 181, 168), -- Teal
+	Color3.fromRGB(76, 155, 232), -- Sky
+	Color3.fromRGB(139, 108, 217), -- Grape
+	Color3.fromRGB(232, 106, 168), -- Rose
+}
+
+function Parts.farmColor(index: number): Color3
+	return Parts.FARM_COLORS[(index - 1) % #Parts.FARM_COLORS + 1]
+end
+
 -- An anchored SmoothPlastic part with these properties.
 function Parts.part(props, parent: Instance?): BasePart
 	local p: any = Instance.new("Part")
@@ -79,6 +96,43 @@ function Parts.cylinder(name: string, cframe: CFrame, diameter: number, height: 
 	all.Size = Vector3.new(height, diameter, diameter)
 	all.CFrame = cframe * CFrame.Angles(0, 0, math.rad(90))
 	return Parts.prop(all, parent)
+end
+
+-- A white picket fence along X in plot space, from min to max (min.Z..max.Z
+-- is its thickness), as tall as PlotLayout's fences (`height`): pointed
+-- pickets with gaps you can see through, two rails behind them, a post
+-- every 8 studs, and an invisible wall up to `block` named `<name>Blocker`
+-- (characters climb rails like a ladder, ArtDirection §7). Returns the
+-- fence model.
+function Parts.picketFence(frame: CFrame, min: Vector3, max: Vector3, parent: Instance, name: string, height: number?, block: number?): Model
+	local top = height or 8
+	local fence = Instance.new("Model")
+	fence.Name = name
+	local z = (min.Z + max.Z) / 2
+	local length = max.X - min.X
+	for _, y in { 1.6, top - 2.2 } do
+		Parts.plotBox("Rail", frame, Vector3.new(min.X, y, z + 0.1), Vector3.new(max.X, y + 0.45, z + 0.4), { Color = Parts.COLORS.fence }, fence)
+	end
+	local pickets = math.max(1, math.floor(length / 1.6))
+	local step = length / pickets
+	for i = 0, pickets - 1 do
+		local x = min.X + (i + 0.5) * step
+		local picket = Parts.prop({ Name = "Picket", Size = Vector3.new(0.75, top - 0.7, 0.25), CFrame = frame * CFrame.new(x, (top - 0.7) / 2, z - 0.05),
+			Color = Parts.COLORS.fence }, fence)
+		picket.CanCollide = true
+		Parts.prop({ Name = "PicketTip", Size = Vector3.new(0.53, 0.53, 0.21), CFrame = frame * CFrame.new(x, top - 0.7, z - 0.05) * CFrame.Angles(0, 0, math.rad(45)),
+			Color = Parts.COLORS.fence }, fence)
+	end
+	local posts = math.max(1, math.round(length / 8))
+	for i = 0, posts do
+		local x = min.X + length * i / posts
+		Parts.plotBox("Post", frame, Vector3.new(x - 0.45, 0, z - 0.45), Vector3.new(x + 0.45, top + 0.3, z + 0.45), { Color = Parts.COLORS.fence }, fence)
+		Parts.plotBox("PostCap", frame, Vector3.new(x - 0.6, top + 0.3, z - 0.6), Vector3.new(x + 0.6, top + 0.55, z + 0.6), { Color = Parts.COLORS.fence }, fence)
+	end
+	Parts.plotBox(`{name}Blocker`, frame, Vector3.new(min.X, 0, min.Z), Vector3.new(max.X, block or 11, max.Z),
+		{ Transparency = 1, CanQuery = false, CanTouch = false }, fence)
+	fence.Parent = parent
+	return fence
 end
 
 function Parts.ball(name: string, position: CFrame, diameter: number, props, parent: Instance): BasePart

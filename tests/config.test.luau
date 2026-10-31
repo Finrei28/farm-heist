@@ -8,7 +8,7 @@ return function(spec, harness)
 	local Land = harness.load("Config/Land")
 	local Crime = harness.load("Config/Crime")
 	local Workers = harness.load("Config/Workers")
-	local Shop = harness.load("Config/Shop")
+	local Store = harness.load("Config/Store")
 	local Warehouse = harness.load("Config/Warehouse")
 	local GrowthRules = harness.load("GrowthRules")
 
@@ -91,7 +91,7 @@ return function(spec, harness)
 		it("have caps for every building tier", function()
 			for name, kind in Workers.TYPES do
 				if kind.caps then
-					if #kind.caps ~= #Warehouse.TIERS or #kind.caps ~= #Shop.TIERS then
+					if #kind.caps ~= #Warehouse.TIERS or #kind.caps ~= #Store.BUILDINGS then
 						error(`{name} has {#kind.caps} caps`)
 					end
 				end
@@ -100,11 +100,6 @@ return function(spec, harness)
 		it("give one Driver slot per truck", function()
 			for index, tier in Warehouse.TIERS do
 				expect(Workers.TYPES.Driver.caps[index]).toBe(if index == 1 then 0 else tier.trucks)
-			end
-		end)
-		it("give one Cashier slot per register", function()
-			for index, tier in Shop.TIERS do
-				expect(Workers.TYPES.Cashier.caps[index]).toBe(tier.registers)
 			end
 		end)
 	end)

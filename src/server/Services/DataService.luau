@@ -91,6 +91,7 @@ local function loadPlayer(player)
 
 	profile:AddUserId(player.UserId) -- GDPR: lets Roblox find the save for deletion requests
 	reconcile(profile.Data, TEMPLATE)
+	SaveData.migrate(profile.Data)
 
 	-- The session ends on leave, on shutdown, or if the save gets opened on
 	-- another server (then this copy must stop being used straight away).
@@ -190,7 +191,7 @@ function DataService.AddXp(player, amount: number)
 	DataService.NotifyState(player)
 end
 
--- Sales income (truck runs, the Farm Stand): the coins, the last hour's
+-- Sales income (truck runs, your store): the coins, the last hour's
 -- earnings (fines are a share of them, shared/FineRules), and sales XP when
 -- the sale happens while you're playing (live), never for sales settled
 -- while you were away. (Paying off debts from it comes with the payout
@@ -223,6 +224,7 @@ function DataService.Wipe(player)
 	for key, value in TEMPLATE do
 		data[key] = SaveData.deepCopy(value)
 	end
+	SaveData.migrate(data)
 	setStat(player, "Coins", data.coins)
 	setStat(player, "Level", data.level)
 	for _, callback in wipedCallbacks do
@@ -259,7 +261,7 @@ local function getPublicState(data)
 		inventory = data.inventory,
 		seedStock = data.seedStock,
 		warehouse = data.warehouse,
-		shop = data.shop,
+		store = data.store,
 		workers = data.workers,
 		freeHireUsed = data.freeHireUsed,
 		defences = data.defences,

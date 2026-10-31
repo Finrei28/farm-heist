@@ -62,9 +62,9 @@ A round green valley with hills all round and a tunnel in the north cliff where 
 4. **Back Trail.** A dirt path circling behind every plot's back fence, with bushes and hay bales to hide behind (the sneaky way in).
 5. **Highway** north from the ring road to the **tunnel**. Trucks drive out of sight and come back empty.
 
-**Distances** (all in `shared/PlotLayout`, checked by `tests/layout.test.luau`): the town square is 160 studs across the radius, the ring road runs at 222, plot fronts start at 240 and backs end at 480, the back trail is at 500 and the hills begin at 530. From the town spawn to a farm's gate is 205–265 studs (about 15 s on foot). From the police porch to the back of a farm is 590–790 studs on foot (37–49 s, depending on which farm), because you have to go round the plots. Most thieves will use **Visit** instead: 3 s to the gate, then about 420 studs round the hedge to the back fence (about 30 s in all). So the walk only slows a thief down a little. The real arrest penalty is the fine and the 3-minute wait before they can steal from that farm again (§4.10). (Play-tested in Studio on 2026-10-30: 785 studs and 49.2 s to the back of the farthest farm.)
+**Distances** (all in `shared/PlotLayout`, checked by `tests/layout.test.luau`): the town square is 160 studs across the radius, the ring road runs at 302, plot fronts start at 320 and backs end at 572, the back trail is at 596 and the hills begin at 630. (The valley grew on 2026-10-31 so each farm's front has room for a real Supermarket, §4.8: farms are 220 studs wide, and a front radius of 320 is the least that keeps the two farms beside the highway clear of it, with 36 studs of woods between neighbours.) The town kept its size, so its own walks didn't change; between the square and the ring road is a 130-stud green with a path to each farm's gate, room for the town's look pass (ArtDirection §6). From the town spawn to a farm's gate is 285–345 studs (18–21.5 s on foot; Visit and Home take 3 s). From the police porch to the back of a farm is 735–910 studs on foot (46–57 s, depending on which farm), because you have to go round the plots. Most thieves will use **Visit** instead: 3 s to the gate, then about 500 studs round the hedge to the back fence (about 34 s in all). So the walk only slows a thief down a little. The real arrest penalty is the fine and the 3-minute wait before they can steal from that farm again (§4.10). (Play-tested in Studio on 2026-10-30, in the smaller valley: 785 studs and 49.2 s to the back of the farthest farm.)
 
-### Plot layout (160 × 240 studs, front to back)
+### Plot layout (220 × 252 studs, front to back)
 
 ```
  ═══════════════════ Ring Road (NPC shoppers, trucks) ═══════════════════
@@ -87,8 +87,9 @@ A round green valley with hills all round and a tunnel in the north cliff where 
  ─────────────────────────── Back Trail ───────────────────────────────
 ```
 
+- **Across the front, from the store's side:** a 7-stud side yard by the hedge, the store's lot (83 studs: the Supermarket and its walls), a 6-stud strip of yard to the gate (the way to the staff door), the gate (18), the gatehouse and the driveway, then 72 studs of yard to the other hedge, kept for the warehouse to grow into (week 4: bigger trucks, a second and third dock). **Front to back:** the store and its stockroom (to 64), an 8-stud yard, the farmhouse (72–114), the field (138–234) and the back fence at 252.
 - **Only two ways in:** the front gate (past the farmhouse, where the owner spawns) or over the back fence (slow and loud, but right by the field). Raids get decided by which one a thief picks. The driveway has a truck gate that only trucks pass through, and the shop's back wall closes it off from the yard, so neither is a third way in.
-- The farm is one zone (`PlotZone`, a server-side box). "In your own plot" means the server's trusted position of your character is inside that box (with 1 stud of hysteresis at the edge). **Your store's building is cut out of it** (§4.8): it's a public place on the road, entered from the sidewalk, and its staff door into the yard only opens for you. The cut-out changes only when the store becomes a bigger building.
+- The farm is one zone (`PlotZone`, a server-side box). "In your own plot" means the server's trusted position of your character is inside that box (with 1 stud of hysteresis at the edge). **Your store's building is cut out of it** (§4.8): it's a public place on the road, entered from the sidewalk, and its staff door into the yard only opens for you. The cut-out changes only when the store becomes a bigger building. (The stockroom behind the store is the farm's.)
 - A plot only exists in the server while its owner is there. When they leave it's packed away (saved) and the plot goes back to "For Rent".
 
 ## 4. Systems
@@ -201,7 +202,7 @@ The way to sell in bulk. Crops go through stations, and **each station can be do
 - **Nothing gets lost on the way to the truck.** If you leave your farm, travel, respawn or quit while carrying a crate, it's set down at the dock, and "Load crate" takes from that pile too.
 - **The truck** backs up to the dock at the top of the driveway. "Send the pickup" is the lever on the dock, or **Send now** in the Market window from anywhere (so you can watch the prices and send at the right moment). It drives out through a striped boom gate (people can't pass it), round the ring road the short way and up the highway into the tunnel; the crates ride along until they're sold, and it comes back empty. A paper receipt lists each crate and the price it locked. **You're paid when it reaches the City** (half the trip). Each run is a saved `TruckRun`: if you've left by then, it's paid the next time you join (any server), shown on the Welcome back card. (`TruckService`, `shared/TruckRules`; clients drive the truck from its `DepartAt`/`ArriveAt`/`ReturnAt` attributes.)
 - **The Cold Room** holds packed crates waiting for a truck (at the Packing Shed it's the rack on the dock). When it's full, packing pauses. It's what lets you **hold crates for a better price**: wait for ▲ on the board, or give your Driver a price rule (§4.9).
-- **Levelling up:** the Warehouse window's **Upgrade** tab is a blueprint with the level ladder: where you are, the next level's card (cost, Farm Level needed, what it adds) and **Upgrade**. Ordinary levels are instant. The four building levels take time to build (builders and scaffolding, at the same online/offline rates as growth) and the old building keeps working until the new one is done. Levels never go down.
+- **Levelling up:** the Warehouse window's **Upgrade** tab is a blueprint with the level ladder: where you are, the next level's card (cost, Farm Level needed, what it adds) and **Upgrade**. Ordinary levels are instant. The four building levels take time to build (builders and scaffolding, at the same online/offline rates as growth) and the old building keeps working until the new one is done. Levels never go down. From Level 5 the warehouse buildings are enclosed, so they get the store's see-through roof (§4.8): an `Interior` box beside the `Roof` model.
 
 | Lv | Cost | Farm Lv | Truck(s) | New at this level |
 |---|---|---|---|---|
@@ -245,24 +246,26 @@ Every crop's truck price is the same on every server at any moment:
 ### 4.8 Your Store (Store Level 1–20)
 Every farm has its own store on the road, from the first minute: NPC shoppers walk in from the sidewalk, browse what you've put out and pay **the prices you set**. You lay it out and decorate it yourself, staff it, and grow it from a little corner store into a supermarket. (It replaces the Farm Stand of week 2, which was the plan's tier 0; the old plan's four fixed tiers had a set number of shelves and no decorating.)
 
-**The building.** It stands on the shop lot at the front of the farm (56 × 40 studs, the storefront on the sidewalk). Inside is a grid of **4-stud floor cells** that opens up level by level, inside a building that's rebuilt bigger at Levels 5, 10 and 15:
+**The building.** It stands on the shop lot at the front of the farm (83 × 64 studs: from the strip of yard by the gate toward the hedge, and back to 8 studs short of the farmhouse; the storefront on the sidewalk). Inside is a grid of **4-stud floor cells** that opens a row or a column at every level (both at Levels 4, 5, 10, 15 and 20), inside a building that's rebuilt bigger at Levels 5, 10 and 15. Each building is clearly bigger than the last, from a corner shop you see all at once to a supermarket wider than the farmhouse:
 
 | Store Levels | Building | Floor (cells) | Looks like |
 |---|---|---|---|
-| 1–4 | **Corner Store** | 5×3 → 6×5 | a timber shop with a striped awning and a hand-painted sign with your store's name |
-| 5–9 | **Farm Shop** (builds in 2 min) | 7×5 → 9×7 | a barn-style shop with a big window |
-| 10–14 | **Market Hall** (5 min) | 10×7 → 12×8 | brick and timber, arched windows, a clock |
-| 15–20 | **Supermarket** (10 min) | 12×8 | a glass front, a rooftop sign, a billboard on the ring road |
+| 1–4 | **Corner Store** (32 × 24 studs) | 6×4 → 8×6 | a timber shop with a striped awning and a hand-painted sign with your store's name |
+| 5–9 | **Farm Shop** (44 × 36, builds in 2 min) | 9×7 → 11×9 | a red barn with two big windows, a barn door and a hayloft, lamps on cords under the gable |
+| 10–14 | **Market Hall** (60 × 44, 5 min) | 12×10 → 15×11 | brick below with arched windows and flower boxes, a timber storey above with little windows, a clock on the parapet |
+| 15–20 | **Supermarket** (80 × 56, 10 min) | 16×12 → 20×14 | 18 studs tall: a glass front, a deep band with its name, a canopy over the door, a trolley bay, light strips across the ceiling, a billboard on the roof |
 
-Floor not open yet is taped off with "Next level!" boxes, so the next expansion is right there to see. The part of the lot the building doesn't cover yet is yard, behind the front fence. At 12×8 (48 × 32 studs, plus the walls and a 6-stud back room for the stockroom) the building fills the lot. When a new building goes up, anyone standing where its walls will be is moved out to the sidewalk or the yard first. **Each new building comes with a free display, already placed in the new space** (Farm Shop: a Tiered Produce Rack · Market Hall: a Glass Showcase · Supermarket: a Self-checkout), so a store grows even for players who never decorate.
+Floor not open yet is bare concrete, taped off in yellow and black with a stack of "Next level!" boxes, so the next expansion is right there to see. The part of the lot the building doesn't cover yet is yard, behind the front fence. **When a level opens floor at the back, everything standing against the old back edge moves back with it** (if the layout still works), so the shelves stay against the wall and the aisle widens instead of a new row being walled off. At 20×14 (Level 20: 80 × 56 studs, 280 cells, plus the walls and a 6-stud back room for the stockroom) the Supermarket fills the lot: from the strip by the gate (kept clear: the way to the staff door) to a 7-stud side yard by the hedge, and back to an 8-stud yard in front of the farmhouse. Every farm's lot is the same, and neighbouring farms are 36 studs apart at the front, so every player has the same room (`tests/layout.test.luau`; `tests/world.test.luau` builds each building at its biggest on a farm and checks it stays on its lot with the front still closed). When a new building goes up, anyone standing where its walls will be is moved out to the sidewalk or the yard first. **Each new building comes with a free display, already placed in the new space** (Farm Shop: a Tiered Produce Rack · Market Hall: a Glass Showcase · Supermarket: a Self-checkout), so a store grows even for players who never decorate.
 
-**Whose space it is.** The store is a public place on the road, **not part of your farm's zone** (§3): anyone can walk in from the sidewalk and look around (a nice way to show off your store), the bat doesn't come out in it, and nothing in it can be stolen. Only NPC shoppers buy; players swap goods by trading (§4.13). A **staff door** at the back leads to your yard, and it only opens for you (and Trusted friends, §4.11): it's a wall to everyone else, so the store is never a way into the farm. The location chip says "🏪 Sam's Corner Store". You name your store in the Store window (filtered for everyone with Roblox's text filter; if the filter fails, it keeps the default "Sam's Corner Store").
+**Whose space it is.** The store is a public place on the road, **not part of your farm's zone** (§3): anyone can walk in from the sidewalk and look around (a nice way to show off your store), the bat doesn't come out in it, and nothing in it can be stolen. Only NPC shoppers buy; players swap goods by trading (§4.13). A **staff door** in the side wall facing the gate leads straight into your yard, and it only opens for you (and Trusted friends from week 6, §4.11): it swings open as you come near, and it's a wall to everyone else, so the store is never a way into the farm. The **stockroom** is a lean-to behind the back wall, on the farm's side and open to the yard, with a crate in it for every crate waiting there. The location chip says "🏪 Sam's Corner Store". You name your store in the Store window (3–24 letters, filtered for everyone with Roblox's text filter; if the filter can't be reached, it keeps the name it had and asks you to try again).
 
-**Decorating.** **Decorate** in the Store window (on your farm or in your store) lifts the camera to a top-down view of the floor with the grid in chalk. A drawer of item cards (Displays · Checkouts · Decor · Wall · My items) slides up from the bottom. Tap a card, then a cell: the item shows green where it fits and red where it doesn't (with why). ⟳ rotates, ✓ buys and places it. Tap a placed item to move, rotate, put it away (it stays yours) or sell it back for half. On a computer: drag with the mouse, R rotates.
-- **The rules** (`shared/StoreLayout`, the same check on the client and the server): items sit inside the open floor and don't overlap. Every display and checkout has a front, and the cell in front of it must be free. **Every one of those front cells must be reachable from the door** through free cells, and each checkout needs 2 free cells for its queue. A move that would cut something off is refused: "This would block the aisle to your Pumpkin shelf". Wall items go on wall cells, never over a door.
-- While you decorate, the store hangs a **"Back soon"** sign: shoppers already inside finish, and no new ones come in until you're done, so nobody walks through moving furniture. Leaving your farm or 5 idle minutes ends it.
-- **Your store starts furnished:** an Honour Box, 2 Produce Crates, a Wooden Shelf and a Potted Plant, already placed. Decorating is never required to sell. (5×3 is the smallest floor that holds that kit with an aisle and a checkout queue: the shelf and crates along the back, the aisle in front of them, the Honour Box by the door with its queue.)
-- At most 80 floor items and 40 wall items, which keeps a full store's parts in check on phones.
+**Seeing in.** While you're inside a store (yours or anyone's), its roof, with what stands on it and the ceiling lamps, fades away on your screen only, so the camera can rise over the walls and look down at your displays, price tags and queues instead of being pushed up behind your head by the ceiling. The room stays out of the sun as if the roof were there (a stand-in for the roof far off in the sky, lost in the sun's glare, casts its shadow), so nothing glares, and **the light everywhere else stays exactly as it is**: from inside your store you still see your field in full daylight, thieves included. The roof comes back as you step out, and nobody else's view changes (`RoofController`, §10).
+
+**Decorating.** **Decorate** in the Store window (on your farm or in your store) lifts the camera over the store with the grid in chalk, the roof off and the walls faded. A drawer of item cards (Displays · Checkouts · Decor · Wall · My items) runs along the bottom. Tap a card, then a cell: the item shows green where it fits and red where it doesn't (with why). ⟳ turns it, ✓ (or a second tap) places it. Tap a placed item to move, turn, put it away (it stays yours) or sell it back for half. On a computer: it follows the mouse, a click places it, R turns it. Pinch (or the mouse wheel) zooms in and a drag (or WASD) moves the view, for the bigger buildings on a phone. **It's a plan until you press DONE**: then the server checks the whole layout once, buys what's new (the total is shown under DONE all along) and saves it; ✕ leaves your store as it was. So you can try things out freely, and nothing moves under a shopper's feet until you're done.
+- **The rules** (`shared/StoreLayout`, the same check on the client and the server): items sit inside the open floor and don't overlap (a Rug is walked over, but nothing stands on it). The cells inside the front door and the staff door stay clear. Every display and checkout has a front, and the cells in front of it must be free. **Every one of those front cells must be reachable from the door** through free cells, and so must the staff door. Each checkout needs a queue: its till's front cell and 2 more free cells in a line (straight back, or turning left or right), not shared with another checkout. A Register needs the cells behind it free, for whoever serves. At least one checkout, and no more than the level allows. A move that breaks a rule is refused with why: "This would block the aisle to your Pumpkin shelf". Wall items hang on the back and side walls (the front is the shop window), never over the staff door.
+- While you decorate, the store hangs a **"Back soon"** sign: no new shoppers come in, and those inside skip the rest of their list and go to pay. Anyone still inside when you press DONE puts their basket back and leaves (no rating score). Leaving your farm and store, or 5 minutes without changing anything, ends it.
+- **Your store starts furnished:** an Honour Box, 2 Produce Crates, a Wooden Shelf and a Potted Plant, already placed. Decorating is never required to sell. (On the 6×4 floor: the shelf, crates and plant along the back wall facing the door, the aisle in front of them, the Honour Box in the corner by the door with its queue up the side wall, and the middle of the floor free: room for 3 or 4 new displays before the first upgrade.)
+- At most 100 floor items and 40 wall items, which keeps a full store's parts in check on phones (a full display is about 25 parts with its produce; streaming will load far farms whole, ArtDirection §10).
 
 **The catalog** (`Config/Store`). Items are bought once with coins and kept ("My items"). Selling one back pays half. Free items (the starter kit and each new building's gift) can be put away but not sold.
 
@@ -302,7 +305,8 @@ Checkouts allowed: 1 (Levels 1–2), 2 (from 3), 3 (from 10), 4 (from 15). Each 
 **Charm** is your decor added up: each item's Charm, but a second copy of the same item counts half, a third a third and so on (so 10 Potted Plants are worth about 6, not 20: variety wins). **Every 10 Charm adds +0.1★ to your Store Rating, up to +1★ at 100 Charm.** Displays add a little Charm too (Tiered Rack 1, Showcase 2, Pedestal 4). Decor takes floor cells that could hold displays: that's the trade-off.
 
 **Stock.** Crates you send to the store wait in its **stockroom** (the back room): 6 crates at Level 1, +2 a level, 44 at Level 20. When it's full, the bench and the Route rules send new crates to the truck instead (and say so). Putting goods out:
-- **By hand:** stand at a display and press **Fill** (it tops up each slot from the stockroom). A slot is set to a crop, or **Auto** (the crop with most in the stockroom that the display can hold); **Set crops** at the display or in the Store window changes it.
+- **By hand:** stand at a display and hold **E: Fill** (it tops up each slot from the stockroom, grade A first, emptying the smallest crates first so they free up room), or **Fill all** in the Store window while you're in your store. A slot is kept to a crop, or **Auto** (a crop the display can hold that isn't out anywhere yet, then the one with most waiting); the Store window's Stock tab changes it.
+- **Only crops your store can show go there:** at the Packing Shed bench the 🏪 Store button says "Store Lv 8" for an Epic until a Chiller Cabinet is unlocked (and "Full" when the stockroom is), so nothing gets stuck in the stockroom.
 - **Stockers** (§4.9) refill any slot below half, the emptiest first.
 - Putting a display away sends its goods back to the stockroom (even past full, like the barn), never lost.
 
@@ -311,8 +315,8 @@ Checkouts allowed: 1 (Levels 1–2), 2 (from 3), 3 (from 10), 4 (from 15). Each 
 **Shoppers** (`shared/ShopRules`, `ShopService`; the clients draw them walking).
 - **How often:** one every `20 × 0.92^(Level − 1)` seconds at 3★: 20 s at Level 1, 14 s at 5, 9 s at 10, 6 s at 15, 4 s at 20. Each star above 3 brings them 15% more often (each below, 15% less). **Variety:** each different crop on display after the first brings 5% more, up to +25%. A Greeter adds up to 25% more (§4.9); the Supermarket's billboard 15%.
 - **What they want:** 1 crop at Levels 1–4, 1–2 at 5–9, 1–3 at 10–14, 2–3 at 15–20 (bigger stores, bigger baskets), each a crop on display (crops on more displays get picked more often).
-- **At most 12 shoppers** are in a store at once (a full store makes the next one wait on the sidewalk), which keeps the NPCs cheap to draw and the queues believable.
-- **The visit:** in through the door, along the aisles (the shortest path on the grid) to a display with each crop they want. There they roll a willingness `w` (log-normal, σ = 0.2) × the rating bonus (0 at 1★ to +25% at 5★) × the display's presentation, and buy 1–4 units if `your price ≤ ref × w` (grade A first, at ×1.15). Then to the shortest checkout queue, pay, and out. Nothing they wanted is affordable → they leave without queueing.
+- **How many at once** grows with the building: 8 in the Corner Store, 12 in the Farm Shop, 16 in the Market Hall and 24 in the Supermarket, counting those on the sidewalk (a full store makes the next one wait). A bigger store has longer aisles, so each visit takes longer (about a minute in a Supermarket); without more room the late levels' shoppers couldn't all fit. Each player's screen only draws shoppers within 300 studs, which keeps eight busy stores cheap on a phone.
+- **The visit:** along the sidewalk and in through the door, along the aisles (the shortest path on the grid, cutting corners across open floor) to a display with each crop they want, standing in front of the slot that has it. There they roll a willingness `w` (log-normal, σ = 0.2) × the rating bonus (0 at 1★ to +25% at 5★) × the display's presentation, and take 1–4 units if `your price ≤ ref × w` (grade A first, at ×1.15), saying so in a bubble ("🥕×3", "Too dear!", "Sold out!"). Then to the shortest checkout queue, pay when they reach the till (a coin pop), and out. A shopper who gives up in the queue puts the basket back on the display. Nothing they wanted was affordable (or it sold out before they got there) → they leave without queueing.
 - **Store Rating** (1–5★): the average of the last 50 shoppers' scores (5 bought · 2 too dear · 1 left the queue), a new store counting 10 shoppers at 3★ until real ones replace them, **plus Charm** (up to +1★), at most 5★. A store with nothing on display is closed: nobody comes to find it empty.
 - **While you're away** shoppers keep coming at 25% (the Honour Box and Self-checkouts serve on their own; Registers need a Cashier; Stockers keep filling), worked out with the warehouse when you return (`shared/PipelineRules`, the Welcome back card).
 
@@ -320,30 +324,30 @@ Checkouts allowed: 1 (Levels 1–2), 2 (from 3), 3 (from 10), 4 (from 15). Each 
 
 | Lv | Cost | Farm Lv | Floor | New at this level |
 |---|---|---|---|---|
-| 1 | free | 1 | 5×3 | **Corner Store**, starter kit, Honour Box, stockroom 6 |
-| 2 | 300 | 1 | 5×4 | Stocker 1 · Flower Barrel |
-| 3 | 900 | 3 | 6×4 | **Register** and Cashier · 2 checkouts · Bulk Bin · Pumpkin Pile |
-| 4 | 2,500 | 4 | 6×5 | wall items: Painted Sign, Chalk Board, Clock |
-| 5 | 6,000 | 5 | 7×5 | **Farm Shop** (+ a free Tiered Produce Rack) · Lamp Post · Rug · shoppers want 1–2 crops |
-| 6 | 10,000 | 6 | 8×5 | Fairy Lights · Fruit Cart |
-| 7 | 16,000 | 7 | 8×6 | |
-| 8 | 24,000 | 8 | 9×6 | **Chiller Cabinet** (Epic crops) · Greeter · Stocker 2 |
-| 9 | 35,000 | 10 | 9×7 | Bench · Mural |
-| 10 | 55,000 | 12 | 10×7 | **Market Hall** (+ a free Glass Showcase) · Fountain · 3 checkouts · shoppers want 1–3 |
-| 11 | 75,000 | 13 | 10×8 | |
-| 12 | 100,000 | 14 | 11×8 | Flower Arch · Neon Sign |
-| 13 | 130,000 | 16 | 12×8 | the whole lot |
-| 14 | 170,000 | 18 | | Stocker 3 |
-| 15 | 240,000 | 20 | | **Supermarket** (+ a free Self-checkout) · Velvet Pedestal · 4 checkouts · billboard (+15% shoppers) · shoppers want 2–3 |
-| 16 | 330,000 | 22 | | |
-| 17 | 440,000 | 24 | | Golden Scarecrow statue |
-| 18 | 580,000 | 26 | | |
-| 19 | 760,000 | 28 | | |
-| 20 | 1,000,000 | 30 | | a gold star on the sign and a Hall of Fame plaque |
+| 1 | free | 1 | 6×4 | **Corner Store**, starter kit, Honour Box, stockroom 6, 8 shoppers at once |
+| 2 | 300 | 1 | 7×4 | Stocker 1 · Flower Barrel |
+| 3 | 900 | 3 | 7×5 | **Register** and Cashier · 2 checkouts · Bulk Bin · Pumpkin Pile |
+| 4 | 2,500 | 4 | 8×6 | the whole Corner Store · wall items: Painted Sign, Chalk Board, Clock |
+| 5 | 6,000 | 5 | 9×7 | **Farm Shop** (+ a free Tiered Produce Rack) · 12 shoppers at once · Lamp Post · Rug · shoppers want 1–2 crops |
+| 6 | 10,000 | 6 | 10×7 | Fairy Lights · Fruit Cart |
+| 7 | 16,000 | 7 | 10×8 | |
+| 8 | 24,000 | 8 | 11×8 | **Chiller Cabinet** (Epic crops) · Greeter · Stocker 2 |
+| 9 | 35,000 | 10 | 11×9 | the whole Farm Shop · Bench · Mural |
+| 10 | 55,000 | 12 | 12×10 | **Market Hall** (+ a free Glass Showcase) · 16 shoppers at once · Fountain · 3 checkouts · shoppers want 1–3 |
+| 11 | 75,000 | 13 | 13×10 | |
+| 12 | 100,000 | 14 | 14×10 | Flower Arch · Neon Sign |
+| 13 | 130,000 | 16 | 14×11 | |
+| 14 | 170,000 | 18 | 15×11 | the whole Market Hall · Stocker 3 |
+| 15 | 240,000 | 20 | 16×12 | **Supermarket** (+ a free Self-checkout) · 24 shoppers at once · Velvet Pedestal · 4 checkouts · billboard (+15% shoppers) · shoppers want 2–3 |
+| 16 | 330,000 | 22 | 17×12 | |
+| 17 | 440,000 | 24 | 17×13 | Golden Scarecrow statue |
+| 18 | 580,000 | 26 | 18×13 | |
+| 19 | 760,000 | 28 | 19×13 | |
+| 20 | 1,000,000 | 30 | 20×14 | the whole lot · a gold star on the sign and a Hall of Fame plaque |
 
 Every level also brings shoppers a little more often (the formula above) and 2 more stockroom crates. The ladder costs about 3.9 million, plus whatever you spend on decor. In the progression sim a daily player reaches Level 5 on day 2, 10 around day 11 and 15 around day 29.
 
-- **The Store window** (a shop counter with price tags): **Prices** (above) · **Stock** (each display and slot with its fill, the stockroom's crates, **Fill all** while you're in the store, Set crops) · **Upgrade** (the level ladder) · your store's name, its rating and **why** ("3 shoppers left the queue: open a second checkout"), and a big **Decorate** stamp.
+- **The Store window** (a shop counter with price tags): a header with your store's name (Rename), its rating with Charm and **why** ("3 shoppers gave up in the queue: open another checkout"), and a big **Decorate** stamp; then **Prices** (above) · **Stock** (Fill all while you're in the store, the stockroom's crates, each display's slots with their fill and Auto or a crop) · **Upgrade** (the next level on blueprint paper: cost, Farm Level, what it brings, Upgrade; then the next few levels).
 - **Epics need a Chiller (Level 8)** and Legendaries a Showcase (Level 10): until then those crops go by truck. The Store window says so on the Prices tab, which keeps the store a step behind the field on purpose: a reason to upgrade.
 - The store is the slow, high-margin outlet; the truck is the fast, bulk one at the market price. When the market's down (▼) shoppers still expect the usual price, so the store pays better; when it's up, the truck does.
 
@@ -410,7 +414,7 @@ The owner's main tool is the **bat** (§4.12). Everything else **slows, warns or
 - **The raid race (a worked example, from the real layout: `lune run tools/raidrace`).** A thief takes a Rare Pumpkin from the back row (24 studs from the back fence). The owner needs to get within bat reach (7 studs):
   - **No defences:** hold 2.5 s + run 1.8 s + climb 1.5 s = safe after **5.8 s**.
   - **With a cloche, the dog and the tall fence:** hold 5 s + run 2.9 s (slowed) + climb 3.5 s = **11.4 s**, and someone climbing out still counts as inside.
-  - **The owner at the warehouse** (1 s to notice + 160 studs of sprint) is in reach at **7.7 s**.
+  - **The owner at the warehouse** (1 s to notice + 178 studs of sprint) is in reach at **8.1 s**.
   - **The owner in town** (1 s + Home 3 s + 153 studs from the farmhouse door) is in reach at **10.4 s**.
   
   So with no defences, a quick back-row thief beats anyone who isn't already near the field. With them, the owner catches the thief even from town, with about a second to spare. Defences and the scarecrow's early warning buy the seconds; they don't block. This is what the numbers are tuned around, and `tests/layout.test.luau` fails if a change breaks it.
@@ -577,12 +581,13 @@ The UI looks like things you'd find on a farm: kraft paper, crate labels, seed p
 - **Top centre** (the "purse"): a wooden sign hung on ropes from the top of the screen with your coins, the Farm Level rosette and the XP rail. Under it the **location chip**, a price tag:
   - 🟢 **Your Farm** (green)
   - 🟡 **Visiting Sam's farm** (gold)
+  - 🏪 **Sam's Corner Store** (green when it's yours, gold when it isn't)
   - 🔴 **TRESPASSING** (red, pulsing, once you're a Suspect)
   - ⚪ **Town**
   It's at the top centre, not top left, because Roblox's chat window lives top left on computers (found in week 1). The top right is Roblox's player list.
 - **Beside it:** the clock, the weather and the next event's countdown (weather week). **Under the purse:** the market ticker, a chalk strip (week 2).
 - **Top right:** the alert stack (theft alarms, auction starting, truck paid, Hot Crop).
-- **Left side bar:** Barn · Warehouse · Store · Workers · Market · More (Cropdex, Trade, Trusted, Farm Log, Robux shop, Settings). Badges show counts (crates waiting, crops ripe, a worker ready to train, an upgrade you can afford). On phones the crates are smaller (58×52) and sit in **2 columns of 3**, above the thumbstick (play-test 2026-10-31). (Built so far: Barn · Stand · Market.)
+- **Left side bar:** Barn · Warehouse · Store · Workers · Market · More (Cropdex, Trade, Trusted, Farm Log, Robux shop, Settings). Badges show counts (crates waiting, crops ripe, a worker ready to train, an upgrade you can afford). On phones the crates are smaller (58×52) and sit in **2 columns of 3**, above the thumbstick (play-test 2026-10-31). (Built so far: Barn · Store · Market.)
 - **Bottom:** the hotbar of **seed packets** (the picked one stands up). The bat 🏏 joins it as slot 1, only inside your farm. There's no watering-can slot: the context stamp waters. The **Home** and **Town** signposts sit above it.
 - **Bottom right:** the **context stamp**, with a chalkboard above saying what's on the tile and how long it has left. It changes to whatever you can do right now: Plant · Water · Harvest · Steal (red, hold) · Swing · Arrest (red, hold) · Deposit · Pack. One press does one action. Hold it and walk to repeat that same action on every tile you cross (plant a row, harvest a row), never a different one.
 
@@ -590,12 +595,12 @@ The UI looks like things you'd find on a farm: kraft paper, crate labels, seed p
 
 | Window | Theme | Main parts |
 |---|---|---|
-| **Packing Shed bench** | crate labels, then the wash | Each barn stack with 🚚 Truck and 🏪 Stand buttons showing what each pays now. Then a crate, a water meter with the green band, and a big **HOLD TO WASH** stamp; grade A wins a gold rosette |
+| **Packing Shed bench** | crate labels, then the wash | Each barn stack with 🚚 Truck and 🏪 Store buttons showing what each pays now ("Store Lv 8" or "Full" when it can't go there). Then a crate, a water meter with the green band, and a big **HOLD TO WASH** stamp; grade A wins a gold rosette |
 | **Seed Rack** (Barley) | wooden rack of seed packets | Tabs by rarity. Each packet: picture, grow time, sell value, stock "×3", price tag, Buy ×1/×5. A restock countdown on a chalkboard. Locked packets say "Lv 10" |
 | **Barn** | barn doors open | Crops · Seeds · Items · Workers · Land tabs; a capacity bar; Send to warehouse; Hold (for planting). The Land tab shows the 4×4 block map, permits waiting, and each clearable block marked Safer or Riskier |
 | **Warehouse** | a clipboard | **Pipeline:** Intake → Sort → Pack → Route → Load → Truck as a row of station cards (queue, worker slots, speed). The bottleneck is orange. Truck cards with a fill bar, the price it would lock and **Send**. **Routes** (crop → Truck / Store / split). **Upgrade**: the level ladder on blueprint paper, the next level's card and **Upgrade**. On phones the pipeline wraps into 2 rows of 3 |
-| **Store** | a shop counter with price tags | Your store's name, rating and why ("3 shoppers left the queue: open a second checkout"). **Prices:** each crop's reference, the truck price now, **your price** (− +), the demand face, % that buy, ~sales/min. **Stock:** each display's slots and fill, the stockroom, **Fill all**, Set crops. **Upgrade:** the level ladder. A big **Decorate** stamp |
-| **Decorate** | blueprint paper over your store | Top-down view with the chalk grid; the drawer of item cards (Displays · Checkouts · Decor · Wall · My items) with price, size and what each does; green/red placing with the reason; ⟳ move, put away, sell back; the "Back soon" sign is up while you're here |
+| **Store** | a shop counter with price tags | A header: your store's name (Rename), rating with Charm and why ("3 shoppers gave up in the queue: open another checkout"), a big **Decorate** stamp. **Prices:** each crop's reference, the truck price now, **your price** (− +), the demand face, % that buy, ~sales/min, and which rarities your displays can't hold yet. **Stock:** **Fill all**, the stockroom, each display's slots (fill, Auto or a crop). **Upgrade:** the next level on blueprint paper and the ladder |
+| **Decorate** | blueprint paper over your store | Your store from above, roof off, walls faded, the chalk grid with DOOR and STAFF marked; the drawer of item cards (Displays · Checkouts · Decor · Wall · My items) with a 3D picture, size, what each does and its price ("Yours ×2", 🔒 Store Lv 5); green/red placing with the reason; Move · Turn · Put away · Sell; **DONE** with the total under it, ✕ to leave it as it was |
 | **Workers / Hiring Hall** | ID badges on a corkboard | Station slots ("Packer 2/3", greyed ones saying which level opens them). Candidate badges: photo, name, type, level and efficiency, trait, wage, hire fee, **Hire**. Your workers: level and efficiency ("Lv 4 · 60%"), the XP bar, **Train** when it's full, fire, the Driver's rule |
 | **Market** (Exchange) | a chalkboard | Each crop: price, ▲/▼, a 3 h sparkline, events (Hot Crop, Glut, festivals) with timers. Main button: **Dispatch truck now** (if one is loaded) at the prices shown |
 | **Auction** | red velvet with a gold frame | The lot's 3D picture, its estimated value, the current bid and leader, a timer ring (it flashes on anti-snipe), **+5% / +10% / +25%** bid buttons, your escrow, the next lots |
@@ -691,20 +696,21 @@ Rule: **no paid power in the PvP**. Robux buys comfort, shared moments, space an
 ## 8. Technical architecture
 
 ```
-src/shared/   Config/  Crops · Rarities · Growth · Land · Warehouse · Shop · Workers · Auction · Market
-                       Crime · Progression · Settings   (to come: Weather · Mutations · Defences · Monetization)
+src/shared/   Config/  Crops · Rarities · Growth · Land · Warehouse · Shop · Store · Workers · Auction
+                       Market · Crime · Progression · Settings   (to come: Weather · Mutations · Defences · Monetization)
               Rules:   GrowthRules · SeedStock · MarketPrice · DemandModel · LandRules · ProgressionRules
                        CrimeRules · FineRules · TravelRules · ZoneRules · AuctionRules · WorkerRules
                        PipelineRules · MoveRules · BarnRules · PlotRules · CrateRules · TruckRules
-                       ShopRules   (to come: TradeRules)
+                       ShopRules · StoreLayout   (to come: TradeRules)
 src/server/   Services/ Data · Plot · Field · SeedShop · Auction · Market · Warehouse · Truck
-                        Shop · Shopper · Worker · Crime (steal, sack, bat, knockout, arrest)
+                        Store (shoppers too) · Worker · Crime (steal, sack, bat, knockout, arrest)
                         Police · Payout · Movement · Trade · Weather · Quest · Leaderboard
                         Analytics · DevCommand
-              World/    WorldBuilder · Parts · FarmArt (the field) · YardArt (shed, dock, pickup,
-                        Farm Stand) · LightingSetup   (PlotLayout lives in shared/)
-src/client/   UI (Kraft & Crate theme, HUD in code) · Controllers/ Field · Warehouse · Shop
-              Workers · Market · Auction · Crime (alarm, KO, mugshot) · Trade · Weather
+              World/    WorldBuilder · Parts · FarmArt (the field) · YardArt (shed, dock, pickup)
+                        StoreArt (the store's buildings) · StoreItems (the catalog's models)
+                        LightingSetup   (PlotLayout lives in shared/)
+src/client/   UI (Kraft & Crate theme, HUD in code) · Controllers/ Field · Warehouse · Store
+              Decorate · Shopper · Workers · Market · Auction · Crime (alarm, KO, mugshot) · Trade · Weather
 ```
 
 - **Server-authoritative.** The client sends intents (plant, harvest, steal start/finish, swing, arrest, bid, set price, dispatch). The server checks and owns all state.
@@ -719,10 +725,11 @@ src/client/   UI (Kraft & Crate theme, HUD in code) · Controllers/ Field · War
   inventory = { crops = { [stackKey] = count }, seeds = { [seedId] = n }, items = {...} },
   warehouse = { level, buildingUntil?, bed = { crate }, dock = { crate }, coldRoom = { crate },
                 routes = { [cropId] = share }, trucks = { TruckRun } },
-  store = { level, buildingUntil?, name,
-            layout = { ["id"] = { item, cell = "x,y", rot, slots = { { crop?, auto, units, a } } } },
-            owned = { [itemId] = count }, stockroom = { crate }, prices = { [cropId] = coins },
-            rating = { scores = { 1–5 } } },
+  store = { level, build? = { to, left }, name?, started, nextId,
+            layout = { ["id"] = { item, x, y, rot, slots? = { { set?, crop?, units, a } } }
+                                | { item, side, at } },   -- wall items
+            owned = { [itemId] = count }, gifts = { [itemId] = count },
+            stockroom = { crate }, prices = { [cropId] = coins }, rating = { scores = { 1–5 } } },
   workers = { [uid] = { type, level, xp, trait, station, hiredAt } },
   defences = { placed = {...}, owned = {...} }, trusted = { userIds },
   crime = { earnBuckets = {12}, arrests = {timestamps}, debts = { {ownerId, amount, createdAt} },
@@ -749,7 +756,7 @@ Each week builds its features *and* their look ([ArtDirection.md](ArtDirection.m
 |---|---|---|
 | 1 ✅ | Plots and zones, field (plant, water, grow, harvest), Barn inventory, Barley's shop with restocks, saving, offline growth. Farm Level and XP, Land Permits and clearing (moved up from week 2: their rules were done, and Stage B tests them). Travel (Home, Town, Visit), dev commands, the Kraft & Crate HUD, the first look pass. Greybox Cloverdale | 8 players can farm for 15 min without bugs (Stage B9) |
 | 2 ✅ | Packing Shed and the pickup truck, the market price (wave + events), Exchange board, Farm Stand with shoppers and pricing. Also the Market window with Send now, the ticker, the receipt, and dev commands for selling (built and played in Studio 2026-10-31) | Players argue about truck vs shop |
-| 3 | **Your Store** (§4.8): the building and its 4 stages, Store Levels 1–20, Decorate mode with the catalog and `shared/StoreLayout`, the stockroom, Fill and Set crops, shoppers walking the aisles, checkouts and queues, the rating with Charm, the store's name, the store cut out of the farm zone. The Farm Stand's code becomes the displays. **Look:** the store's buildings and items, farm colours and name plates, the gate arch, picket fences | Testers decorate a store on a phone and get it selling without help |
+| 3 ✅ | **Your Store** (§4.8): the building and its 4 stages, Store Levels 1–20, Decorate mode with the catalog and `shared/StoreLayout`, the stockroom, Fill and Set crops, shoppers walking the aisles, checkouts and queues, the rating with Charm, the store's name, the store cut out of the farm zone. The Farm Stand's code becomes the displays. **Look:** the store's buildings and items, farm colours and name plates, the gate arch, picket fences. (Built and played in Studio 2026-10-31) | Testers decorate a store on a phone and get it selling without help |
 | 4 | **Warehouse Levels 1–20** (§4.6: stations, conveyors, Cold Room, routes, the second and third truck), **every worker type with Levels 1–10** (§4.9: XP, training, efficiency), wages and strikes, the Hiring Hall, offline settlement with the store and the Welcome back card; the progression sim updated with the real tables. **Look:** the warehouse's buildings and trucks, worker outfits | Testers come back the next day to collect, and level a worker on purpose |
 | 5 | Stealing, the sack, deposit, bat, knockout, Suspect, arrest, Police Station, fines and debt, every bypass counter + tests. **Look:** Suspect markers, the sack, the back fence's slats and climb, the Police Station's front | Raids feel fun on both sides; nobody can dodge an arrest |
 | 6 | Defences, theft alarm, Home, Sprout Shield, arrival grace, raid caps, Trusted list (and the staff door for Trusted friends), MovementService. **Look:** the defences | A defended farm catches most raids; an undefended one still survives |
@@ -933,6 +940,109 @@ Built: `MarketService` (prices, Hot Crop and Glut announcements, the Exchange de
 
 Left for later, as planned: shoppers and Driver runs while you're away (week 3, `PipelineRules.settle` with the Welcome back card), paying debts from sales income (`FineRules.garnish`, week 4 with the payout queue: there can't be debts before then), the MemoryStore supply factor (week 7), festivals such as the Pumpkin Festival (week 6, with the events), the Farm Guide steps for packing and the stand (week 7), the pickup in your farm colour (look pass step 5).
 
+### MVP week 3: your store (built 2026-10-31)
+
+Built: `shared/StoreLayout` (cells, fronts, queues, the layout check, aisles with corners cut, Charm, the floor growing, a spot for a new building's gift), `Config/Store` (the grid, 4 buildings, 20 levels, 27 catalog items, the starter kit), `ShopRules` reworked for displays and slots (fill, Auto, set crops, wants, picks, baskets put back, the rating with Charm), `StoreService` (shoppers in the aisles and queues, Fill, prices, the name, levels and new buildings going up, saving a layout from Decorate, the staff door), `World/StoreArt` (the Corner Store, Farm Shop, Market Hall and Supermarket; the taped-off floor; the stockroom with its crates; scaffolding; "Back soon"), `World/StoreItems` (every catalog item, built once into `ReplicatedStorage.StoreCatalog` for the clients), the store cut out of the farm's zone (`PlotLayout.zone` with holes, an `InStore` attribute), farm colours, the gate arch with its name plank, picket fences and rounded hedges, old saves' Farm Stand goods moved into the store. The client: the Store window, Decorate mode, shoppers walking the aisles, the side bar in 2 columns on phones, the 🏪 location chip. Dev commands `/store N` and `/tp store`. 281 tests. The review found:
+
+| # | Found | Fix |
+|---|---|---|
+| 1 | Placing items one at a time on the server would move furniture under shoppers' feet, and a half-finished layout would be live | Decorate edits a plan; **DONE** saves it in one go (one check, one purchase); "Back soon" hurries shoppers inside to pay; anyone still in when you save puts their basket back (§4.8) |
+| 2 | A staff door "at the back" would open into the stockroom: either a bat-free room inside the farm or a door into a room | The staff door is in the side wall facing the gate, straight into the yard; the stockroom is a lean-to on the farm's side, open to the yard, showing your crates (§4.8) |
+| 3 | When the floor gets deeper, the starter's shelves along the back would wall off the new row | Things against the back edge move back with it, if the layout still works (`StoreLayout.grow`) |
+| 4 | A Register had nowhere for whoever serves to stand, and a 2-wide checkout had no "till end" | Its back cells must stay free; its queue starts at the till (`StoreLayout.tillFront`); in week 3 it serves while you stand behind it (Cashiers come in week 4) |
+| 5 | Shoppers would stand anywhere in front of a 2-slot shelf | They stand in front of the slot with their crop (`StoreLayout.slotFront`) |
+| 6 | Epic crops sent to the store before a Chiller would sit in the stockroom for good | The bench's 🏪 button says "Store Lv 8" (or "Full") and won't send them; the Prices tab says which rarities wait for which display |
+| 7 | "5×3 is the smallest floor" for the starter kit isn't true under the final rules | Kept 5×3 (it leaves room for the first new items), wording fixed |
+| 8 | The store's front door is a gap in the front boundary | It leads into the store, which isn't the farm: `tests/world.test.luau` allows the gate and the store's door, and invisible walls on the store's outline (the staff door's only for you) keep the store from being a way in |
+| 9 | A starter layout in the save template would come back after you sold something (missing keys get filled in on load) | The kit is laid out once by `SaveData.migrate`, which also moves old Farm Stand goods, prices and rating into the store |
+| 10 | Two catalog models stuck out of their cells (the Bulk Bin's lid, the Golden Scarecrow's arms) | Fixed; a test now checks every item's corners against its cells |
+| 11 | Wall items on the front wall would cover the shop windows | Back and side walls only |
+| 12 | A shopper who finds their crop sold out had no score | It counts like "too dear" (2): nothing they could buy |
+| 13 | Six side-bar crates on a phone | Two columns of three (a grid layout on phones) |
+
+Played in Studio on 2026-10-31 (desktop and phone emulation, [PlaytestLog](PlaytestLog.md), screenshots in [playtest/2026-10-31-week3/](playtest/2026-10-31-week3/)): the farm's front, the store inside and out, the staff door, the stockroom, Fill, shoppers in the aisles and the queue, the Store window, levelling up through a new building, Decorate, all four buildings, the phone. It found:
+
+| # | Found | Fix |
+|---|---|---|
+| 14 | The doorway was glazed (the wall builder sorted its openings in place) | It sorts a copy |
+| 15 | Shoppers' bubbles were inside the ceiling | Lower, just over their heads |
+| 16 | The construction countdown errored every second and stopped every store's shoppers | Fixed; each store's tick runs on its own |
+| 17 | Decorate: the ghost a row off, the awning over the front row, the Highlight not drawn, the grid invisible on white, DONE under the toasts, the camera left overhead | `ScreenPointToRay`, everything over the doors hidden, a glowing footprint, a blue grid, DONE bottom right, the camera back behind you |
+| 18 | On a phone the floor was too small to tap | Pinch or wheel to zoom, drag or WASD to move the view (§4.8 Decorating) |
+| 19 | Red walls inside the Farm Shop, lamps floating under its gable, awnings over the Market Hall's sign, a square "star" | Plaster inside, lamps on cords, flower boxes, a gold ★ |
+
+Left for later, as planned: Stockers, Cashiers and the Greeter (week 4, with every worker), shoppers while you're away (week 4, the Welcome back card), Trusted friends through the staff door (week 6), the bat and crime around the store (week 5). Still to try with people: C9 (decorate on a real phone, with pinch).
+
+### Change after review: the store keeps growing to Level 18 (2026-10-31)
+
+The user asked for the store to keep expanding with its level as players add more to it, and for a check that every player's plot has room for it. What the check found: the floor stopped growing at Level 13 (12×8, 96 cells) and Levels 14–20 opened none, while the catalog keeps unlocking items to Level 17 and players keep buying displays and decor; with aisles and queues, 96 cells hold only about 45 items, so a late store fills up while its levels keep going. The plot had room to spare: the biggest store used x −71…−21 and z −1…40 of the plot, leaving 8 studs to the hedge and 20 studs of yard before the farmhouse. Every farm's layout is the same, and neighbouring farms are 24 studs apart at the front, so there's no overlap between players.
+
+| Found | Fix |
+|---|---|
+| No floor from Level 14 to 20 | The floor opens a row or a column at every level up to 18: 12×9, 13×9, 13×10, 14×10, 14×11 (154 cells, +60%). The Market Hall is 12×9 and the Supermarket 14×11; layouts carry over (cells are counted from the door's corner) |
+| Where the room comes from | The store's lot runs to the hedge and back to 8 studs short of the farmhouse (`PlotLayout.PLOT.shop`); the strip by the gate stays clear (the way to the staff door, the construction sign) |
+| The Supermarket reaches the hedge, leaving a 1-stud gap where the picket fence was | A fence post and its invisible wall close it |
+| Nothing checked that a building fits its plot once built | `tests/world.test.luau` builds each building at its biggest on a farm: every part on the lot (eaves and trim within half a stud), the front still closed but for the gate and the store's door. `tests/layout.test.luau` checks the gate strip (6 studs or more), the farmhouse yard (8 or more), the hedge, and that neighbouring farms stay apart |
+
+Levels 19 and 20 open no floor (the lot is full); they bring stockroom space, shoppers and the gold star. A bigger floor is also a bigger coin sink late on (more displays and decor to buy, §6.2).
+
+### Change after review: bigger stores, a bigger valley (2026-10-31)
+
+The user asked for a fresh look at how big the store should be at the start and what a supermarket should be like, with leave to make the world bigger as long as everything still fits. Seen in Studio (week 3's shots), the stores read small. Level 1 was 5×3 cells (20 × 12 studs): a one-cell aisle that the Honour Box's queue ran along, with 2–3 cells to spare. The Supermarket, at 56 × 44 studs and 14 tall, was barely bigger than the 44 × 42 farmhouse, and from the road it looked like a shop window, not a supermarket. Its 154 cells hold only about 75 items with aisles, under the 80 a store allows. This replaces the entry above: the store still grows at every level, but on a bigger plot.
+
+| Looked at | Change |
+|---|---|
+| The start | Level 1 is 6×4 in an 8×6 Corner Store: the starter kit along the back wall, an aisle in front, the Honour Box's queue up the side wall (no longer along the aisle) and the middle of the floor free for 3–4 new displays (a test places them) |
+| The buildings | Corner Store 8×6 (32 × 24 studs), Farm Shop 11×9 (44 × 36), Market Hall 15×11 (60 × 44), Supermarket 20×14 (80 × 56, 280 cells, 1.8× the old one), each clearly bigger than the last. Taller too: the Supermarket 18 studs (was 14), the Market Hall 15, the Farm Shop 12 with a 9.5-stud gable |
+| The ladder | Every level opens floor: a row or a column, and both at Levels 4, 5, 10, 15 and 20 (19 steps from 6×4 to 20×14). Each building's whole floor is open by its last level (tested) |
+| What a supermarket is | A tall glass front, a deep name band, a canopy over the door, a trolley bay, light strips across the ceiling and a bigger billboard outside; inside, room for long aisles of shelves, a row of checkouts and chillers along the back |
+| Room for it | The plot is 220 × 252 studs (was 160 × 240). The store's lot is 83 × 64, with a 7-stud side yard by the hedge, the 6-stud strip by the gate and an 8-stud yard before the farmhouse; the farmhouse and the field moved back 12. The other side of the front gets 72 studs of yard for week 4's warehouse. Eight farms that wide need a front radius of 320 (was 240) to keep the two by the highway clear of it, so the ring road, sidewalk, back trail, valley and hills moved out with them. The town kept its size, so its walks are the same; the green between it and the ring road is 130 studs (ArtDirection §6 now plans it) |
+| Walks | Town spawn to a gate 285–345 studs (18–21.5 s, was 13–17 s); police porch to the back of a farm 735–910 (46–57 s); Visit, then round the hedge, about 500 (34 s). The raid race holds: the owner at the warehouse is in reach at 8.1 s (was 7.7; the thief with every defence is safe at 11.4 s), and from town still with 1.1 s to spare, because the farmhouse moved back with the field |
+| Shoppers | A bigger store and a longer sidewalk make each visit longer (about a minute in a Supermarket), so 12 at once would have held the late levels back: now 8 / 12 / 16 / 24 by building, and the level-up card says so. Each screen only draws shoppers within 300 studs |
+| Items | At most 100 floor items (was 80), so a full Supermarket doesn't run out of items with floor to spare. ArtDirection's part budget goes to 4,000 a farm, with streaming at about 600 studs |
+| Decorate | Zoomed all the way in, 18 studs of floor fill the view's height in every building, so the Supermarket's cells are as big to tap as the Corner Store's |
+
+Checked in Studio on 2026-10-31 ([playtest/2026-10-31-store-sizes/](playtest/2026-10-31-store-sizes/)): every building from the road and inside, the stockroom and yards from behind, the farm from above, the farms from the town, Decorate on the Supermarket, and shoppers walking the longer sidewalk, browsing, queueing and paying in it. 288 tests. Not checked: a real phone (the tap size, and the part budget with several full Supermarkets in view).
+
+### Change after review: see-through roofs, with the same light inside (2026-10-31)
+
+The user asked whether roofs should go invisible while players are inside a building like the store, so the roof doesn't block the view, and which buildings should do it. Then, seeing the shots, that the stores were really bright inside, and whether the light could be the same with and without the roof. Then that darkening the outside while you're inside isn't acceptable: an owner in the store must still see thieves on the farm, so the outside has to look the same whether you're inside or not.
+
+**Why it's worth it.** Roblox's follow camera sits about 12.5 studs behind and above your head and jumps in front of anything solid in the way. Under the Corner Store's 10-stud ceiling it's forced right up behind your head; in any store, zooming out to see your displays, price tags, queues and shoppers' bubbles hits the ceiling. Fading the roof on your own screen lets the camera rise over the walls and look down into the room, the way Decorate already does. It's client-only and changes nothing in the game.
+
+| Building | See-through roof? | Why |
+|---|---|---|
+| Your store, all four buildings, yours or anyone's | **Yes** (now) | You spend time inside filling displays, serving and watching shoppers; visitors come to look around. Corner Store ceilings are 10 studs |
+| The warehouses from Warehouse Level 5 (week 4) | **Yes**, when they're built | Enclosed, and you work their stations inside |
+| The Packing Shed | No | Open on three sides: the camera is never trapped, and its roof is what makes it read as a shed at the bench |
+| The farmhouse | No | No interior: you deposit at the door |
+| The town's buildings | No | Barley's, the Exchange desk, the Hiring Hall's board and the police porch are all used from outside. The Auction House hall (week 7) is 26 studs tall, so the camera fits; decide when it's built |
+| The stockroom lean-to | No | It's outside the store's walls, open to the yard |
+
+**How:** a building opts in with an invisible `Interior` part (the room's box) beside its `Roof` model. `RoofController` fades the roof, what stands on it and the ceiling lamps over a quarter of a second as you step in (0.3 studs past the walls), turns the words on its signs off, and brings it all back once you're a stud outside (no flicker in the doorway). A faded roof doesn't stop the camera. Decorate hides the roof its own way, so the controller waits while it's open and hides the roof again if you're still inside when it closes.
+
+**The light inside.** Two problems, found in the shots:
+
+| Found | Fix |
+|---|---|
+| Even with the roof on, the stores were glaring inside: near-white walls (the Corner Store cream inside and out, plaster 246, the Supermarket white) under up to 6 lamps each as bright as 0.9 | Every building has its own inside colour, none near-white: the Corner Store buttermilk, the Farm Shop and Market Hall warm plaster, the Supermarket pale sage; the lightest floor tiles a step darker (the Supermarket a grey checker, the Market Hall's cream a sandier one); lamps 0.45 |
+| With the roof faded, the sun pours in (an invisible part casts no shadow) and the room glares, with sun patches and hard wall shadows a roofed room never has | See below: a stand-in for the roof far toward the sun |
+
+**Keeping the sun out without touching the light.** Roblox's lighting is one setting for the whole screen, so anything done with it reaches the farm outside too. Compared in Studio from the same spots:
+
+| Tried | Inside | Outside | Verdict |
+|---|---|---|---|
+| (1) Darken the exposure while you're in | dimmer, but the sun patches stay | darker | no |
+| (2) Keep the roof but nearly invisible, for its shadow | sunlit: even 97% invisible, a part casts no shadow | same | impossible |
+| (3) Your screen lit as indoors (no sun, no sky light) | the same as with the roof | **overcast: it hides thieves in the field** | dropped (built first, then replaced) |
+| (4) **A stand-in for the roof far along the line to the sun** | shaded like the roofed room, lit by the open sky | **exactly the same** | **chosen** |
+
+How (4) works: the sun's rays are parallel, so a copy of the roof moved along the line toward the sun casts the roof's own shadow on the room and nowhere else. It's added on your screen only, while the roof is faded (and on your own store while Decorate is open), follows the sun as it moves, and goes at night. How far: Roblox drew the shadow from 600 to 1,500 studs away and not from 3,000, so it sits at 800; a grey copy there showed as a patch in front of the sun, a glowing white one is smaller than the sun's glare and vanishes into it, even looking straight at the sun, and at sunset. Because the room still sees the sky, it's lit like shade outdoors: grey and sage turned blue-white, so the Supermarket's inside went warm (a khaki-sage wall, a warm grey checker), after which it matches the roofed room side by side. Never tried: a ceiling visible only from below (Roblox's runtime meshes, with unproven shadows and ID-verification rules for creators).
+
+**Also found:** the Supermarket's glass front stood on a plinth that ran straight across the doorway, a 1.2-stud ledge that characters stalled at (the user saw it). It stops either side of the door now, and `tests/world.test.luau` checks that nothing solid stands in any building's doorway above the floor.
+
+Checked in Studio on 2026-10-31 ([playtest/2026-10-31-roofs/](playtest/2026-10-31-roofs/)): walking into and out of each building, the camera rising over the walls, Decorate opened and closed inside, each building shaded and with its roof on side by side, the stand-in on and off, looking straight at the sun, a low evening sun, the farm through the windows and over the walls in full daylight, and the stand-in gone when you leave. 288 tests (`tests/world.test.luau` checks the Interior box covers each building's floor, the lamps are in the Roof model, and the doorways are clear). Not checked: a real phone (shadows there, at low graphics, are drawn shorter or not at all: then the roof casts none either, so it still matches), and the night (§4.14 isn't built yet).
+
 ### Change after review: your own store, and levels for the warehouse, the store and workers (2026-10-31)
 
 The user asked for four things: their own store instead of the stand, decorated freely with racks and shelves, with workers and a way to grow it; workers that level from low to high efficiency; a warehouse that levels up for more capacity and features; and market prices on a button instead of only in town. What the plan had: the Farm Stand was the shop's tier 0 (not a test stand), followed by three fixed shop tiers with a set number of shelves and no decorating; four warehouse tiers, all bought by day 10 in the sim; worker levels 1–5 bought with coins only; and the Market window already on the side bar (built in week 2). What changed:
@@ -998,6 +1108,6 @@ In order. Each one makes the next one cheaper. Every step ends with a review aga
 2. ✅ **Write the shared rules with Lune tests.** `GrowthRules`, `SeedStock`, `MarketPrice`, `DemandModel`, `LandRules`, `CrimeRules` (every bypass in the §4.12 table), `FineRules`, `TravelRules`, `ZoneRules`, `AuctionRules`, `WorkerRules`, `PipelineRules.simulate`, plus config checks: 155 tests, all passing (`lune run tools/check`).
 3. ✅ **Build a progression sim.** `lune run tools/progression`: the XP curve is tuned so every permit target is met, and wages stay at 5–8% of income. It also showed that coins pile up late (see step 6).
 4. ✅ **Greybox Cloverdale and time the raid race.** The layout, the greybox and the race from real distances are done and tested (5.8 s without defences, 11.4 s with them; the tall fence went to 3.5 s). Walked in Studio on 2026-10-30 (play-test Stage A, §10): the distances hold. Still open from Stage A: A7 (finding your way) needs a new tester.
-5. **MVP weeks 1–4 (§9)**, play-tested as they land (PlaytestPlan Stages A–D). ✅ Week 1 (the farming loop, with its dev commands and the first look pass: light, fences, the field and crops). ✅ Week 2 (selling: the Packing Shed, the pickup, the market, the Farm Stand), played in Studio on 2026-10-31. Next: Stage B with testers, then week 3 (your store) and week 4 (Warehouse Levels, workers with levels), then Stage C. The look pass ([ArtDirection.md](ArtDirection.md) §11) carries on alongside. The raid stage measures the arrest rate (target 35–50%) and whether raids feel fun from both sides before defences are built in week 6.
+5. **MVP weeks 1–4 (§9)**, play-tested as they land (PlaytestPlan Stages A–D). ✅ Week 1 (the farming loop, with its dev commands and the first look pass: light, fences, the field and crops). ✅ Week 2 (selling: the Packing Shed, the pickup, the market, the Farm Stand), played in Studio on 2026-10-31. ✅ Week 3 (your store: the building and its 4 stages, Store Levels, Decorate, shoppers in the aisles), played in Studio on 2026-10-31; then the stores and the valley were made bigger (§10), so a Supermarket is 80 × 56 studs and each farm is 220 wide. Next: Stage B with testers, week 4 (Warehouse Levels, workers with levels; the far side of each farm's front has 72 studs of yard kept for the bigger warehouses and docks), then Stage C. The look pass ([ArtDirection.md](ArtDirection.md) §11) carries on alongside. The raid stage measures the arrest rate (target 35–50%) and whether raids feel fun from both sides before defences are built in week 6.
 6. **Late-game coin sinks** (found by the sim). Mostly answered by Warehouse and Store Levels, store decor and worker Levels 1–10 (§6.2): coins now level off through the first month. Still open: the very long tail once both ladders are done (around day 50 for a daily player). Ideas: bigger auction lots and a weekly "Grand Auction", a coin-bought prestige ("Harvest Festival") that resets land for a permanent bonus, seasonal decor sets, costly seasonal seeds. Decide with live data after launch.
 7. **Content and policy checks before launch.** Run the maturity questionnaire with the bonk and arrest content (aim for *Mild*), name the crops and NPCs, and plan the low-poly crop mesh pipeline (like Tide Market's `tools/plant_art`).

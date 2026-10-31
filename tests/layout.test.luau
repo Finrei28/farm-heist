@@ -8,6 +8,7 @@ return function(spec, harness)
 	local PlotLayout = harness.load("PlotLayout")
 	local ZoneRules = harness.load("ZoneRules")
 	local LandRules = harness.load("LandRules")
+	local Store = harness.load("Config/Store")
 	local raidRace = require("./lib/raidrace")
 
 	local P = PlotLayout.PLOT
@@ -96,6 +97,57 @@ return function(spec, harness)
 				end
 			end
 		end)
+		it("puts every store building on the shop lot, its stockroom too", function()
+			for stage = 1, #Store.BUILDINGS do
+				local box = PlotLayout.storeBox(stage)
+				local back = box.max.Z + P.store.backRoom + P.store.wall
+				expect(box.min.X >= P.shop.min.X and box.max.X <= P.shop.max.X).toBe(true)
+				expect(box.min.Z >= -P.store.wall and back <= P.shop.max.Z).toBe(true)
+			end
+		end)
+		it("leaves room round the biggest store: the strip by the gate, the yard before the farmhouse, inside the hedge", function()
+			-- the strip from the store to the gate: the owner's way to the staff door
+			expect(P.gate.across - P.gate.width / 2 - P.shop.max.X >= 6).toBe(true)
+			-- a yard (8 studs or more) between the stockroom and the farmhouse
+			expect(P.farmhouse.min.Z - P.shop.max.Z >= 8).toBe(true)
+			-- inside the hedge, with room for a stretch of picket fence beside it
+			expect(P.shop.min.X - -W / 2 >= 3).toBe(true)
+			-- and the lot is used: the biggest building and its stockroom fill it
+			local biggest = PlotLayout.storeBox(#Store.BUILDINGS)
+			expect(biggest.max.Z + P.store.backRoom + P.store.wall).toBe(P.shop.max.Z)
+			expect(biggest.min.X).toBe(P.shop.min.X)
+		end)
+		it("keeps neighbouring farms apart, so every farm has the same room", function()
+			-- the corners of the front of a plot against its neighbour's
+			for index = 1, PlotLayout.COUNT do
+				local nextIndex = index % PlotLayout.COUNT + 1
+				local a = PlotLayout.toWorld(index, Vector3.new(-W / 2 - 3, 0, 0))
+				local b = PlotLayout.toWorld(nextIndex, Vector3.new(W / 2 + 3, 0, 0))
+				local c = PlotLayout.toWorld(index, Vector3.new(W / 2 + 3, 0, 0))
+				local d = PlotLayout.toWorld(nextIndex, Vector3.new(-W / 2 - 3, 0, 0))
+				expect(math.min((a - b).Magnitude, (c - d).Magnitude, (a - d).Magnitude, (c - b).Magnitude)).toBeGreaterThan(10)
+			end
+		end)
+		it("cuts the store out of the farm's zone, but not its stockroom", function()
+			for stage = 1, #Store.BUILDINGS do
+				local zone = PlotLayout.zone(2, stage)
+				local cells = Store.BUILDINGS[stage].cells
+				expect(ZoneRules.inside(zone, PlotLayout.storeWorld(2, 1, 1, 3))).toBe(false)
+				expect(ZoneRules.inside(zone, PlotLayout.storeWorld(2, cells[1], cells[2], 3))).toBe(false)
+				expect(ZoneRules.inside(PlotLayout.storeZone(2, stage), PlotLayout.storeWorld(2, cells[1], cells[2], 3))).toBe(true)
+				-- the stockroom, behind the back wall, is the farm's
+				local stockroom = PlotLayout.storeWorld(2, 1, cells[2] + 1 + P.store.backRoom / 2 / Store.CELL, 3)
+				expect(ZoneRules.inside(zone, stockroom)).toBe(true)
+				-- the yard beside the store, by the staff door
+				local yard = PlotLayout.storeWorld(2, -0.5, Store.STAFF_Y, 3)
+				expect(ZoneRules.inside(zone, yard)).toBe(true)
+			end
+		end)
+		it("finds store cells from world positions", function()
+			local x, y = PlotLayout.storeCellAt(5, PlotLayout.storeWorld(5, 4, 2, 3))
+			expect(x).toBeNear(4, 1e-4)
+			expect(y).toBeNear(2, 1e-4)
+		end)
 		it("numbers tiles as LandRules does, with the start corner by the farmhouse", function()
 			local zone = PlotLayout.zone(3)
 			local nearest, farthest = math.huge, 0
@@ -140,10 +192,10 @@ return function(spec, harness)
 	end)
 
 	describe("distances in the design doc (§3)", function()
-		it("town spawn to a farm's gate: 205–265 studs, about 15 s on foot", function()
+		it("town spawn to a farm's gate: 285–345 studs, 18–21.5 s on foot", function()
 			for index = 1, PlotLayout.COUNT do
 				local distance = (PlotLayout.visitWorld(index) - PlotLayout.TOWN.spawn).Magnitude
-				expect(distance >= 205 and distance <= 265).toBe(true)
+				expect(distance >= 285 and distance <= 345).toBe(true)
 			end
 		end)
 		-- Walking routes, not straight lines: the plots are in the way, so you
@@ -160,7 +212,7 @@ return function(spec, harness)
 		local function behind(index: number): Vector3
 			return PlotLayout.toWorld(index, Vector3.new(0, 0, D + 6))
 		end
-		it("police porch to the back of a farm on foot: 590–790 studs, 37–49 s", function()
+		it("police porch to the back of a farm on foot: 735–910 studs, 46–57 s", function()
 			local porch = PlotLayout.policePorchWorld()
 			for index = 1, PlotLayout.COUNT do
 				local best = math.huge
@@ -174,10 +226,10 @@ return function(spec, harness)
 						behind(index),
 					}))
 				end
-				expect(best >= 590 and best <= 790).toBe(true)
+				expect(best >= 735 and best <= 910).toBe(true)
 			end
 		end)
-		it("a farm's Visit point round the hedge to its back fence: 400–450 studs, about 27 s", function()
+		it("a farm's Visit point round the hedge to its back fence: 490–510 studs, about 31 s", function()
 			for index = 1, PlotLayout.COUNT do
 				for _, side in { -1, 1 } do
 					local x = side * (PlotLayout.WIDTH / 2 + 8)
@@ -187,7 +239,7 @@ return function(spec, harness)
 						PlotLayout.toWorld(index, Vector3.new(x, 0, D + 6)),
 						behind(index),
 					})
-					expect(distance >= 400 and distance <= 450).toBe(true)
+					expect(distance >= 490 and distance <= 510).toBe(true)
 				end
 			end
 		end)
@@ -220,16 +272,19 @@ return function(spec, harness)
 				expect(PlotLayout.pathLength(route)).toBeLessThan(math.pi * PlotLayout.RING_ROAD.radius + 500)
 			end
 		end)
-		it("shoppers walk the sidewalk to the stand's counter without setting foot in a farm", function()
+		it("shoppers walk the sidewalk to the store's door without setting foot in a farm", function()
 			for index = 1, PlotLayout.COUNT do
-				for _, lane in { -1, 0, 1 } do
-					local route, counter = PlotLayout.shopperRoute(index, lane)
-					for _, point in route do
-						expect(inAnyFarm(point)).toBe(nil)
+				for _, side in { -1, 1 } do
+					for _, lane in { -1, 0, 1 } do
+						local route = PlotLayout.storeApproach(index, side, lane)
+						for _, point in route do
+							expect(inAnyFarm(point)).toBe(nil)
+						end
+						-- they end at the door, just outside the front wall
+						local cx, cy = PlotLayout.storeCellAt(index, route[#route])
+						expect(math.abs(cx - Store.DOOR_X)).toBeLessThan(0.5)
+						expect(cy < 0.25 and cy > -1).toBe(true)
 					end
-					local at = PlotLayout.frame(index):PointToObjectSpace(route[counter])
-					expect(math.abs(at.X - PlotLayout.PLOT.stand.across)).toBeLessThan(PlotLayout.PLOT.stand.width / 2)
-					expect(at.Z > -5 and at.Z < 0).toBe(true)
 				end
 			end
 		end)

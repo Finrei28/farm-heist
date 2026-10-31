@@ -1,4 +1,5 @@
--- Your own shop (docs/GameDesign.md §4.8, shared/DemandModel).
+-- Shoppers in your store (docs/GameDesign.md §4.8, shared/DemandModel,
+-- shared/ShopRules). The store itself (grid, levels, catalog) is Config/Store.
 return {
 	-- Shoppers judge your price against ref = REF_BASE × base + (1 − REF_BASE) × market.
 	REF_BASE = 0.5,
@@ -6,29 +7,37 @@ return {
 	SIGMA = 0.2,
 	-- ... times the rating bonus (0 at 1★ up to this at 5★) ...
 	RATING_BONUS = 0.25,
-	-- ... times this for grade A crops.
+	-- ... times the display's presentation (Config/Store) ... times this for grade A crops.
 	GRADE_A = 1.15,
 	PRICE_MIN = 0.5, -- allowed prices, as a share of the reference
 	PRICE_MAX = 3.0,
 	UNITS_PER_SHOPPER = 2.5, -- 1–4 units, on average
-	PATIENCE = 20, -- seconds a shopper waits at the register
 	RATING_WINDOW = 50, -- shoppers the rating averages over
-	START_STARS = 3, -- a shop nobody has visited yet ...
+	START_STARS = 3, -- a store nobody has visited yet ...
 	RATING_SETTLE = 10, -- ... counts as this many 3★ shoppers until real ones replace them
 	-- What each shopper adds to the rating (1–5): they bought; everything
-	-- they looked at was too dear. (A shop with nothing on its shelves is
+	-- they looked at was too dear (or sold out by the time they got there);
+	-- they gave up waiting in the queue. (A store with nothing on display is
 	-- closed, so nobody comes to find it empty: a new farm doesn't sink to
-	-- 1★ before its first harvest. Waiting at a register comes with T1.)
+	-- 1★ before its first harvest.)
 	SCORE_BOUGHT = 5,
 	SCORE_TOO_DEAR = 2,
-	FLOW_PER_STAR = 0.15, -- shoppers come this much more often per star above 3 (less below)
-	SHOPPER_SPEED = 8, -- studs a second along the sidewalk (shared/PlotLayout.shopperRoute)
-	SHOPPER_BROWSE = 2.5, -- seconds they stand at the counter before walking on
+	SCORE_LEFT_QUEUE = 1,
 
-	TIERS = { -- index 1 = T0; interval = seconds between shoppers at 3★
-		{ id = "FarmStand", name = "Farm Stand", cost = 0, level = 1, shelves = 2, shelfUnits = 20, registers = 0, interval = 20 },
-		{ id = "FarmShop", name = "Farm Shop", cost = 2_500, level = 3, shelves = 6, shelfUnits = 20, registers = 1, interval = 12 },
-		{ id = "MarketHall", name = "Market Hall", cost = 25_000, level = 10, shelves = 12, shelfUnits = 20, registers = 2, interval = 8 },
-		{ id = "Supermarket", name = "Supermarket", cost = 150_000, level = 18, shelves = 20, shelfUnits = 20, registers = 2, interval = 5.2 },
-	},
+	-- How often shoppers come: every INTERVAL × INTERVAL_DECAY^(Store Level − 1)
+	-- seconds at 3★ (20 s at Level 1, 4 s at 20), FLOW_PER_STAR more often for
+	-- each star above 3 (less below), VARIETY more for each different crop on
+	-- display after the first (up to VARIETY_MAX).
+	INTERVAL = 20,
+	INTERVAL_DECAY = 0.92,
+	FLOW_PER_STAR = 0.15,
+	VARIETY = 0.05,
+	VARIETY_MAX = 0.25,
+	-- (How many shoppers a store holds at once grows with its building: Config/Store.BUILDINGS.)
+
+	-- The visit (StoreService; clients draw them from ShopperEvent).
+	SPEED = 8, -- studs a second
+	BROWSE = 2.5, -- seconds at each display
+	QUEUE_LENGTH = 4, -- shoppers waiting at a checkout, besides the one paying
+	PATIENCE = 20, -- seconds a shopper waits in a queue before putting their basket back
 }

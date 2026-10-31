@@ -22,7 +22,8 @@
 --   drivers    number of Drivers (no Driver: trucks wait for you)
 --   minPrice   Driver rule: dispatch only at ≥ this × base value (default 0)
 --   truck      { crates, roundTrip, backAt }
---   shop       { tier, stars, prices = { [cropId] = coins }, capacity }
+--   shop       { level, stars, prices = { [cropId] = coins }, capacity, staffed }
+--              (staffed: only staffed checkouts, so shoppers need a Cashier)
 --   wages      coins a minute for the whole crew, online
 local Crops = require(script.Parent.Config.Crops)
 local Rarities = require(script.Parent.Config.Rarities)
@@ -73,7 +74,7 @@ function PipelineRules.newState()
 		tiles = {}, seeds = {}, replant = "same", barn = {}, sorted = {}, truckQueue = {}, bed = {},
 		stockroom = {}, shelves = {}, routes = {}, speeds = {}, drivers = 0, minPrice = 0,
 		truck = { crates = 4, roundTrip = 60, backAt = 0 },
-		shop = { tier = 0, stars = 3, prices = {}, capacity = 40 },
+		shop = { level = 1, stars = 3, prices = {}, capacity = 40, staffed = false },
 		wages = 0,
 	}
 end
@@ -220,14 +221,14 @@ function PipelineRules.simulate(state, seconds: number, rate: number, startTime:
 			end
 		end
 
-		-- Shoppers buy at your prices. The Farm Stand has an honour box; any
-		-- bigger shop needs a Cashier to serve them.
+		-- Shoppers buy at your prices. Honour Boxes and Self-checkouts serve
+		-- themselves; a store with only Registers needs a Cashier.
 		local shop = state.shop
-		budget.shoppers += 60 / DemandModel.shopperInterval(shop.tier, shop.stars) * rate
+		budget.shoppers += 60 / DemandModel.shopperInterval(shop.level, shop.stars) * rate
 		local arrived = math.floor(budget.shoppers)
 		budget.shoppers -= arrived
 		local served = arrived
-		if shop.tier > 0 then
+		if shop.staffed then
 			budget.register = refill(budget.register, (speeds.Register or 0) * rate)
 			served = math.min(arrived, math.floor(budget.register))
 			budget.register -= served

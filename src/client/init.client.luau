@@ -60,8 +60,8 @@ PlayerState.Start()
 
 local Controllers = script.Controllers
 for _, name in {
-	"HudController", "HotbarController", "FieldController", "SeedRackController", "BarnController", "ShopController", "MarketController",
-	"ShedController", "TruckController", "ShopperController", "PromptController", "SprintController",
+	"HudController", "HotbarController", "FieldController", "SeedRackController", "BarnController", "StoreController", "DecorateController",
+	"MarketController", "ShedController", "TruckController", "ShopperController", "PromptController", "SprintController", "RoofController",
 } do
 	task.spawn(function() -- (one waiting on the world doesn't hold up the rest)
 		local ok, err = pcall(function()

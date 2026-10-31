@@ -29,6 +29,19 @@ return function(spec, harness)
 		end)
 	end)
 
+	describe("holes (your store)", function()
+		it("leaves a hole out of the farm, a stud in to leave the farm, a stud out to come back", function()
+			local holed = { cframe = zone.cframe, size = zone.size,
+				holes = { { cframe = CFrame.new(-50, 0, -100), size = Vector3.new(40, 40, 30) } } }
+			expect(ZoneRules.inside(holed, Vector3.new(-50, 3, -100))).toBe(false)
+			expect(ZoneRules.inside(holed, Vector3.new(-50, 3, -80))).toBe(true)
+			-- the hole's edge is z = −85: in the farm until a stud into the store
+			expect(ZoneRules.inside(holed, Vector3.new(-50, 3, -85.5), true)).toBe(true)
+			expect(ZoneRules.inside(holed, Vector3.new(-50, 3, -86.5), true)).toBe(false)
+			expect(ZoneRules.inside(holed, Vector3.new(-50, 3, -85.5), false)).toBe(false)
+		end)
+	end)
+
 	describe("climbing", function()
 		it("counts as inside for the whole climb, in or out", function()
 			expect(ZoneRules.inside(zone, Vector3.new(0, 3, 130), false, true)).toBe(true)

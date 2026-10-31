@@ -20,6 +20,48 @@ return function(spec, harness)
 		end)
 	end)
 
+	describe("your store", function()
+		it("starts furnished with the starter kit, all free", function()
+			local data = SaveData.deepCopy(SaveData.TEMPLATE)
+			SaveData.migrate(data)
+			local count = 0
+			for _ in data.store.layout do
+				count += 1
+			end
+			expect(count).toBe(5)
+			expect(data.store.owned.ProduceCrate).toBe(2)
+			expect(data.store.gifts.ProduceCrate).toBe(2)
+			expect(data.store.nextId).toBe(6)
+			local StoreLayout = harness.load("StoreLayout")
+			expect((StoreLayout.check(data.store.layout, 1))).toBe(true)
+		end)
+		it("isn't furnished again on the next load, even after selling things", function()
+			local data = SaveData.deepCopy(SaveData.TEMPLATE)
+			SaveData.migrate(data)
+			data.store.layout["4"] = nil
+			SaveData.reconcile(data, SaveData.TEMPLATE)
+			SaveData.migrate(data)
+			expect(data.store.layout["4"]).toBe(nil)
+			expect(data.store.nextId).toBe(6)
+		end)
+		it("takes over the Farm Stand's goods, prices and rating", function()
+			local old = { shop = { tier = 0, shelves = { ["1"] = { crop = "Carrot", units = 9, a = 4 } },
+				stockroom = { { crop = "Wheat", key = "Wheat||", units = 12, grade = "B" } },
+				prices = { Carrot = 24 }, rating = { scores = { 5, 5, 2 } } } }
+			SaveData.reconcile(old, SaveData.TEMPLATE)
+			SaveData.migrate(old)
+			expect(old.shop).toBe(nil)
+			local units = {}
+			for _, crate in old.store.stockroom do
+				units[crate.crop] = (units[crate.crop] or 0) + crate.units
+			end
+			expect(units.Carrot).toBe(9)
+			expect(units.Wheat).toBe(12)
+			expect(old.store.prices.Carrot).toBe(24)
+			expect(#old.store.rating.scores).toBe(3)
+		end)
+	end)
+
 	describe("an old save", function()
 		it("gains new fields and keeps its own values", function()
 			local old = { coins = 1234, inventory = { seeds = { Pumpkin = 2 } } }

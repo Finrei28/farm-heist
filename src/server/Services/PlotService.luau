@@ -5,8 +5,10 @@
 --
 -- It also keeps track of which farm everyone is standing in, from their
 -- trusted position (MovementService) with the zone's 1-stud hysteresis
--- (shared/ZoneRules): the player attribute InFarm = plot index, or 0. The
--- HUD's location chip reads it; the bat (week 4) will too.
+-- (shared/ZoneRules): the player attribute InFarm = plot index, or 0. A
+-- farm's store is cut out of it (a public place, §4.8): InStore = the plot
+-- index of the store you're in, or 0. The HUD's location chip reads them;
+-- the bat (week 5) will too.
 --
 -- Plot models (workspace.World.Plot<n>) carry OwnerId and OwnerName while
 -- someone has them; players carry Plot = their plot index.
@@ -74,12 +76,17 @@ function PlotService.OnReleased(callback)
 	table.insert(releasedCallbacks, callback)
 end
 
+-- The name plank on the gate arch (both faces).
 local function setGateLabel(index: number, text: string)
-	local gate = PlotService.model(index):FindFirstChild("Gate")
-	local gui = gate and gate:FindFirstChildOfClass("BillboardGui")
-	local label = gui and gui:FindFirstChildOfClass("TextLabel")
-	if label then
-		label.Text = text
+	local arch = PlotService.model(index):FindFirstChild("GateArch")
+	local plank = arch and arch:FindFirstChild("NamePlank")
+	for _, gui in (plank and plank:GetChildren()) or {} do
+		if gui:IsA("SurfaceGui") then
+			local label = gui:FindFirstChild("Text")
+			if label then
+				label.Text = text
+			end
+		end
 	end
 end
 
@@ -158,25 +165,45 @@ local function onCharacter(player: Player, character: Model)
 	end)
 end
 
+-- The store building's stage on a plot (World/StoreArt keeps it on the model).
+local function stageOf(index: number): number
+	return PlotService.model(index):GetAttribute("StoreStage") or 1
+end
+
+-- Which zone of which plot a position is in: the one it was in (with
+-- hysteresis), else the first that has it. `zoneOf(index)` gives the zone.
+local function find(position: Vector3, current: number, zoneOf): number
+	if current > 0 and ZoneRules.inside(zoneOf(current), position, true) then
+		return current
+	end
+	for index = 1, PlotLayout.COUNT do
+		if ZoneRules.inside(zoneOf(index), position, false) then
+			return index
+		end
+	end
+	return 0
+end
+
+local function farmZone(index: number)
+	return PlotLayout.zone(index, stageOf(index))
+end
+local function storeZone(index: number)
+	return PlotLayout.storeZone(index, stageOf(index))
+end
+
 local function updateZones()
 	for _, player in Players:GetPlayers() do
 		local position = MovementService.positionOf(player)
-		local current = player:GetAttribute("InFarm") or 0
-		local now = 0
+		local farm, store = 0, 0
 		if position then
-			if current > 0 and ZoneRules.inside(PlotLayout.zone(current), position, true) then
-				now = current
-			else
-				for index = 1, PlotLayout.COUNT do
-					if ZoneRules.inside(PlotLayout.zone(index), position, false) then
-						now = index
-						break
-					end
-				end
-			end
+			farm = find(position, player:GetAttribute("InFarm") or 0, farmZone)
+			store = find(position, player:GetAttribute("InStore") or 0, storeZone)
 		end
-		if now ~= current then
-			player:SetAttribute("InFarm", now)
+		if farm ~= (player:GetAttribute("InFarm") or 0) then
+			player:SetAttribute("InFarm", farm)
+		end
+		if store ~= (player:GetAttribute("InStore") or 0) then
+			player:SetAttribute("InStore", store)
 		end
 	end
 end

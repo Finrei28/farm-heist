@@ -1,16 +1,17 @@
--- The Packing Shed (warehouse tier 0, docs/GameDesign.md §4.6). At the
+-- The Packing Shed (Warehouse Levels 1–4, docs/GameDesign.md §4.6). At the
 -- bench you pick a barn stack and where its crate goes (the truck or your
--- Farm Stand), hold to wash it and let go in the green for grade A
+-- store), hold to wash it and let go in the green for grade A
 -- (shared/CrateRules; the server times the hold itself). A crate for the
 -- truck goes into your arms: carry it to the dock and load it
--- (TruckService). A crate for the stand goes to its stockroom (ShopService
--- puts it on the shelves).
+-- (TruckService). A crate for the store goes to its stockroom (StoreService;
+-- you put it out with Fill), unless the stockroom's full: then it's for the
+-- truck.
 --
 -- A crate you're carrying is set down at the dock if you leave your farm,
 -- travel, respawn or leave the game, so nothing is ever lost: the dock's
 -- "Load crate" takes from that pile too.
 --
--- WarehouseAction remote: "Wash" "stackKey|Truck" or "stackKey|Stand", then "Pack".
+-- WarehouseAction remote: "Wash" "stackKey|Truck" or "stackKey|Store", then "Pack".
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
@@ -21,6 +22,7 @@ local CrateRules = require(Shared.CrateRules)
 local Crops = require(Shared.Config.Crops)
 local PlotLayout = require(Shared.PlotLayout)
 local Remotes = require(Shared.Remotes)
+local ShopRules = require(Shared.ShopRules)
 local Warehouse = require(Shared.Config.Warehouse)
 
 local Server = ServerScriptService.Server
@@ -31,7 +33,7 @@ local YardArt = require(Server.World.YardArt)
 local DataService = require(script.Parent.DataService)
 local MovementService = require(script.Parent.MovementService)
 local PlotService = require(script.Parent.PlotService)
-local ShopService = require(script.Parent.ShopService)
+local StoreService = require(script.Parent.StoreService)
 
 local WarehouseService = {}
 
@@ -102,10 +104,10 @@ end
 
 local actions = {}
 
--- "stackKey|Truck" or "stackKey|Stand": starts the wash (the hold).
+-- "stackKey|Truck" or "stackKey|Store": starts the wash (the hold).
 function actions.Wash(player, data, arg)
 	local key, to = string.match(arg or "", "^([%w|]+)|(%a+)$")
-	if not key or (to ~= "Truck" and to ~= "Stand") or not Crops.ById[BarnRules.parse(key)] then
+	if not key or (to ~= "Truck" and to ~= "Store") or not Crops.ById[BarnRules.parse(key)] then
 		return "BadRequest"
 	end
 	local index = PlotService.plotOf(player)
@@ -121,6 +123,9 @@ function actions.Wash(player, data, arg)
 	end
 	if to == "Truck" and carrying[player] then
 		return "Carrying"
+	end
+	if to == "Store" and ShopRules.stockroomRoom(data.store) <= 0 and carrying[player] then
+		return "StockroomFull" -- (the crate would have to go to the truck, but your arms are full)
 	end
 	washing[player] = { key = key, to = to, at = now() }
 	return nil
@@ -145,14 +150,19 @@ function actions.Pack(player, data)
 	if not crate then
 		return "NoCrops"
 	end
-	if wash.to == "Truck" then
+	local to = wash.to
+	if to == "Store" and ShopRules.stockroomRoom(data.store) <= 0 then
+		to = "Truck" -- (a full stockroom: this one's for the pickup)
+		Notice.send(player, "Your store's stockroom is full, so this crate's for the pickup. A higher Store Level holds more.")
+	end
+	if to == "Truck" then
 		setCarrying(player, crate)
 	else
-		table.insert(data.shop.stockroom, crate)
-		ShopService.Refresh(player) -- (the stand's prompt shows the stockroom count)
+		table.insert(data.store.stockroom, crate)
+		StoreService.StockroomChanged(player) -- (the stockroom's crates and the displays' prompts)
 	end
 	Analytics.step(player, data, "FirstCrate")
-	return nil, { grade = grade, units = crate.units, crop = crate.crop, to = wash.to }
+	return nil, { grade = grade, units = crate.units, crop = crate.crop, to = to }
 end
 
 ------------------------------------------------------------------------
