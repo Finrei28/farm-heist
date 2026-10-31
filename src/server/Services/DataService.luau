@@ -264,6 +264,7 @@ local function getPublicState(data)
 		store = data.store,
 		workers = data.workers,
 		freeHireUsed = data.freeHireUsed,
+		crew = data.crew,
 		defences = data.defences,
 		trusted = data.trusted,
 		debts = data.crime.debts,

@@ -19,6 +19,43 @@ Follow-ups: <what to test next time>
 
 ## Sessions
 
+### 2026-11-01 · week 4 smoke test (warehouse levels and workers) · build: this session's week 4
+Testers: Claude, driving Studio (the chat's dev commands, the command bar for camera views) · Setup: solo Play, desktop, two fresh Play sessions (the second after the fixes below) · Lag: 0 · Screenshots: [playtest/2026-11-01-week4/](playtest/2026-11-01-week4/)
+
+| Check | Result | OK? | Notes |
+|---|---|---|---|
+| The first hire | the Hire tab's board, 3 candidates a job, "Your first hire is free!"; Eli the Shed Hand hired free; the board then says hiring more needs Farm Level 2 | ✓ | Farmhands were offered Careful (+grade A, useless to them): traits now only come on jobs they help. The Hire buttons now look disabled below Level 2 |
+| The Shed Hand | with 60 carrots in the barn he packed 5 crates: 4 into the pickup, the fifth onto the dock's rack (1/6); 3 of 4 came out grade A (50% with Careful) | ✓ | wages came out each minute (100 → 93) |
+| Levels by hand | Upgrade tab: Level 1 → 4 instant, Level 5 started the Distribution Warehouse (2:00, scaffolding round the new walls, "the old building keeps working") | ✓ | a milestone's long list of news shrank to tiny text in the ladder: those rows are taller now |
+| The new building | the Distribution Warehouse went up when the timer ran out; outside: metal walls, a low roof, the name board and dock door in the farm colour, the staff door with its awning; inside (roof faded while you're in): the conveyor from the intake hopper past the Sort and Pack tables to the pallets, the Cold Room, the wash table | ✓ | **bug**: the Cold Room's count sign looked for its label in the wrong place, and the error stopped the level-up halfway (no toast, no dock prompts, the crew not moved). Fixed and tested. The Cold Room's top trim was a solid lid: now a trim round its walls, open above. A darker base band added to the walls |
+| A full crew | `/crew 3`: a Farmhand, Sorter, Packer, Loader and Driver at their stations in their outfits (the Loader's hi-vis vest and hard hat, the Driver's cap by the box truck's cab); the Pipeline tab marked Wash & Sort orange as the bottleneck (2.7 crates a minute) with its tip | ✓ | at the Packing Shed (one station) it no longer calls the bench a bottleneck |
+| Routes | 🚚 / 🏪 / ✋ and − + for a split: 80% · 20% shown | ✓ | |
+| Several trucks | Level 10: two semis at numbered docks, a lane and boom each; Semi 1 sent from the window drove out of its lane and up the ring road, its receipt shown | ✓ | **bug** in the first session: after the warehouse was rebuilt while the pickup was out, its parts streamed in late and landed 170 studs off when it came home (StreamingEnabled). Trucks are now persistent models (always whole on every client), booms atomic; the second session's semi drove out and back cleanly through a rebuild |
+| Level 20 | the Distribution Center: flat roof with skylights and air units, gold trim, docks 1–3, three reefers | ✓ | the name was cream on gold: now dark letters on the gold board |
+| Strike | coins below a minute's wages: "on strike" toast, everyone sitting on a crate holding a sign; `/state` shows strike true; coins back → "Wages paid: your crew is back at work" | ✓ | the sign was small and the name tag hid it: bigger, held higher, the tag lifted while striking |
+| Welcome back | `/away 8`: away 8 h, crops kept growing, 49 crates packed, 1 truck sent +8,724, wages −6,090, +2,634 | ✓ | the numbers match the crew's wages (51 a minute × 25% × 480) |
+| The store's crew | Store Level 8, carrots routed to the store: the Stockers (green polos) filled the displays without a hand from me, the Greeter (gold sash) by the door, shoppers buying | ✓ | no Register placed, so no Cashier tried (the next session) |
+| The Workers window | badges: photo, name, job, level and speed, wage, the XP bar (a Packer's filled from work while "away"), Train with its fee, Let go | ✓ | |
+
+Bugs found and fixed in the session: the level-up stopping halfway (the Cold Room sign), trucks streaming in part by part. Also polished: traits by job, the disabled Hire buttons, the bottleneck at the shed, the ladder's milestone rows, the Cold Room's open top, the base band, the gold sign's ink, the strike sign. Added `/state` (prints the save's warehouse and crew to the Output: the command bar can't read the live save).
+Not covered: a Cashier at a Register, a Farmhand harvesting a real field, the hand cart at the warehouses, the Drivers' price rule, a real absence (Studio's mock save keeps nothing), a phone, 8 players.
+
+**Would a new player understand it?** (asked by the user during the session; every screen looked at again as a first-time player, fixed, then checked in a third Play: [12](playtest/2026-11-01-week4/12-tags-signs-badge.jpg), [13](playtest/2026-11-01-week4/13-pipeline-plain-words.jpg))
+
+| What a new player saw | Now |
+|---|---|
+| The side bar said "WAREHOUSI" (cut off) | crate labels shrink to fit: "WAREHOUSE" |
+| "Sorters 1/1 (next: Warehouse Level 8)", "228 units", "tiles a minute", "replant: same" | "1 of 1 Sorters · more at Warehouse Level 8", "228 crops waiting", "crops a minute", "they replant the same seed", and a first row saying how crops flow from the field to the trucks |
+| "…is your bottleneck" | "🐢 Slowest step: hire another Sorter, or train yours to speed it up" |
+| Routes as bare emoji (🚚 🏪 ✋: what's ✋?) | "🚚 Truck", "🏪 Store", "✋ Keep", and the line above says Keep leaves it in the barn |
+| "Change" buttons cycling through choices you couldn't see (the Drivers' rule, the Farmhands' replanting) | every choice is a button, the current one green ("When full · 90%+ · 100%+ …"; "Same seed · Cheapest · Nothing"), with a line on what it means |
+| "47%", "wage 5.4/min" on badges and candidates | "47% speed", "paid 5.4 coins/min", "learns by working" on the XP bar |
+| "0/0 · next slot: Warehouse Level 5" on the Hire tab | "🔒 opens at Warehouse Level 5", "2 of 3 hired", "full · more at …", "🔒 needs a Register in your store" |
+| Ladder news: "a Sorter", "Driver 2", "conveyors ×1.1", "50 s round trip" | "room for a Sorter", "room for a 2nd Driver", "conveyors 10% faster", "trips take 50 s", "a new building: the … (2 min to build)" |
+| Tables inside the warehouse all looked alike (only the intake had a sign) | hanging signs: WASH & SORT, PACK, LOAD THE TRUCKS |
+| Name tags "Daisy · Lv 3": who's she? | "Daisy · Packer Lv 3"; workers side by side get their tags at different heights so they don't overlap |
+| Nothing on screen once the "ready to train" or "on strike" toast had gone | a badge on the Workers crate: a green ⭐ when someone's ready to train, a red ! during a strike |
+
 ### 2026-10-31 · see-through roofs and the light inside (check by eye) · build: this session's week 3 + the resize
 Testers: Claude, driving Studio (the chat's dev commands; the command bar for the lighting comparisons and to zoom the follow camera out) · Setup: solo Play, desktop · Lag: 0 · Screenshots: [playtest/2026-10-31-roofs/](playtest/2026-10-31-roofs/)
 

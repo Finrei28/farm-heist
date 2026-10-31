@@ -10,11 +10,13 @@
 -- one. A shopper walks the sidewalk to the door, the aisles to a display for
 -- each crop they want (they decide there: ShopRules.pick), then to the
 -- shortest checkout queue; they pay when served (an Honour Box serves
--- itself; a Register only while you stand behind it), or put their basket
--- back after Shop.PATIENCE seconds. The coins come in when they pay.
+-- itself; a Register while you stand behind it or a Cashier works it), or
+-- put their basket back after Shop.PATIENCE seconds. The coins come in when
+-- they pay. A Greeter brings more shoppers; Stockers fill the displays
+-- (WorkerService, through StoreService.crew and StoreService.Restock).
 --
 -- (Shoppers only come while you're playing. Selling while you're away is
--- worked out on your return with the workers, in week 4.)
+-- worked out on your return with the workers: WorkerService.)
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -59,6 +61,21 @@ local rng = Random.new()
 
 local stores = {} -- [Player] = { index, shoppers = { [id] = shopper }, queues = { [checkoutId] = { shopper } }, nextAt, rush, decorating, decorateAt, soldOutTold }
 local lastId = 0
+
+-- The store's crew (WorkerService sets these):
+--   cashier(player, checkoutId) → the Cashier working that Register, and
+--     the seconds they take a shopper; nil if none
+--   boost(player) → the Greeter's extra shoppers (a share)
+--   served(player, worker, seconds) → a Cashier served a shopper
+StoreService.crew = {
+	cashier = function(_player: Player, _checkout: string)
+		return nil, nil
+	end,
+	boost = function(_player: Player): number
+		return 0
+	end,
+	served = function(_player: Player, _worker, _seconds: number) end,
+}
 
 local function now(): number
 	return workspace:GetServerTimeNow()
@@ -440,26 +457,32 @@ local function atDisplay(st, shopper, t: number)
 	goNext(st, shopper, t + Shop.BROWSE, say)
 end
 
--- Whether a checkout can serve right now: a Register only while you stand
--- behind it (a Cashier comes in week 4).
-local function canServe(st, store, checkout: string): boolean
+-- Whether a checkout can serve right now, and how long a shopper takes: a
+-- Register while you stand behind it or while a Cashier works it (slower
+-- until they're trained), and the Cashier if it's theirs.
+local function canServe(st, store, checkout: string): (boolean, number?, any)
 	local entry = store.layout[checkout]
 	local def = entry and Store.ITEMS[entry.item]
 	if not def then
 		return false
 	end
 	if not def.staffed then
-		return true
+		return true, def.serve
 	end
 	local owner = PlotService.ownerOf(st.index)
 	local position = owner and MovementService.positionOf(owner)
-	if not position or (owner:GetAttribute("InStore") or 0) ~= st.index then
-		return false
+	if position and (owner:GetAttribute("InStore") or 0) == st.index then
+		local cx, cy = PlotLayout.storeCellAt(st.index, position)
+		for _, cell in StoreLayout.behind(entry) do
+			if math.abs(cx - cell[1]) <= SERVE_REACH and math.abs(cy - cell[2]) <= SERVE_REACH then
+				return true, def.serve
+			end
+		end
 	end
-	local cx, cy = PlotLayout.storeCellAt(st.index, position)
-	for _, cell in StoreLayout.behind(entry) do
-		if math.abs(cx - cell[1]) <= SERVE_REACH and math.abs(cy - cell[2]) <= SERVE_REACH then
-			return true
+	if owner then
+		local cashier, seconds = StoreService.crew.cashier(owner, checkout)
+		if cashier then
+			return true, math.max(def.serve, seconds), cashier
 		end
 	end
 	return false
@@ -550,7 +573,7 @@ local function tickShoppers(player: Player, st, t: number)
 				st.rush -= 1
 				st.nextAt = t + RUSH_GAP
 			else
-				st.nextAt = t + ShopRules.interval(store) * rng:NextNumber(0.75, 1.25)
+				st.nextAt = t + ShopRules.interval(store) / (1 + StoreService.crew.boost(player)) * rng:NextNumber(0.75, 1.25)
 			end
 		else
 			st.nextAt = t + 1
@@ -575,11 +598,19 @@ local function tickShoppers(player: Player, st, t: number)
 	-- checkouts
 	for checkout, queue in st.queues do
 		local head = queue[1]
-		if head and head.stage == "queued" and head.spot == 1 and canServe(st, store, checkout) then
-			head.stage = "paying"
-			head.payAt = t + Store.ITEMS[store.layout[checkout].item].serve
+		if head and head.stage == "queued" and head.spot == 1 then
+			local ok, seconds, cashier = canServe(st, store, checkout)
+			if ok then
+				head.stage = "paying"
+				head.payAt = t + seconds
+				head.cashier = cashier
+				head.serveSeconds = seconds
+			end
 		end
 		if head and head.stage == "paying" and t >= head.payAt then
+			if head.cashier then
+				StoreService.crew.served(player, head.cashier, head.serveSeconds)
+			end
 			pay(st, head, t)
 		end
 		for i = #queue, 1, -1 do
@@ -654,6 +685,34 @@ function StoreService.SetLevel(player: Player, to: number)
 	while data.store.level < to do
 		levelUp(player, data, data.store.level + 1)
 	end
+	redraw(player)
+end
+
+-- A Stocker's round: up to `units` from the stockroom onto the emptiest
+-- displays (not while you're decorating). Returns units moved.
+function StoreService.Restock(player: Player, units: number): number
+	local st = stores[player]
+	local data = DataService.Get(player)
+	if not st or not data or st.decorating or units < 1 then
+		return 0
+	end
+	local moved = ShopRules.restockDisplays(data.store, MarketService.priceAt(), units)
+	if moved > 0 then
+		drawDisplays(player)
+		drawStockroom(player)
+		DataService.NotifyState(player)
+	end
+	return moved
+end
+
+-- Whether you're decorating (the crew stays out of the way).
+function StoreService.IsDecorating(player: Player): boolean
+	local st = stores[player]
+	return st ~= nil and st.decorating == true
+end
+
+-- Redraws the displays and the stockroom (after the offline settlement).
+function StoreService.Redraw(player: Player)
 	redraw(player)
 end
 

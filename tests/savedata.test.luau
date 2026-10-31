@@ -71,6 +71,18 @@ return function(spec, harness)
 			expect(old.inventory.crops ~= nil).toBe(true)
 			expect(old.crime.debts ~= nil).toBe(true)
 		end)
+		it("turns week 2's warehouse into Warehouse Level 1, its pickup's crates still loaded", function()
+			local old = { warehouse = { tier = 0, buildingUntil = 0, queues = {}, routes = {}, dock = {}, trucks = {},
+				bed = { { crop = "Carrot", key = "Carrot||", units = 12, grade = "A" } } } }
+			SaveData.reconcile(old, SaveData.TEMPLATE)
+			SaveData.migrate(old)
+			expect(old.warehouse.level).toBe(1)
+			expect(old.warehouse.tier).toBe(nil)
+			expect(old.warehouse.bed).toBe(nil)
+			expect(#old.warehouse.beds).toBe(1)
+			expect(old.warehouse.beds[1][1].units).toBe(12)
+			expect(old.crew.replant).toBe("same")
+		end)
 	end)
 
 	describe("for DataStores", function()

@@ -20,6 +20,7 @@ local MarketPrice = require(Shared.MarketPrice)
 local Rarities = require(Shared.Config.Rarities)
 local Remotes = require(Shared.Remotes)
 local TruckRules = require(Shared.TruckRules)
+local Warehouse = require(Shared.Config.Warehouse)
 
 local PlayerState = require(script.Parent.Parent.PlayerState)
 local Reasons = require(script.Parent.Parent.Reasons)
@@ -152,7 +153,11 @@ local function yours(state)
 			set[cropId] = true
 		end
 	end
-	for _, list in { state.warehouse.bed, state.warehouse.dock, state.store.stockroom } do
+	local lists = { state.warehouse.dock, state.store.stockroom }
+	for _, bed in state.warehouse.beds do
+		table.insert(lists, bed)
+	end
+	for _, list in lists do
 		for _, crate in list do
 			set[crate.crop] = true
 		end
@@ -186,22 +191,34 @@ local function updateLive()
 	end
 	if truckLine then
 		local warehouse = state.warehouse
+		local info = TruckRules.info(warehouse)
+		local name = Warehouse.TRUCK_NAMES[info.truck]
+		local loaded, total, homeLoaded, onRoad = 0, 0, 0, 0
+		for i = 1, info.trucks do
+			local bed = warehouse.beds[i] or {}
+			if not TruckRules.isHome(warehouse, i, t) then
+				onRoad += 1
+			elseif #bed > 0 then
+				homeLoaded += 1
+				loaded += #bed
+				total += TruckRules.quote(bed, function(cropId)
+					return MarketPrice.price(cropId, t)
+				end, info.premium)
+			end
+		end
 		local run = TruckRules.nextBack(warehouse, t)
-		local tier = TruckRules.tier(warehouse)
-		if run then
+		if homeLoaded > 0 then
+			local which = if info.trucks == 1 then `{name} {loaded}/{info.truckCrates}` else `{homeLoaded} {name}{if homeLoaded == 1 then "" else "s"} with {loaded} crates`
+			truckLine.Text = `🚚 {which} · sending now locks {UI.formatNumber(total)} coins{if onRoad > 0 then ` · {onRoad} on the road` else ""}`
+			truckButtonHolder.Visible = true
+		elseif run then
 			truckLine.Text = if t < run.arriveAt
 				then `🚚 On the road with {#run.crates} crate{if #run.crates == 1 then "" else "s"} ({UI.formatNumber(run.coins)} locked) · paid in {UI.formatTime(run.arriveAt - t)}`
 				else `🚚 Sold in the City · home in {UI.formatTime(run.returnAt - t)}`
 			truckButtonHolder.Visible = false
-		elseif #warehouse.bed == 0 then
-			truckLine.Text = `🚚 Pickup home, empty (0/{tier.truckCrates}). Pack crates at the Packing Shed.`
-			truckButtonHolder.Visible = false
 		else
-			local total = TruckRules.quote(warehouse.bed, function(cropId)
-				return MarketPrice.price(cropId, t)
-			end)
-			truckLine.Text = `🚚 Pickup {#warehouse.bed}/{tier.truckCrates} · sending now locks {UI.formatNumber(total)} coins`
-			truckButtonHolder.Visible = true
+			truckLine.Text = `🚚 {name} home, empty (0/{info.truckCrates}). Pack crates at the {if info.stage == 1 then "Packing Shed" else "wash table"}.`
+			truckButtonHolder.Visible = false
 		end
 	end
 end

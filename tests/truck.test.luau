@@ -1,17 +1,25 @@
--- The truck (shared/TruckRules): loading, the price locking at dispatch,
--- payment on arrival (once only), and the truck coming home.
+-- The trucks (shared/TruckRules): loading, the price locking at dispatch,
+-- payment on arrival (once only), the trucks coming home, and the second
+-- and third trucks of the bigger warehouses.
 return function(spec, harness)
 	local describe, it, expect = spec.describe, spec.it, spec.expect
 	local TruckRules = harness.load("TruckRules")
-	local Warehouse = harness.load("Config/Warehouse")
+	local WarehouseRules = harness.load("WarehouseRules")
 
-	local function newWarehouse()
-		return { tier = 0, bed = {}, dock = {}, trucks = {} }
+	local function newWarehouse(level)
+		local warehouse = { level = level or 1, routes = {}, beds = {}, dock = {}, sorted = {}, trucks = {} }
+		WarehouseRules.finish(warehouse, warehouse.level)
+		return warehouse
 	end
 	local function crate(crop, units, grade)
 		return { crop = crop, key = `{crop}||`, units = units, grade = grade or "B" }
 	end
-	local pickup = Warehouse.TIERS[1]
+	local function flat(price)
+		return function()
+			return price
+		end
+	end
+	local pickup = WarehouseRules.level(1)
 
 	describe("loading", function()
 		it("fills the pickup's bed up to 4 crates", function()
@@ -20,14 +28,12 @@ return function(spec, harness)
 				expect(TruckRules.load(warehouse, crate("Carrot", 12), 0)).toBe(nil)
 			end
 			expect(TruckRules.load(warehouse, crate("Carrot", 12), 0)).toBe("TruckFull")
-			expect(#warehouse.bed).toBe(4)
+			expect(#warehouse.beds[1]).toBe(4)
 		end)
 		it("can't load while the truck is out", function()
 			local warehouse = newWarehouse()
 			TruckRules.load(warehouse, crate("Carrot", 12), 0)
-			TruckRules.dispatch(warehouse, 0, function()
-				return 20
-			end)
+			TruckRules.dispatch(warehouse, 1, 0, flat(20))
 			expect(TruckRules.load(warehouse, crate("Carrot", 12), 10)).toBe("TruckAway")
 			expect(TruckRules.load(warehouse, crate("Carrot", 12), pickup.roundTrip)).toBe(nil)
 		end)
@@ -39,7 +45,7 @@ return function(spec, harness)
 			TruckRules.load(warehouse, crate("Carrot", 12, "A"), 0)
 			TruckRules.load(warehouse, crate("Pumpkin", 6), 0)
 			local prices = { Carrot = 20, Pumpkin = 600 }
-			local run = TruckRules.dispatch(warehouse, 100, function(cropId)
+			local run = TruckRules.dispatch(warehouse, 1, 100, function(cropId)
 				return prices[cropId]
 			end)
 			expect(run.coins).toBe(276 + 3600)
@@ -47,26 +53,34 @@ return function(spec, harness)
 			expect(run.crates[2].coins).toBe(3600)
 			expect(run.arriveAt).toBe(100 + pickup.roundTrip / 2)
 			expect(run.returnAt).toBe(100 + pickup.roundTrip)
-			expect(#warehouse.bed).toBe(0)
+			expect(#warehouse.beds[1]).toBe(0)
 			prices.Pumpkin = 1 -- the market crashing after it left changes nothing
 			expect(run.coins).toBe(3876)
 		end)
 		it("won't leave empty, or twice", function()
 			local warehouse = newWarehouse()
-			local run, why = TruckRules.dispatch(warehouse, 0, function()
-				return 1
-			end)
+			local run, why = TruckRules.dispatch(warehouse, 1, 0, flat(1))
 			expect(run).toBe(nil)
 			expect(why).toBe("TruckEmpty")
 			TruckRules.load(warehouse, crate("Carrot", 1), 0)
-			TruckRules.dispatch(warehouse, 0, function()
-				return 1
-			end)
-			warehouse.bed = { crate("Carrot", 1) }
-			run, why = TruckRules.dispatch(warehouse, 5, function()
-				return 1
-			end)
+			TruckRules.dispatch(warehouse, 1, 0, flat(1))
+			warehouse.beds[1] = { crate("Carrot", 1) }
+			run, why = TruckRules.dispatch(warehouse, 1, 5, flat(1))
 			expect(why).toBe("TruckAway")
+		end)
+		it("goes quicker with a Driver's shorter trip", function()
+			local warehouse = newWarehouse()
+			TruckRules.load(warehouse, crate("Carrot", 12), 0)
+			local run = TruckRules.dispatch(warehouse, 1, 0, flat(20), 54)
+			expect(run.returnAt).toBe(54)
+		end)
+		it("adds the Premium contracts to Legendary and Mythic crates only", function()
+			local warehouse = newWarehouse(15)
+			TruckRules.load(warehouse, crate("Moonmelon", 2), 0)
+			TruckRules.load(warehouse, crate("Carrot", 12), 0)
+			local run = TruckRules.dispatch(warehouse, 1, 0, flat(100))
+			expect(run.crates[1].price).toBe(110)
+			expect(run.crates[2].price).toBe(100)
 		end)
 	end)
 
@@ -74,9 +88,7 @@ return function(spec, harness)
 		it("pays when the truck reaches the City, once", function()
 			local warehouse = newWarehouse()
 			TruckRules.load(warehouse, crate("Carrot", 12), 0)
-			TruckRules.dispatch(warehouse, 0, function()
-				return 20
-			end)
+			TruckRules.dispatch(warehouse, 1, 0, flat(20))
 			expect(#TruckRules.collect(warehouse, pickup.roundTrip / 2 - 1)).toBe(0)
 			local due = TruckRules.collect(warehouse, pickup.roundTrip / 2)
 			expect(#due).toBe(1)
@@ -86,9 +98,7 @@ return function(spec, harness)
 		it("pays a run that arrived while you were away when you come back", function()
 			local warehouse = newWarehouse()
 			TruckRules.load(warehouse, crate("Carrot", 12), 0)
-			TruckRules.dispatch(warehouse, 0, function()
-				return 20
-			end)
+			TruckRules.dispatch(warehouse, 1, 0, flat(20))
 			local due = TruckRules.collect(warehouse, 86400)
 			expect(#due).toBe(1)
 			expect(TruckRules.tidy(warehouse, 86400)).toBe(1)
@@ -97,26 +107,43 @@ return function(spec, harness)
 		it("keeps an unpaid run even after the truck is home", function()
 			local warehouse = newWarehouse()
 			TruckRules.load(warehouse, crate("Carrot", 12), 0)
-			TruckRules.dispatch(warehouse, 0, function()
-				return 20
-			end)
+			TruckRules.dispatch(warehouse, 1, 0, flat(20))
 			expect(TruckRules.tidy(warehouse, pickup.roundTrip * 2)).toBe(0)
 			expect(TruckRules.home(warehouse, pickup.roundTrip * 2)).toBe(1)
 		end)
 	end)
 
-	describe("trucks home", function()
-		it("counts the bigger warehouses' second truck", function()
-			local warehouse = newWarehouse()
-			warehouse.tier = 2
+	describe("more trucks", function()
+		it("loads the first truck home with room, then the next", function()
+			local warehouse = newWarehouse(10)
+			local info = WarehouseRules.level(10)
 			expect(TruckRules.home(warehouse, 0)).toBe(2)
-			TruckRules.load(warehouse, crate("Carrot", 12), 0)
-			TruckRules.dispatch(warehouse, 0, function()
-				return 20
-			end)
+			for _ = 1, info.truckCrates do
+				TruckRules.load(warehouse, crate("Carrot", 12), 0)
+			end
+			local _, truck = TruckRules.load(warehouse, crate("Carrot", 12), 0)
+			expect(truck).toBe(2)
+			TruckRules.dispatch(warehouse, 1, 0, flat(20))
 			expect(TruckRules.home(warehouse, 1)).toBe(1)
-			expect(TruckRules.load(warehouse, crate("Carrot", 12), 1)).toBe(nil)
-			expect(TruckRules.nextBack(warehouse, 1).returnAt).toBe(Warehouse.TIERS[3].roundTrip)
+			expect(TruckRules.isHome(warehouse, 2, 1)).toBe(true)
+			expect(TruckRules.nextBack(warehouse, 1).returnAt).toBe(info.roundTrip)
+			expect(TruckRules.runOf(warehouse, 1, 1).truck).toBe(1)
+		end)
+		it("loads the truck at the dock you're on", function()
+			local warehouse = newWarehouse(10)
+			expect(TruckRules.loadInto(warehouse, 2, crate("Carrot", 12), 0)).toBe(nil)
+			expect(#warehouse.beds[2]).toBe(1)
+			expect(#warehouse.beds[1]).toBe(0)
+			TruckRules.dispatch(warehouse, 2, 0, flat(20))
+			expect(TruckRules.loadInto(warehouse, 2, crate("Carrot", 12), 1)).toBe("TruckAway")
+		end)
+		it("gets a bed for each new truck as the warehouse grows", function()
+			local warehouse = newWarehouse(9)
+			expect(#warehouse.beds).toBe(1)
+			WarehouseRules.finish(warehouse, 10)
+			expect(#warehouse.beds).toBe(2)
+			WarehouseRules.finish(warehouse, 20)
+			expect(#warehouse.beds).toBe(3)
 		end)
 	end)
 end

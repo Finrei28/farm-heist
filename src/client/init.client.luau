@@ -62,6 +62,7 @@ local Controllers = script.Controllers
 for _, name in {
 	"HudController", "HotbarController", "FieldController", "SeedRackController", "BarnController", "StoreController", "DecorateController",
 	"MarketController", "ShedController", "TruckController", "ShopperController", "PromptController", "SprintController", "RoofController",
+	"WarehouseController", "WorkersController", "WorkerController",
 } do
 	task.spawn(function() -- (one waiting on the world doesn't hold up the rest)
 		local ok, err = pcall(function()

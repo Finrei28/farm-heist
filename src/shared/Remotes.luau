@@ -9,9 +9,15 @@
 --   SeedAction     C→S  ("Buy" "cropId|count") -> { ok, reason? }   Barley's Seeds (shared/SeedStock)
 --   LandAction     C→S  ("Clear" block) -> { ok, reason? }   Land Permits (shared/LandRules; obstacles are server prompts)
 --   TravelAction   C→S  ("Home" | "Town" | "Visit" userId | "Cancel") -> { ok, reason? }   (shared/TravelRules)
---   WarehouseAction C→S ("Wash" "stackKey|Truck" or "stackKey|Store" | "Pack") -> { ok, reason?, result? }
---                        the Packing Shed bench: Wash starts the hold, Pack is letting go (result = { grade, units, crop, to })
---   TruckAction    C→S  ("Dispatch") -> { ok, reason? }   send the loaded truck (shared/TruckRules)
+--   WarehouseAction C→S ("Wash" "stackKey|Truck" or "stackKey|Store" | "Pack" | "Upgrade" | "Route" "cropId|Truck/Store/Keep/0.7"
+--                        | "DriverRule" share) -> { ok, reason?, result? }   the warehouse (server/Services/WarehouseService):
+--                        at the bench Wash starts the hold, Pack is letting go (result = { grade, units, crop, to })
+--   TruckAction    C→S  ("Dispatch" [truck]) -> { ok, reason? }   send the loaded trucks (shared/TruckRules)
+--   WorkerAction   C→S  ("Hire" candidateId | "Train" uid | "Fire" uid | "Replant" "same"/"cheapest"/"none") -> { ok, reason?, result? }
+--                        your crew (server/Services/WorkerService, shared/WorkerRules)
+--   WorkerEvent    S→C  ("Crew", { plot, workers = { { id, type, name, level, look, at, face, strike } } }) where each
+--                        worker stands · ("Do", { plot, id, at, to, carry?, back? }) a worker walks to `to` from
+--                        server time `at` (and back) · ("Clear", { plot })   drawn by the clients (WorkerController)
 --   StoreAction    C→S  ("Price" "cropId|coins" | "Fill" id or "all" | "SetSlot" "id|slot|cropId or Auto"
 --                        | "Upgrade" | "Name" text | "Decorate" "On"/"Off" | "Layout" json) -> { ok, reason?, result? }
 --                        your store (server/Services/StoreService, shared/ShopRules, shared/StoreLayout)
@@ -33,6 +39,8 @@ local DEFINITIONS = {
 	TruckAction = "RemoteFunction",
 	StoreAction = "RemoteFunction",
 	ShopperEvent = "RemoteEvent",
+	WorkerAction = "RemoteFunction",
+	WorkerEvent = "RemoteEvent",
 }
 
 local IS_SERVER = RunService:IsServer()

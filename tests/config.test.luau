@@ -88,18 +88,39 @@ return function(spec, harness)
 	end)
 
 	describe("buildings and workers", function()
-		it("have caps for every building tier", function()
+		it("every worker type has a station, a wage and a place in the list", function()
 			for name, kind in Workers.TYPES do
-				if kind.caps then
-					if #kind.caps ~= #Warehouse.TIERS or #kind.caps ~= #Store.BUILDINGS then
-						error(`{name} has {#kind.caps} caps`)
+				expect(table.find(Workers.ORDER, name) ~= nil).toBe(true)
+				expect(kind.wage).toBeGreaterThan(0)
+				expect(type(kind.station)).toBe("string")
+				for _, list in (kind.slots or {}) do
+					for i = 2, #list do
+						expect(list[i]).toBeGreaterThan(list[i - 1])
 					end
 				end
 			end
+			expect(#Workers.ORDER).toBe(#(function()
+				local names = {}
+				for name in Workers.TYPES do
+					table.insert(names, name)
+				end
+				return names
+			end)())
 		end)
-		it("give one Driver slot per truck", function()
-			for index, tier in Warehouse.TIERS do
-				expect(Workers.TYPES.Driver.caps[index]).toBe(if index == 1 then 0 else tier.trucks)
+		it("open warehouse slots at levels that exist, and store slots at Store Levels", function()
+			for _, kind in Workers.TYPES do
+				for _, from in (kind.slots and kind.slots.warehouse) or {} do
+					expect(Warehouse.LEVELS[from] ~= nil).toBe(true)
+				end
+				for _, from in (kind.slots and kind.slots.store) or {} do
+					expect(Store.LEVELS[from] ~= nil).toBe(true)
+				end
+			end
+		end)
+		it("the warehouse's buildings start at levels that exist, in order", function()
+			for index = 2, #Warehouse.BUILDINGS do
+				expect(Warehouse.BUILDINGS[index].from).toBeGreaterThan(Warehouse.BUILDINGS[index - 1].from)
+				expect(Warehouse.LEVELS[Warehouse.BUILDINGS[index].from] ~= nil).toBe(true)
 			end
 		end)
 	end)

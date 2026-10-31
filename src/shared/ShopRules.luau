@@ -221,22 +221,26 @@ end
 
 -- Fills one display from the stockroom: each slot topped up with its crop,
 -- an empty slot given its set crop or (Auto) a crop chosen for it. A crop
--- going out for the first time is priced at the reference. Returns units
--- moved.
-function ShopRules.fill(store, id: string, marketPrice): number
+-- going out for the first time is priced at the reference. limit: at most
+-- this many units (a Stocker's work). Returns units moved.
+function ShopRules.fill(store, id: string, marketPrice, limit: number?): number
 	local entry = store.layout[id]
 	local def = entry and Store.ITEMS[entry.item]
 	if not def or def.kind ~= "Display" then
 		return 0
 	end
 	local moved = 0
+	local left = limit or math.huge
 	for _, slot in entry.slots do
+		if left - moved <= 0 then
+			break
+		end
 		if slot.units <= 0 then
 			slot.units, slot.a = 0, 0
 			slot.crop = if slot.set then slot.set else autoCrop(store, entry)
 		end
 		if slot.crop then
-			moved += topUp(store, slot, def.units - slot.units)
+			moved += topUp(store, slot, math.min(def.units - slot.units, left - moved))
 			if slot.units > 0 and not store.prices[slot.crop] then
 				ShopRules.setPrice(store, slot.crop, ShopRules.reference(slot.crop, marketPrice(slot.crop)), marketPrice(slot.crop))
 			end
@@ -246,6 +250,93 @@ function ShopRules.fill(store, id: string, marketPrice): number
 		end
 	end
 	return moved
+end
+
+-- How full a display is (0–1), and whether the stockroom has something for
+-- it (a crop it can hold that it has room for).
+local function fullness(store, id: string): (number, boolean)
+	local entry = store.layout[id]
+	local def = Store.ITEMS[entry.item]
+	local units, room, wanted = 0, 0, false
+	local waiting = ShopRules.stockroomUnits(store)
+	for _, slot in entry.slots do
+		units += slot.units
+		room += def.units
+		if slot.units < def.units then
+			local crop = if slot.units > 0 then slot.crop else slot.set
+			if crop then
+				wanted = wanted or (waiting[crop] or 0) > 0
+			else
+				for cropId in waiting do
+					wanted = wanted or ShopRules.canHold(entry.item, cropId)
+				end
+			end
+		end
+	end
+	return if room > 0 then units / room else 1, wanted
+end
+
+-- A Stocker's round: fills the emptiest displays first, up to `limit`
+-- units. Returns units moved.
+function ShopRules.restockDisplays(store, marketPrice, limit: number): number
+	local list = {}
+	for _, id in StoreLayout.ofKind(store.layout, "Display") do
+		local full, wanted = fullness(store, id)
+		if wanted then
+			table.insert(list, { id = id, full = full })
+		end
+	end
+	table.sort(list, function(a, b)
+		if a.full ~= b.full then
+			return a.full < b.full
+		end
+		return a.id < b.id
+	end)
+	local moved = 0
+	for _, entry in list do
+		if moved >= limit then
+			break
+		end
+		moved += ShopRules.fill(store, entry.id, marketPrice, limit - moved)
+	end
+	return moved
+end
+
+-- Units of a crop sold off the displays while you were away (the offline
+-- settlement): taken grade A first, paid at your price (× GRADE_A for A).
+-- Returns units taken and coins.
+function ShopRules.sellOff(store, cropId: string, units: number): (number, number)
+	local price = store.prices[cropId] or 0
+	local taken, coins = 0, 0
+	for _, id in StoreLayout.ofKind(store.layout, "Display") do
+		for _, slot in store.layout[id].slots or {} do
+			if units - taken > 0 and slot.crop == cropId and slot.units > 0 then
+				local take = math.min(units - taken, slot.units)
+				local a = math.min(take, slot.a)
+				slot.units -= take
+				slot.a -= a
+				taken += take
+				coins += a * math.floor(price * Warehouse.GRADE_A + 0.5) + (take - a) * price
+				if slot.units <= 0 then
+					slot.units, slot.a = 0, 0
+					if not slot.set then
+						slot.crop = nil
+					end
+				end
+			end
+		end
+	end
+	return taken, coins
+end
+
+-- Units the displays hold when full (for the offline settlement).
+function ShopRules.displayRoom(store): number
+	local room = 0
+	for _, id in StoreLayout.ofKind(store.layout, "Display") do
+		local def = Store.ITEMS[store.layout[id].item]
+		room += def.units * #(store.layout[id].slots or {})
+	end
+	return room
 end
 
 -- Fills every display. Returns units moved.

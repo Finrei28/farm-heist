@@ -1,7 +1,9 @@
 -- The field (docs/GameDesign.md §4.2, §4.5): planting, watering and
--- harvesting through the FieldAction remote, growth while the owner is
--- online (every TICK) and offline (settled when they join, at
--- Growth.OFFLINE_RATE), and drawing it all on their farm (World/FarmArt).
+-- harvesting through the FieldAction remote (and Farmhands' harvests,
+-- WorkerService), growth while the owner is online (every TICK), and
+-- drawing it all on their farm (World/FarmArt). Growth while they were
+-- away is settled with the crew's work when they join (WorkerService,
+-- shared/PipelineRules, at Growth.OFFLINE_RATE).
 --
 -- Every action is checked here: it's your farm, you're standing within
 -- REACH of the tile (trusted position), the land is open, you have the seed
@@ -33,7 +35,6 @@ local FieldService = {}
 
 FieldService.REACH = 10 -- studs (across the ground) from a tile's centre you can work it from
 local TICK = 1
-local WELCOME_AWAY = 120 -- seconds away before "your crops grew while you were away"
 
 local lastTick = {} -- [Player] = server time growth was last settled
 
@@ -212,6 +213,65 @@ function actions.Harvest(player, data, arg)
 	return nil
 end
 
+-- A Farmhand's harvest of a ripe tile (not one flagged to stay), replanted
+-- with `replant` ("same" · "cheapest" · "none") from your seed bag. Half
+-- the XP of picking it yourself. Returns nil (and "NoSeeds" if it couldn't
+-- be replanted), or why not: "NotRipe" · "BarnFull" · "Leave".
+function FieldService.WorkerHarvest(player: Player, data, key: string, replant: string): (string?, string?)
+	local index = PlotService.plotOf(player)
+	local planted = data.field[key]
+	if not index or not planted then
+		return "Empty"
+	elseif planted.leave then
+		return "Leave"
+	elseif not GrowthRules.isRipe(planted) then
+		return "NotRipe"
+	elseif not BarnRules.hasRoom(data.inventory, data.silo, 1) then
+		return "BarnFull"
+	end
+	local regrowing = planted.regrowing
+	local _, stays = GrowthRules.harvest(planted)
+	BarnRules.addCrops(data.inventory, BarnRules.key(planted.crop), 1)
+	data.stats.harvested += 1
+	if not stays then
+		data.field[key] = nil
+		local seed = nil
+		if replant == "same" and (data.inventory.seeds[planted.crop] or 0) > 0 then
+			seed = planted.crop
+		elseif replant == "cheapest" then
+			for cropId, count in data.inventory.seeds do
+				if count > 0 and data.level >= Rarities.ById[Crops.ById[cropId].rarity].seedLevel
+					and (not seed or Crops.ById[cropId].seed < Crops.ById[seed].seed or (Crops.ById[cropId].seed == Crops.ById[seed].seed and cropId < seed)) then
+					seed = cropId
+				end
+			end
+		end
+		if seed and BarnRules.takeSeed(data.inventory, seed) then
+			local fresh = data.land.fresh[key] == true
+			data.land.fresh[key] = nil
+			data.field[key] = GrowthRules.plant(seed, fresh)
+		end
+	end
+	FarmArt.showTile(tilePart(index, tonumber(key) :: number), data.field[key], now())
+	DataService.AddXp(player, ProgressionRules.harvestXp(planted.crop, regrowing, true))
+	return nil, if not stays and replant ~= "none" and not data.field[key] then "NoSeeds" else nil
+end
+
+-- Ripe tiles Farmhands could harvest now (not flagged to stay), in tile order.
+function FieldService.RipeTiles(player: Player, data): { string }
+	settle(player, data, true)
+	local keys = {}
+	for key, tile in data.field do
+		if not tile.leave and GrowthRules.isRipe(tile) then
+			table.insert(keys, key)
+		end
+	end
+	table.sort(keys, function(a, b)
+		return tonumber(a) < tonumber(b)
+	end)
+	return keys
+end
+
 -- 🚩 Leave in field: Farmhands skip it (§4.2).
 function actions.Flag(player, data, arg)
 	local tile = parseTile(arg)
@@ -233,21 +293,10 @@ end
 function FieldService.Start()
 	ActionRemote(Remotes.func("FieldAction"), actions, DataService, 0.1)
 
-	PlotService.OnAssigned(function(player, _index, data)
-		-- Growth while they were away, at the offline rate (§4.2).
-		local away = DataService.AwaySeconds(player)
-		local grew = false
-		for _, tile in data.field do
-			if not GrowthRules.isRipe(tile) then
-				grew = true
-			end
-			GrowthRules.offline(tile, away)
-		end
+	-- (Growth while they were away is settled with the crew's work: WorkerService.)
+	PlotService.OnAssigned(function(player)
 		lastTick[player] = now()
 		FieldService.Render(player)
-		if grew and away >= WELCOME_AWAY then
-			Notice.send(player, "Welcome back! Your crops kept growing while you were away (at quarter speed).", "Good")
-		end
 	end)
 
 	PlotService.OnReleased(function(_player, index)

@@ -21,7 +21,7 @@ local StoreArt = require(script.Parent.StoreArt)
 
 local WorldBuilder = {}
 
-WorldBuilder.VERSION = 5
+WorldBuilder.VERSION = 6
 
 local COLORS = Parts.COLORS
 local part, plotBox = Parts.part, Parts.plotBox
@@ -163,6 +163,20 @@ local function buildTown(world: Instance)
 	Parts.cylinder("HatCrown", feet * CFrame.new(0, 5.5, 0), 2, 1, { Color = COLORS.hay }, barley)
 	barley.Parent = town
 	label("Barley", barley.Body, 4.6, 1.4, 90)
+
+	-- The Hiring Hall's job board on two posts (WorkerService opens the
+	-- Workers window's Hire tab from it): today's candidates pinned up.
+	local boardAt = PlotLayout.frontOf("HiringHall", 4)
+	local boardFrame = CFrame.lookAt(boardAt, Vector3.new(0, 0, 0))
+	for _, x in { -5, 5 } do
+		part({ Name = "BoardPost", Size = Vector3.new(0.6, 8, 0.6), CFrame = boardFrame * CFrame.new(x, 4, 0), Color = COLORS.post }, town)
+	end
+	local jobBoard = part({ Name = "JobBoard", Size = Vector3.new(10, 5, 0.6), CFrame = boardFrame * CFrame.new(0, 5, 0), Color = COLORS.kraft }, town)
+	for i, color in { COLORS.cream, COLORS.hay, COLORS.cream, COLORS.water, COLORS.cream, COLORS.leaf } do
+		local x, y = -3.4 + ((i - 1) % 3) * 3.4, if i <= 3 then 1 else -1.2
+		Parts.prop({ Name = "Notice", Size = Vector3.new(2.4, 1.8, 0.1), CFrame = jobBoard.CFrame * CFrame.new(x, y, -0.35) * CFrame.Angles(0, 0, math.rad((i * 37) % 9 - 4)), Color = color }, town)
+	end
+	label("Help wanted", jobBoard, 3.6, 1.6, 90)
 
 	-- The Exchange's desk (MarketService opens the Market window from it);
 	-- the price board on the building's face is drawn by the clients.
@@ -316,24 +330,23 @@ local function buildPlot(index: number, world: Instance)
 	end
 	fence("BackFence", Vector3.new(-W / 2, 0, D), Vector3.new(W / 2, 0, D + 1))
 	-- The front: pickets from the store to the gate, the gate, then to the
-	-- truck gate and on to the hedge. (The stretch from the hedge to the
-	-- store is the store's: World/StoreArt. The store and the truck gate are
-	-- part of the front too: neither is a way in.)
+	-- first truck gate. (The stretch from the hedge to the store is the
+	-- store's: World/StoreArt; from the first truck gate to the hedge, with
+	-- a truck gate for each dock, the warehouse's: World/YardArt. The store
+	-- and the truck gates are part of the front too: none is a way in.)
 	local gateLeft = P.gate.across - P.gate.width / 2
 	local gateRight = P.gate.across + P.gate.width / 2
 	pickets("FrontFenceByGate", P.store.right + P.store.wall, gateLeft)
 	pickets("FrontFence", gateRight, P.driveway.min.X)
-	pickets("FrontFenceFar", P.driveway.max.X, W / 2)
 	local gatePost = plotBox("Gate", frame, Vector3.new(gateLeft, 0, -1.5), Vector3.new(gateRight, 0.5, 0.5), { Color = COLORS.hay }, model)
 	buildGateArch(model, frame, index, gateLeft, gateRight)
 
 	-- Buildings.
 	plotBox("Gatehouse", frame, P.gatehouse.min, P.gatehouse.max, { Color = COLORS.cream }, model)
 	-- (on the lawn, not level with it)
-	plotBox("Driveway", frame, P.driveway.min + Vector3.new(0, 0.2, 0), P.driveway.max + Vector3.new(0, 0.15, 0), { Color = COLORS.road }, model)
 	plotBox("Path", frame, P.path.min + Vector3.new(0, 0.2, 0), P.path.max + Vector3.new(0, 0.15, 0), { Color = COLORS.trail }, model)
-	-- Selling: the Packing Shed and dock, the pickup, the truck gate (the
-	-- warehouse's stations come with Warehouse Level 5), and your store.
+	-- Selling: the Packing Shed with its dock, lane and pickup (rebuilt as
+	-- the owner's Warehouse Level grows), and your store.
 	YardArt.build(model, frame)
 	StoreArt.build(model)
 	label("Farmhouse & barn", plotBox("Farmhouse", frame, P.farmhouse.min, P.farmhouse.max, { Color = COLORS.cream }, model), 12, 3, 120)

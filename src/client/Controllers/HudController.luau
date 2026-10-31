@@ -154,7 +154,12 @@ local function sizeCrate(crate: Frame)
 	crate.Icon.Size = UDim2.new(1, 0, 0, if UI.compact then 22 else 30)
 	crate.Icon.Position = UDim2.fromOffset(0, if UI.compact then 5 else 7)
 	crate.Label.Size = UDim2.new(1, -8, 0, if UI.compact then 15 else 18)
-	crate.Label:FindFirstChildOfClass("TextLabel").TextSize = if UI.compact then 11 else 13
+	local text = crate.Label:FindFirstChildOfClass("TextLabel")
+	text.TextSize = if UI.compact then 11 else 13
+	local fit = text:FindFirstChildOfClass("UITextSizeConstraint")
+	if fit then
+		fit.MaxTextSize = text.TextSize
+	end
 end
 
 -- A crate in the side bar. Returns its button.
@@ -424,6 +429,8 @@ function HudController.Start()
 			showLevelUp(notice)
 		elseif notice.kind == "Receipt" then
 			showReceipt(notice)
+		elseif notice.kind == "Welcome" then
+			return -- (WorkersController's Welcome back card)
 		else
 			UI.toast(notice.text, notice.kind)
 		end

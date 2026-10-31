@@ -1,10 +1,12 @@
--- The Packing Shed bench (docs/GameDesign.md §4.6, §5.3): opens from the
--- bench's prompt. Each barn stack is a crate label with two choices, each
--- showing what it pays right now: 🚚 Truck (today's market price, locked
--- when the pickup leaves) or 🏪 Store (your price there). Picking one
--- opens the wash: hold the stamp, let go with the meter in the green for
--- grade A (+15%), and the crate is packed. A truck crate goes into your
--- arms (carry it to the dock); a store crate goes to your store's stockroom.
+-- Washing and packing by hand (docs/GameDesign.md §4.6, §5.3): the Packing
+-- Shed's bench, or the warehouses' wash table, from its prompt. Each barn
+-- stack is a crate label with two choices, each showing what it pays right
+-- now: 🚚 Truck (today's market price, locked when the truck leaves) or 🏪
+-- Store (your price there). Picking one opens the wash: hold the stamp, let
+-- go with the meter in the green for grade A (+15%), and the crate is
+-- packed. A truck crate goes into your arms at the Packing Shed (carry it to
+-- the dock), onto the conveyor to the Cold Room in the warehouses; a store
+-- crate goes to your store's stockroom.
 -- The server times the hold itself (WarehouseService); the meter here is
 -- the same clock as near as lag allows.
 local HttpService = game:GetService("HttpService")
@@ -26,6 +28,7 @@ local Store = require(Shared.Config.Store)
 local StoreLayout = require(Shared.StoreLayout)
 local TruckRules = require(Shared.TruckRules)
 local Warehouse = require(Shared.Config.Warehouse)
+local WarehouseRules = require(Shared.WarehouseRules)
 
 local PlayerState = require(script.Parent.Parent.PlayerState)
 local Reasons = require(script.Parent.Parent.Reasons)
@@ -51,7 +54,15 @@ end
 local function bench(): BasePart?
 	local index = player:GetAttribute("Plot")
 	local plot = index and workspace.World:FindFirstChild(`Plot{index}`)
-	return plot and plot.PackingShed:FindFirstChild("Bench")
+	local warehouse = plot and plot:FindFirstChild("Warehouse")
+	return warehouse and warehouse.Building:FindFirstChild("Bench") :: BasePart?
+end
+
+-- The trucks' name, whether this is still the Packing Shed (crates go into
+-- your arms there), and the level's info.
+local function trucks(state)
+	local info = WarehouseRules.level(state.warehouse.level)
+	return Warehouse.TRUCK_NAMES[info.truck], info.stage == 1, info
 end
 
 ------------------------------------------------------------------------
@@ -148,7 +159,8 @@ local function showWash(key: string, to: string)
 	chosen = { key = key, to = to }
 	crateIcon.Text = crop.icon or "📦"
 	crateCount.Text = `{crop.name} ×{units}`
-	destination.Text = if to == "Truck" then "🚚 for the pickup" else "🏪 for your store"
+	local name, shed = trucks(state)
+	destination.Text = if to == "Store" then "🏪 for your store" elseif shed then `🚚 for the {string.lower(name)}` else "🚚 to the Cold Room, for the trucks"
 	water.Size = UDim2.fromScale(1, 0)
 	resultHolder.Visible = false
 	holdStamp.Visible = true
@@ -171,6 +183,9 @@ local function finish(result)
 	if result.to == "Truck" then
 		panel.close()
 		UI.toast("Crate in your arms: load it into the pickup at the dock 🚚", nil, 3)
+	elseif result.to == "ColdRoom" then
+		UI.toast("Crate on the conveyor to the Cold Room ❄ Load the trucks at the docks (or let your Loaders).", "Good", 3)
+		showList()
 	else
 		UI.toast("Crate sent to your store's stockroom. Fill a display (hold E at it) to put it out!", "Good", 3)
 		showList()
@@ -288,11 +303,17 @@ local function render(force: boolean?)
 	end
 	local t = now()
 	local warehouse = state.warehouse
-	local tier = TruckRules.tier(warehouse)
-	local away = TruckRules.home(warehouse, t) < 1
-	local pickup = if away then "on the road" else `{#warehouse.bed}/{tier.truckCrates} crates`
+	local name, shed, info = trucks(state)
+	panel.frame.Sign.Title.Text = if shed then "Packing Shed" else "Wash Table"
+	local truckText
+	if info.trucks == 1 then
+		truckText = if TruckRules.isHome(warehouse, 1, t) then `{#(warehouse.beds[1] or {})}/{info.truckCrates} crates` else "on the road"
+	else
+		truckText = `{TruckRules.home(warehouse, t)} of {info.trucks} home`
+	end
+	local hold = if shed then "" else `  ·  ❄ Cold Room {#warehouse.dock}/{info.hold}`
 	local arms = if player:GetAttribute("Carrying") then "  ·  carrying a crate" else ""
-	panel.toolbar.Text = `🚚 Pickup {pickup}  ·  🏪 Stockroom {#state.store.stockroom}/{ShopRules.stockroomSize(state.store)} crates{arms}`
+	panel.toolbar.Text = `🚚 {name} {truckText}{hold}  ·  🏪 Stockroom {#state.store.stockroom}/{ShopRules.stockroomSize(state.store)} crates{arms}`
 	-- (prices move every few seconds: the rows redraw with them, but only when one changes)
 	local prices = {}
 	for key in state.inventory.crops do

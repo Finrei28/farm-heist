@@ -403,10 +403,10 @@ function UI.crate(props)
 		Name = "Label", AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -9), Size = UDim2.new(1, -10, 0, 18),
 		BackgroundColor3 = C.cream, Parent = holder,
 	}, { UI.corner(3), UI.stroke(SEAM, 1.5) })
-	make("TextLabel", {
-		Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Font = UI.HEAD, Text = string.upper(props.text or ""),
+	UI.fit(make("TextLabel", { -- (shrinks to fit: "WAREHOUSE" is long for a crate)
+		Size = UDim2.new(1, -4, 1, 0), Position = UDim2.fromOffset(2, 0), BackgroundTransparency = 1, Font = UI.HEAD, Text = string.upper(props.text or ""),
 		TextSize = 13, TextColor3 = C.ink, Parent = plate,
-	})
+	}), 7)
 	local button = make("TextButton", { Name = "Hit", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "", ZIndex = 3, Parent = holder })
 	button.MouseButton1Down:Connect(function()
 		holder.Rotation = -4

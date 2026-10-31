@@ -99,12 +99,15 @@ return function(spec, harness)
 		it("builds each farm's selling side where the services look for it", function()
 			for index = 1, PlotLayout.COUNT do
 				local plot = world[`Plot{index}`]
-				expect(plot.PackingShed:FindFirstChild("Bench") ~= nil).toBe(true)
-				expect(plot:FindFirstChild("LoadSpot") ~= nil).toBe(true)
-				expect(plot:FindFirstChild("LeverBase") ~= nil).toBe(true)
-				expect(plot:FindFirstChild("DockPile") ~= nil).toBe(true)
-				expect(plot.Truck:FindFirstChild("Bed") ~= nil).toBe(true)
-				expect(plot.TruckGate:FindFirstChild("Boom") ~= nil).toBe(true)
+				-- the Packing Shed: its bench, the dock with its lever and rack, the pickup, the lane's gate
+				local warehouse = plot.Warehouse
+				expect(warehouse:GetAttribute("Level")).toBe(1)
+				expect(warehouse.Building:FindFirstChild("Bench") ~= nil).toBe(true)
+				expect(warehouse.Docks:FindFirstChild("LoadSpot1") ~= nil).toBe(true)
+				expect(warehouse.Docks:FindFirstChild("LeverBase1") ~= nil).toBe(true)
+				expect(warehouse:FindFirstChild("Rack") ~= nil).toBe(true)
+				expect(warehouse.Trucks.Truck1:FindFirstChild("Bed") ~= nil).toBe(true)
+				expect(warehouse.Lanes.Gate1:FindFirstChild("Boom") ~= nil).toBe(true)
 				-- an empty Corner Store, "For rent", its staff door blocked to visitors
 				local building = plot.Store.Building
 				expect(building:GetAttribute("Stage")).toBe(1)
@@ -115,8 +118,8 @@ return function(spec, harness)
 				expect(plot:GetAttribute("StoreName")).toBe("FOR RENT")
 				expect(plot.GateArch:FindFirstChild("NamePlank") ~= nil).toBe(true)
 				-- the truck is parked where its route starts (TruckController drives it from there)
-				local parked = plot.Truck.WorldPivot.Position -- (Lune has no GetPivot; the model has no PrimaryPart, so they agree)
-				local start = PlotLayout.truckRoute(index)[1]
+				local parked = warehouse.Trucks.Truck1.WorldPivot.Position -- (Lune has no GetPivot; the model has no PrimaryPart, so they agree)
+				local start = PlotLayout.truckRoute(index, nil, 20)[1]
 				expect(math.abs(parked.X - start.X) + math.abs(parked.Z - start.Z)).toBeLessThan(0.01)
 			end
 			expect(world.Town:FindFirstChild("ExchangeDesk") ~= nil).toBe(true)
@@ -234,6 +237,139 @@ return function(spec, harness)
 					local open = math.abs(x - P.gate.across) < P.gate.width / 2 or math.abs(x - door.X) < Store.CELL / 2
 					if walled == open then
 						error(`Level {levelNumber}: front boundary at x = {x}: {if open then "the door is walled" else "a gap"}`)
+					end
+				end
+			end)
+		end
+	end)
+
+	describe("every warehouse on a plot (World/YardArt)", function()
+		-- Builds the warehouse side at each building's first level and the top
+		-- on Plot 1: it stays on its side of the farm, the front stays walled
+		-- but for the gate and the store's door, each truck has its dock,
+		-- lever and lane, and the warehouses' roofs fade (RoofController).
+		local ok, world = pcall(build)
+		if not ok then
+			return
+		end
+		local game = roblox.Instance.new("DataModel")
+		local YardArt = harness.loadServerWith("World/YardArt", { Instance = roblox.Instance, workspace = game:GetService("Workspace") })
+		local WarehouseRules = harness.load("WarehouseRules")
+		local P = PlotLayout.PLOT
+		local frame = PlotLayout.frame(1)
+		local function bounds(part)
+			local lo, hi = roblox.Vector3.new(math.huge, math.huge, math.huge), roblox.Vector3.new(-math.huge, -math.huge, -math.huge)
+			for _, sx in { -0.5, 0.5 } do
+				for _, sy in { -0.5, 0.5 } do
+					for _, sz in { -0.5, 0.5 } do
+						local c = frame:PointToObjectSpace(part.CFrame * (part.Size * roblox.Vector3.new(sx, sy, sz)))
+						lo, hi = lo:Min(c), hi:Max(c)
+					end
+				end
+			end
+			return lo, hi
+		end
+		for _, level in { 1, 5, 10, 15, 20 } do
+			it(`fits the farm at Warehouse Level {level}`, function()
+				local plot = world.Plot1
+				local info = WarehouseRules.level(level)
+				local warehouse = YardArt.setLevel(plot, level)
+				local layout = PlotLayout.WAREHOUSES[info.stage]
+				for _, part in warehouse:GetDescendants() do
+					if part:IsA("BasePart") then
+						expect(part.Anchored).toBe(true)
+						local lo, hi = bounds(part)
+						-- (the truck gates' posts and the fence reach the hedge; drums and the step stick out a little)
+						local onSide = lo.X >= P.warehouse.min.X - 2.5 and hi.X <= PlotLayout.WIDTH / 2 + 1 and lo.Z >= -1.2 and hi.Z <= P.warehouse.max.Z + 1.5
+						if not onSide then
+							error(`{part:GetFullName()} is off the warehouse's side ({lo.X}..{hi.X}, {lo.Z}..{hi.Z})`)
+						end
+						-- clear of the gatehouse
+						local g = P.gatehouse
+						if part.CanCollide and hi.X > g.min.X and lo.X < g.max.X and hi.Z > g.min.Z and lo.Z < g.max.Z then
+							error(`{part:GetFullName()} runs into the gatehouse`)
+						end
+					end
+				end
+				-- a truck, a dock (load spot and lever) and a lane with its gate for each truck
+				expect(#warehouse.Trucks:GetChildren()).toBe(info.trucks)
+				for i = 1, info.trucks do
+					local across = layout.docks[i]
+					expect(warehouse.Docks:FindFirstChild(`LoadSpot{i}`) ~= nil).toBe(true)
+					expect(warehouse.Docks:FindFirstChild(`LeverBase{i}`) ~= nil).toBe(true)
+					expect(warehouse.Lanes:FindFirstChild(`Gate{i}`) ~= nil).toBe(true)
+					local truck = warehouse.Trucks[`Truck{i}`]
+					local start = PlotLayout.truckRoute(1, across, truck:GetAttribute("Length"))[1]
+					expect((truck.WorldPivot.Position - start).Magnitude).toBeLessThan(0.01)
+					-- parked in its lane, short of the dock
+					local lo, hi = roblox.Vector3.new(math.huge, 0, math.huge), roblox.Vector3.new(-math.huge, 0, -math.huge)
+					for _, piece in truck:GetDescendants() do
+						if piece:IsA("BasePart") then
+							local a, b = bounds(piece)
+							lo, hi = lo:Min(a), hi:Max(b)
+						end
+					end
+					expect(lo.X >= across - PlotLayout.LANE / 2 and hi.X <= across + PlotLayout.LANE / 2).toBe(true)
+					expect(lo.Z > 0 and hi.Z < P.dock.z).toBe(true)
+				end
+				expect(warehouse.Building:FindFirstChild("Bench", true) ~= nil).toBe(true)
+				expect(warehouse:FindFirstChild("Rack") ~= nil).toBe(true)
+				-- the front: walled but for the gate and the store's door
+				local front = {}
+				for _, child in plot:GetDescendants() do
+					if string.match(child.Name, "Blocker$") and child.Name ~= "StaffDoorBlocker" then
+						local centre = frame:PointToObjectSpace(child.CFrame.Position)
+						if math.abs(centre.Z - child.Size.Z / 2 - (-1)) < 1.1 then
+							table.insert(front, { centre.X - child.Size.X / 2, centre.X + child.Size.X / 2 })
+						end
+					end
+				end
+				local door = PlotLayout.storeLocal(Store.DOOR_X, 1)
+				for x = -PlotLayout.WIDTH / 2 + 0.25, PlotLayout.WIDTH / 2 - 0.25, 0.5 do
+					local walled = false
+					for _, span in front do
+						if x >= span[1] and x <= span[2] then
+							walled = true
+						end
+					end
+					local open = math.abs(x - P.gate.across) < P.gate.width / 2 or math.abs(x - door.X) < Store.CELL / 2
+					if walled == open then
+						error(`Level {level}: front boundary at x = {x}: {if open then "the gate or door is walled" else "a gap"}`)
+					end
+				end
+				if info.stage == 1 then
+					return
+				end
+				-- the see-through roof: an Interior box over the floor, the lamps in the Roof model
+				local building = warehouse.Building
+				local interior = building.Interior
+				expect(interior.Transparency).toBe(1)
+				expect(interior.CanCollide or interior.CanQuery or interior.CanTouch).toBe(false)
+				expect(building:FindFirstChild("Roof") ~= nil).toBe(true)
+				for _, part in building:GetDescendants() do
+					if part.Name == "Lamp" and not part:IsDescendantOf(building.Roof) then
+						error(`{part:GetFullName()} hangs outside the Roof model`)
+					end
+				end
+				for _, id in { "Intake", "Sort", "Pack", "Load" } do
+					expect(building.Stations:FindFirstChild(id) ~= nil).toBe(true)
+				end
+				-- the doorways are clear: the staff door, each dock door, the intake door
+				local floor = P.dock.height
+				local doors = {
+					{ name = "staff door", min = roblox.Vector3.new(layout.min.X - 1, 0, layout.min.Z + 8), max = roblox.Vector3.new(layout.min.X + 1.5, 7, layout.min.Z + 12) },
+				}
+				for _, across in layout.docks do
+					table.insert(doors, { name = "dock door", min = roblox.Vector3.new(across - 5, 0, layout.min.Z - 0.2), max = roblox.Vector3.new(across + 5, 7, layout.min.Z + 1.5) })
+				end
+				for _, part in warehouse:GetDescendants() do
+					if part:IsA("BasePart") and part.CanCollide and part.Name ~= "Slab" and part.Name ~= "Dock" and part.Name ~= "Step" then
+						local lo, hi = bounds(part)
+						for _, door in doors do
+							if hi.X > door.min.X and lo.X < door.max.X and hi.Z > door.min.Z and lo.Z < door.max.Z and hi.Y > floor + 0.15 and lo.Y < door.max.Y then
+								error(`Level {level}: {part:GetFullName()} stands in the {door.name}`)
+							end
+						end
 					end
 				end
 			end)

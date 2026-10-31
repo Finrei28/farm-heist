@@ -41,15 +41,16 @@ Build them in `DevCommandService` (Studio only, plus `Util/Staff` in live server
 | `/coins N` ✅ | add coins | Stage B |
 | `/level N` ✅ · `/xp N` ✅ | set XP to reach level N (and its Land Permits) · add XP | Stage B |
 | `/grow S` ✅ · `/grow ripe` ✅ | fast-forward your field S seconds online · ripen everything | Stage B |
-| `/away H` ✅ | settle H hours offline (growth now; workers and the Welcome back card in week 4) | Stage B–C |
-| `/store N` ✅ · `/warehouse N` · `/workers N` | set your Store Level (up only; new buildings done at once), Warehouse Level, or every worker's level (and fill their XP bars) | Stage C |
+| `/away H` ✅ | settle H hours away: growth, the crew at 25% for up to 8 h, store sales, the Welcome back card | Stage B–C |
+| `/store N` ✅ · `/warehouse N` ✅ · `/workers N` ✅ | set your Store Level (up only; new buildings done at once), Warehouse Level (the same), or every worker's level (and fill their XP bars) | Stage C |
+| `/hire Type N` ✅ · `/crew N` ✅ · `/trainxp` ✅ | a worker of that type at Level N (free, past the slots) · a Level N worker in every open slot · every XP bar full | Stage C |
 | `/restock` ✅ · `/restock full` ✅ | Barley's next restock now · with everything in stock | Stage B |
 | `/seeds Crop N` ✅ · `/seeds all N` ✅ | give seeds | Stage B |
 | `/tp N` ✅ · `/tp town` ✅ · `/tp porch` ✅ · `/tp barley` ✅ · `/tp home` ✅ | teleport (through `MovementService.Teleport`) | Stage A–B |
 | `/crops Crop N` ✅ | put harvested crops in your barn (C2's "tester with 40 Pumpkins") | Stage C |
-| `/truck` ✅ | your pickup reaches the City and comes home now | Stage C |
+| `/truck` ✅ | your trucks reach the City and come home now | Stage C |
 | `/shoppers N` ✅ | the next N shoppers come to your store 1.5 s apart (C3) | Stage C |
-| `/tp exchange` ✅ · `/tp shed` ✅ · `/tp store` ✅ | to the Exchange desk, your Packing Shed bench, the sidewalk outside your store's door | Stage C |
+| `/tp exchange` ✅ · `/tp shed` ✅ · `/tp dock` ✅ · `/tp store` ✅ · `/tp hiring` ✅ | to the Exchange desk, your bench or wash table, your first dock, the sidewalk outside your store's door, the Hiring Hall's job board | Stage C |
 | `/stopwatch` | prints server time to Output (for timing from logs instead of a phone) | Stage A |
 | `/shield off` | end your Sprout Shield and arrival grace now | Stage D |
 | `/ko` · `/suspect` | knock yourself out / mark yourself a Suspect | Stage D |
@@ -116,7 +117,7 @@ If A3 is off by more than 0.7 s, or A4 fails, fix `PlotLayout` before week 1 and
 
 | Case | Expected (`tools/raidrace`) | Pass |
 |---|---|---|
-| Thief, no defences vs owner at the warehouse | thief safe at ~5.8 s; owner in reach ~8.1 s → thief escapes | escapes ≥ 4 of 5 |
+| Thief, no defences vs owner at the warehouse | thief safe at ~5.8 s; owner in reach ~8.2 s → thief escapes | escapes ≥ 4 of 5 |
 | Thief vs cloche + dog + tall fence, owner at the warehouse | caught | caught ≥ 4 of 5 |
 | Same, owner in town (Home) | caught with ~1 s to spare | caught ≥ 3 of 5 at 0.2 s lag; if not, raise the tall fence climb or the dog's slow |
 

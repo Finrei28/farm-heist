@@ -10,6 +10,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Settings = require(ReplicatedStorage.Shared.Config.Settings)
 local Store = require(ReplicatedStorage.Shared.Config.Store)
 local StoreLayout = require(ReplicatedStorage.Shared.StoreLayout)
+local WarehouseRules = require(ReplicatedStorage.Shared.WarehouseRules)
 
 -- New fields added here are filled in automatically for existing saves.
 local TEMPLATE = {
@@ -36,10 +37,12 @@ local TEMPLATE = {
 	},
 	seedStock = { index = -1, bought = {} }, -- packs bought in the current Barley's restock (shared/SeedStock)
 
-	-- The warehouse (shared/TruckRules): crates in the truck's bed, crates set
-	-- down at the dock, and truck runs on the road (paid when they reach the
-	-- City, even if you've left by then).
-	warehouse = { tier = 0, buildingUntil = 0, queues = {}, routes = {}, bed = {}, dock = {}, trucks = {} },
+	-- The warehouse (shared/WarehouseRules, shared/TruckRules): its level and
+	-- a building going up (build = { to, left }), where each crop's crates go,
+	-- each truck's bed, the crates waiting for a truck (the rack, the Cold
+	-- Room), batches waiting for a Packer, truck runs on the road (paid when
+	-- they reach the City, even if you've left by then), the Drivers' rule.
+	warehouse = { level = 1, routes = {}, beds = { {} }, dock = {}, sorted = {}, trucks = {}, driverRule = 0 },
 	-- Your store (shared/ShopRules, shared/StoreLayout): its level, a new
 	-- building going up (build = { to, left } seconds of work), its name (nil:
 	-- "<you>'s <building>"), the layout (["id"] = item on the floor or a wall),
@@ -49,7 +52,11 @@ local TEMPLATE = {
 	-- back in on every load by reconcile).
 	store = { level = 1, started = false, layout = {}, owned = {}, gifts = {}, nextId = 1,
 		stockroom = {}, prices = {}, rating = { scores = {} } },
-	workers = {}, -- ["uid"] = { type, level, trait, hiredAt } (shared/WorkerRules)
+	workers = {}, -- ["uid"] = { type, level, xp, trait, name, look, hiredAt } (shared/WorkerRules)
+	-- The crew (WorkerService): the next worker's uid, what Farmhands replant
+	-- ("same" · "cheapest" · "none"), who was hired from this board (window:
+	-- WorkerRules.boardWindow), whether they're on strike.
+	crew = { nextId = 1, replant = "same", hired = { window = -1, ids = {} }, strike = false },
 	freeHireUsed = false,
 
 	defences = { placed = {}, owned = {} },
@@ -100,12 +107,14 @@ local function startStore(store)
 end
 
 -- Changes an old save's shape to today's, after reconcile: a new store gets
--- its starter kit, and the Farm Stand's goods, prices and rating (week 2's
--- `shop`) move into the store, nothing lost.
+-- its starter kit, the Farm Stand's goods, prices and rating (week 2's
+-- `shop`) move into the store, and week 2's warehouse tier and truck bed
+-- become a Warehouse Level and the first truck's bed: nothing lost.
 local function migrate(data)
 	if not data.store.started then
 		startStore(data.store)
 	end
+	WarehouseRules.migrate(data.warehouse)
 	local shop = data.shop
 	if shop then
 		for _, crate in shop.stockroom or {} do

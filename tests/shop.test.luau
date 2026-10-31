@@ -101,6 +101,47 @@ return function(spec, harness)
 		end)
 	end)
 
+	describe("a Stocker", function()
+		it("fills only as many units as their round allows, the emptiest display first", function()
+			local store = newStore({ a = "WoodenShelf", b = "WoodenShelf" })
+			store.stockroom = { crate("Carrot", 12), crate("Wheat", 12) }
+			slot(store, "a", 1).crop, slot(store, "a", 1).units = "Carrot", 4
+			store.stockroom[1].units = 8
+			local moved = ShopRules.restockDisplays(store, market(18), 5)
+			expect(moved).toBe(5)
+			local onA, onB = 0, 0
+			for _, s in store.layout.a.slots do
+				onA += s.units
+			end
+			for _, s in store.layout.b.slots do
+				onB += s.units
+			end
+			expect(onA).toBe(4) -- (b was emptier)
+			expect(onB).toBe(5)
+		end)
+		it("leaves displays alone when there's nothing for them", function()
+			local store = newStore({ a = "WoodenShelf" })
+			expect(ShopRules.restockDisplays(store, market(18), 50)).toBe(0)
+		end)
+	end)
+
+	describe("selling while you're away", function()
+		it("takes the units off the displays, grade A first, at your price", function()
+			local store = newStore({ a = "WoodenShelf" })
+			local s1 = slot(store, "a", 1)
+			s1.crop, s1.units, s1.a = "Carrot", 6, 2
+			store.prices.Carrot = 20
+			local taken, coins = ShopRules.sellOff(store, "Carrot", 4)
+			expect(taken).toBe(4)
+			expect(coins).toBe(2 * 23 + 2 * 20)
+			expect(s1.units).toBe(2)
+			expect(s1.a).toBe(0)
+			taken = ShopRules.sellOff(store, "Carrot", 10)
+			expect(taken).toBe(2)
+			expect(s1.crop).toBe(nil)
+		end)
+	end)
+
 	describe("prices", function()
 		it("stay within 50–300% of the reference", function()
 			local store = newStore()

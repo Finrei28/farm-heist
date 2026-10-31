@@ -5,14 +5,20 @@
 --   /level 5             set your Farm Level (XP to the start of it)
 --   /xp 120              add Farm XP
 --   /grow 60             grow your crops N seconds at online speed (/grow ripe = all ripe)
---   /away 2              as if you'd been away N hours (offline speed, 25%)
+--   /away 2              as if you'd been away N hours (growth, the crew at 25%, store sales: the Welcome back card)
 --   /restock [full]      Barley moves to the next restock now (full = every seed in)
 --   /seeds Pumpkin 10    give seeds by crop id (/seeds all 5 = 5 of each)
 --   /crops Pumpkin 40    put harvested crops in your barn (past its capacity)
---   /truck               your pickup reaches the City and comes home now
+--   /truck               your trucks reach the City and come home now
+--   /warehouse 5         your warehouse straight to Warehouse Level N (up only; buildings done at once)
+--   /hire Packer 3       a worker of that type joins at that level (free, past the slots)
+--   /crew 5              a Level N worker in every open slot (default 1)
+--   /workers 5           every worker to Level N, their XP bars full
+--   /trainxp             every worker's XP bar full (ready to train)
+--   /state               prints your warehouse, trucks and crew to the Output
 --   /shoppers 5          the next N shoppers come to your store one after another
 --   /store 5             your store straight to Store Level N (up only; buildings done at once)
---   /tp town · /tp porch · /tp barley · /tp exchange · /tp home · /tp shed · /tp store · /tp 3 (a farm's gate)
+--   /tp town · /tp porch · /tp barley · /tp exchange · /tp hiring · /tp home · /tp shed (the bench) · /tp dock · /tp store · /tp 3 (a farm's gate)
 --   /wipe                start your save over (in place)
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -26,7 +32,9 @@ local Crops = require(Shared.Config.Crops)
 local PlotLayout = require(Shared.PlotLayout)
 local ProgressionRules = require(Shared.ProgressionRules)
 local SeedStock = require(Shared.SeedStock)
+local WarehouseRules = require(Shared.WarehouseRules)
 local Store = require(Shared.Config.Store)
+local Workers = require(Shared.Config.Workers)
 
 local Server = ServerScriptService.Server
 local Analytics = require(Server.Util.Analytics)
@@ -39,6 +47,8 @@ local PlotService = require(script.Parent.PlotService)
 local StoreService = require(script.Parent.StoreService)
 local TravelService = require(script.Parent.TravelService)
 local TruckService = require(script.Parent.TruckService)
+local WarehouseService = require(script.Parent.WarehouseService)
+local WorkerService = require(script.Parent.WorkerService)
 
 local DevCommandService = {}
 
@@ -119,8 +129,8 @@ function DevCommandService.Start()
 
 	register("DevAway", "/away", function(player, _data, args)
 		local hours = tonumber(args[2]) or 1
-		FieldService.FastForward(player, hours * 3600, true)
-		reply(player, `As if away {hours} h (crops grew at quarter speed)`)
+		WorkerService.DevAway(player, math.floor(hours * 3600))
+		reply(player, `As if away {hours} h`)
 	end)
 
 	register("DevRestock", "/restock", function(player, _data, args)
@@ -164,7 +174,64 @@ function DevCommandService.Start()
 
 	register("DevTruck", "/truck", function(player)
 		TruckService.Hurry(player)
-		reply(player, "Pickup: there and back")
+		reply(player, "Trucks: there and back")
+	end)
+
+	register("DevWarehouse", "/warehouse", function(player, data, args)
+		local to = math.floor(tonumber(args[2]) or data.warehouse.level + 1)
+		if to <= data.warehouse.level then
+			reply(player, `Your warehouse is at Level {data.warehouse.level}; /warehouse only goes up (/wipe starts over)`)
+			return
+		end
+		WarehouseService.SetLevel(player, to)
+		reply(player, `Warehouse Level {data.warehouse.level}`)
+	end)
+
+	register("DevHire", "/hire", function(player, _data, args)
+		local typeName = nil
+		for name in Workers.TYPES do
+			if string.lower(name) == string.lower(args[2] or "") then
+				typeName = name
+			end
+		end
+		if not typeName then
+			reply(player, "Who? e.g. /hire Packer 3 (Farmhand, ShedHand, Sorter, Packer, Loader, Driver, Stocker, Cashier, Greeter)")
+			return
+		end
+		WorkerService.DevHire(player, typeName, tonumber(args[3]))
+		reply(player, `A {Workers.TYPES[typeName].name} joined your crew`)
+	end)
+
+	register("DevCrew", "/crew", function(player, _data, args)
+		local joined = WorkerService.DevCrew(player, tonumber(args[2]) or 1)
+		reply(player, if joined > 0 then `{joined} workers joined (every open slot)` else "Every slot is full")
+	end)
+
+	register("DevWorkers", "/workers", function(player, _data, args)
+		local level = math.clamp(math.floor(tonumber(args[2]) or 5), 1, Workers.MAX_LEVEL)
+		WorkerService.DevSetLevels(player, level)
+		reply(player, `Every worker is Level {level}`)
+	end)
+
+	register("DevState", "/state", function(player, data)
+		local w = data.warehouse
+		local beds = {}
+		for i, bed in w.beds do
+			table.insert(beds, `{i}:{#bed}`)
+		end
+		print(`[state] coins {data.coins} · Warehouse {w.level}{if w.build then ` (building to {w.build.to}, {math.ceil(w.build.left)} s)` else ""} · hold {#w.dock} · sorted {#w.sorted} · beds {table.concat(beds, " ")} · runs {#w.trucks} · strike {data.crew.strike}`)
+		for key, units in data.inventory.crops do
+			print(`[state] barn {key} ×{units}`)
+		end
+		for uid, worker in data.workers do
+			print(`[state] worker {uid} {worker.name} {worker.type} Lv {worker.level} xp {math.floor(worker.xp or 0)}`)
+		end
+		reply(player, "Printed to the Output")
+	end)
+
+	register("DevTrainXp", "/trainxp", function(player)
+		WorkerService.DevFillXp(player)
+		reply(player, "Every worker is ready to train")
 	end)
 
 	register("DevShoppers", "/shoppers", function(player, _data, args)
@@ -200,10 +267,20 @@ function DevCommandService.Start()
 		elseif where == "home" then
 			local index = PlotService.plotOf(player)
 			frame = index and PlotService.homeFrame(index)
-		elseif where == "shed" then
+		elseif where == "hiring" then
+			local at = PlotLayout.frontOf("HiringHall", 12) + Vector3.new(0, 3, 0)
+			frame = CFrame.lookAt(at, PlotLayout.frontOf("HiringHall", 0) + Vector3.new(0, 3, 0))
+		elseif where == "shed" or where == "dock" then
 			local index = PlotService.plotOf(player)
-			if index then
-				local spot, look = PlotLayout.PLOT.bench + Vector3.new(0, 3, -6), PlotLayout.PLOT.bench + Vector3.new(0, 3, 0)
+			local data = DataService.Get(player)
+			if index and data then
+				local layout = PlotLayout.WAREHOUSES[WarehouseRules.level(data.warehouse.level).stage]
+				local spot, look
+				if where == "shed" then
+					spot, look = layout.bench + Vector3.new(0, 3, -6), layout.bench + Vector3.new(0, 3, 0)
+				else
+					spot, look = PlotLayout.leverLocal(layout.docks[1]) + Vector3.new(-6, 4, 0), PlotLayout.loadLocal(layout.docks[1]) + Vector3.new(0, 3, -8)
+				end
 				frame = CFrame.lookAt(PlotLayout.toWorld(index, spot), PlotLayout.toWorld(index, look))
 			end
 		elseif where == "store" then
@@ -219,7 +296,7 @@ function DevCommandService.Start()
 		if frame then
 			TravelService.Send(player, frame)
 		else
-			reply(player, "Where? /tp town · porch · barley · exchange · home · shed · store · 1–8")
+			reply(player, "Where? /tp town · porch · barley · exchange · hiring · home · shed · dock · store · 1–8")
 		end
 	end)
 

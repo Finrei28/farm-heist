@@ -59,17 +59,14 @@ PlotLayout.PLOT = {
 	gate = { across = -5, width = 18 },
 	path = { min = Vector3.new(-8, 0, 0), max = Vector3.new(-2, 0.2, 138) }, -- gate to field
 	gatehouse = { min = Vector3.new(6, 0, 4), max = Vector3.new(15, 9, 13) },
-	driveway = { min = Vector3.new(20, 0, 0), max = Vector3.new(38, 0.2, 48) },
-	warehouse = { min = Vector3.new(14, 0, 48), max = Vector3.new(76, 22, 114) }, -- the site; T1 and up fill it
-	-- The Packing Shed (warehouse T0) at the front of the site: one bench
-	-- that washes and packs, by the dock at the top of the driveway where
-	-- the pickup backs in. Crates for the truck are carried bench → dock.
-	shed = { min = Vector3.new(14, 0, 48), max = Vector3.new(46, 12, 72) },
-	bench = Vector3.new(30, 0, 58),
-	dock = { min = Vector3.new(18, 0, 41), max = Vector3.new(42, 0.8, 48) }, -- the loading platform (low enough to step onto)
-	truck = Vector3.new(29, 0, 29), -- the parked pickup's middle, nose to the road, tailgate at the dock
-	lever = Vector3.new(40.5, 0, 44.5), -- the dispatch lever, on the dock
-	dockPile = Vector3.new(21, 0, 44.5), -- where dropped crates wait
+	driveway = { min = Vector3.new(20, 0, 0), max = Vector3.new(38, 0.2, 41) }, -- truck lane 1, to dock 1 (lanes 2 and 3 come with the docks: PlotLayout.lane)
+	-- The warehouse's site (docs/GameDesign.md §4.6): its four buildings
+	-- (PlotLayout.WAREHOUSES) grow from the Packing Shed's corner toward the
+	-- hedge and the field, their docks along the front at z 41–48, the
+	-- trucks parked in front of them in the yard. The biggest fills it.
+	warehouse = { min = Vector3.new(14, 0, 48), max = Vector3.new(106, 22, 120) },
+	dock = { z = 41, height = 0.8 }, -- the loading platform runs from z 41 to the building (48)
+	truckTail = 39.5, -- a parked truck's tail, just short of the dock's bumper
 	-- Your store (docs/GameDesign.md §4.8, Config/Store) on the shop lot,
 	-- its front wall on the front boundary. The floor's cells run from
 	-- `right` (the floor's edge at the gate end) toward the hedge, and from
@@ -77,13 +74,6 @@ PlotLayout.PLOT = {
 	-- wall is the stockroom, `backRoom` deep, on the farm's side. `floor` is
 	-- the floor's top.
 	store = { right = -22, wall = 1, backRoom = 6, height = 18, floor = 0.6 }, -- (height: the tallest building's walls)
-	stations = { -- inside the warehouse, from the dock back
-		{ id = "Load", z = 57 },
-		{ id = "Pack", z = 73 },
-		{ id = "Sort", z = 89 },
-		{ id = "Intake", z = 105 },
-	},
-	stationAcross = 47,
 	farmhouse = { min = Vector3.new(-70, 0, 72), max = Vector3.new(-26, 18, 114) },
 	door = Vector3.new(-20, 0, 93), -- in front of the farmhouse door: the owner's spawn and the barn's deposit point
 	field = { across = -48, depth = 138, tile = 12, size = 8 }, -- corner (row 1, column 1) and tiles
@@ -91,6 +81,69 @@ PlotLayout.PLOT = {
 	kennel = Vector3.new(67, 0, 145),
 	backFence = 252,
 }
+
+-- The warehouse's buildings by stage (Config/Warehouse.BUILDINGS), in plot
+-- space: the box (max.Y = wall height), the docks (each truck's middle
+-- across, one per truck the building takes), where you wash and pack by
+-- hand (the Packing Shed's bench; the warehouses' wash table), and in the
+-- warehouses the Cold Room and the stations on the conveyor, from the
+-- intake door at the back (toward the field) to loading by the docks.
+PlotLayout.WAREHOUSES = {
+	{
+		min = Vector3.new(14, 0, 48), max = Vector3.new(46, 12, 72),
+		docks = { 29 }, bench = Vector3.new(30, 0, 58),
+	},
+	{
+		min = Vector3.new(14, 0, 48), max = Vector3.new(66, 16, 106),
+		docks = { 29 }, bench = Vector3.new(22, 0, 86),
+		coldRoom = { min = Vector3.new(48, 0, 49), max = Vector3.new(65, 10, 66) },
+		stations = { Intake = Vector3.new(36, 0, 100), Sort = Vector3.new(36, 0, 86), Pack = Vector3.new(36, 0, 72), Load = Vector3.new(36, 0, 56) },
+	},
+	{
+		min = Vector3.new(14, 0, 48), max = Vector3.new(92, 19, 114),
+		docks = { 29, 55 }, bench = Vector3.new(24, 0, 94),
+		coldRoom = { min = Vector3.new(68, 0, 49), max = Vector3.new(91, 11, 70) },
+		stations = { Intake = Vector3.new(42, 0, 108), Sort = Vector3.new(42, 0, 94), Pack = Vector3.new(42, 0, 78), Load = Vector3.new(42, 0, 58) },
+	},
+	{
+		min = Vector3.new(14, 0, 48), max = Vector3.new(106, 22, 120),
+		docks = { 29, 55, 81 }, bench = Vector3.new(26, 0, 100),
+		coldRoom = { min = Vector3.new(89, 0, 49), max = Vector3.new(105, 12, 78) },
+		stations = { Intake = Vector3.new(50, 0, 114), Sort = Vector3.new(50, 0, 100), Pack = Vector3.new(50, 0, 82), Load = Vector3.new(50, 0, 58) },
+	},
+}
+PlotLayout.LANE = 18 -- a truck lane's width, from the front fence to the dock
+
+-- The loading platform along a building's front, { min, max }.
+function PlotLayout.dockBox(stage: number)
+	local docks = PlotLayout.WAREHOUSES[stage].docks
+	local d = PlotLayout.PLOT.dock
+	return { min = Vector3.new(docks[1] - 11, 0, d.z), max = Vector3.new(docks[#docks] + 13, d.height, PlotLayout.PLOT.warehouse.min.Z) }
+end
+
+-- Truck lane `dock` (across = the dock's x), { min, max }: from the front
+-- fence to the dock.
+function PlotLayout.lane(across: number)
+	return { min = Vector3.new(across - PlotLayout.LANE / 2, 0, 0), max = Vector3.new(across + PlotLayout.LANE / 2, 0.2, PlotLayout.PLOT.dock.z) }
+end
+
+-- Where a truck `length` studs long parks at the dock at `across`: its
+-- middle on the ground, in plot space.
+function PlotLayout.truckParked(across: number, length: number): Vector3
+	return Vector3.new(across, 0, PlotLayout.PLOT.truckTail - length / 2)
+end
+
+-- On the dock at `across`: the dispatch lever, where crates are loaded
+-- from, and (dock 1) where the Packing Shed's rack stands.
+function PlotLayout.leverLocal(across: number): Vector3
+	return Vector3.new(across + 11.5, 0, 44.5)
+end
+function PlotLayout.loadLocal(across: number): Vector3
+	return Vector3.new(across, 0, PlotLayout.PLOT.dock.z + 1)
+end
+function PlotLayout.rackLocal(): Vector3
+	return Vector3.new(PlotLayout.WAREHOUSES[1].docks[1] - 8, 0, 44.5)
+end
 
 ------------------------------------------------------------------------
 -- Frames and conversions
@@ -292,14 +345,14 @@ local function arc(from: number, to: number, radius: number, step: number)
 	return points
 end
 
--- The pickup's road to the City, in world space: out through the truck
--- gate, round the ring road the short way to the highway, north into the
--- tunnel. The first leg (dock to gate) is the one it backs up on the way
--- home.
-function PlotLayout.truckRoute(index: number): { Vector3 }
-	local P = PlotLayout.PLOT
-	local parked = PlotLayout.toWorld(index, P.truck)
-	local out = PlotLayout.toWorld(index, Vector3.new(P.truck.X, 0, -6))
+-- A truck's road to the City, in world space: from its dock (`across`;
+-- default dock 1) out through its lane's truck gate, round the ring road
+-- the short way to the highway, north into the tunnel. The first leg (dock
+-- to gate) is the one it backs up on the way home. length: the truck's.
+function PlotLayout.truckRoute(index: number, across: number?, length: number?): { Vector3 }
+	across = across or PlotLayout.WAREHOUSES[1].docks[1]
+	local parked = PlotLayout.toWorld(index, PlotLayout.truckParked(across, length or 20))
+	local out = PlotLayout.toWorld(index, Vector3.new(across, 0, -6))
 	local points = { parked, out }
 	local from = bearing(out)
 	local to = if from < 180 then 0 else 360

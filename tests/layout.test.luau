@@ -97,6 +97,44 @@ return function(spec, harness)
 				end
 			end
 		end)
+		it("puts every warehouse building on its site, its stations, bench and Cold Room inside it", function()
+			local site = P.warehouse
+			local function inside(point, box, margin)
+				return point.X >= box.min.X + margin and point.X <= box.max.X - margin and point.Z >= box.min.Z + margin and point.Z <= box.max.Z - margin
+			end
+			for stage, layout in PlotLayout.WAREHOUSES do
+				expect(layout.min.X >= site.min.X and layout.max.X <= site.max.X and layout.min.Z >= site.min.Z and layout.max.Z <= site.max.Z).toBe(true)
+				expect(layout.max.Y <= site.max.Y).toBe(true)
+				expect(inside(layout.bench, layout, 4)).toBe(true)
+				if stage > 1 then
+					for _, at in layout.stations do
+						expect(inside(at, layout, 3)).toBe(true)
+					end
+					local room = layout.coldRoom
+					expect(room.min.X >= layout.min.X and room.max.X <= layout.max.X and room.min.Z >= layout.min.Z and room.max.Z <= layout.max.Z).toBe(true)
+				end
+				-- each bigger than the last, and the old one inside the new (it keeps working while the new one goes up)
+				if stage > 1 then
+					local before = PlotLayout.WAREHOUSES[stage - 1]
+					expect(layout.max.X >= before.max.X and layout.max.Z > before.max.Z).toBe(true)
+					expect(#layout.docks >= #before.docks).toBe(true)
+				end
+			end
+			-- the biggest leaves a walkway to the hedge and the field
+			expect(W / 2 - site.max.X >= 3).toBe(true)
+			expect(P.field.depth - site.max.Z >= 15).toBe(true)
+		end)
+		it("gives each dock its own lane, inside the farm, clear of the gatehouse and each other", function()
+			local docks = PlotLayout.WAREHOUSES[#PlotLayout.WAREHOUSES].docks
+			for i, across in docks do
+				local lane = PlotLayout.lane(across)
+				expect(lane.min.X >= P.gatehouse.max.X and lane.max.X <= W / 2 - 3).toBe(true)
+				if i > 1 then
+					expect(lane.min.X >= PlotLayout.lane(docks[i - 1]).max.X).toBe(true)
+				end
+			end
+			expect(PlotLayout.lane(docks[1]).min.X).toBe(P.driveway.min.X)
+		end)
 		it("puts every store building on the shop lot, its stockroom too", function()
 			for stage = 1, #Store.BUILDINGS do
 				local box = PlotLayout.storeBox(stage)
@@ -255,21 +293,23 @@ return function(spec, harness)
 			end
 			return nil
 		end
-		it("the pickup leaves through its truck gate, keeps off every farm, and ends in the tunnel", function()
+		it("every truck leaves through its own lane's gate, keeps off every farm, and ends in the tunnel", function()
 			for index = 1, PlotLayout.COUNT do
-				local route = PlotLayout.truckRoute(index)
-				local P = PlotLayout.PLOT
-				local gate = PlotLayout.frame(index):PointToObjectSpace(route[2])
-				expect(gate.Z < 0).toBe(true)
-				expect(gate.X > P.driveway.min.X and gate.X < P.driveway.max.X).toBe(true)
-				for i = 2, #route do
-					expect(inAnyFarm(route[i])).toBe(nil)
+				for _, across in PlotLayout.WAREHOUSES[#PlotLayout.WAREHOUSES].docks do
+					local route = PlotLayout.truckRoute(index, across, 36)
+					local lane = PlotLayout.lane(across)
+					local gate = PlotLayout.frame(index):PointToObjectSpace(route[2])
+					expect(gate.Z < 0).toBe(true)
+					expect(gate.X > lane.min.X and gate.X < lane.max.X).toBe(true)
+					for i = 2, #route do
+						expect(inAnyFarm(route[i])).toBe(nil)
+					end
+					local last = route[#route]
+					expect(last.Z).toBeGreaterThan(PlotLayout.HIGHWAY.to)
+					expect(math.abs(last.X)).toBeLessThan(PlotLayout.HIGHWAY.width / 2)
+					-- the short way round: at most half the ring
+					expect(PlotLayout.pathLength(route)).toBeLessThan(math.pi * PlotLayout.RING_ROAD.radius + 500)
 				end
-				local last = route[#route]
-				expect(last.Z).toBeGreaterThan(PlotLayout.HIGHWAY.to)
-				expect(math.abs(last.X)).toBeLessThan(PlotLayout.HIGHWAY.width / 2)
-				-- the short way round: at most half the ring
-				expect(PlotLayout.pathLength(route)).toBeLessThan(math.pi * PlotLayout.RING_ROAD.radius + 500)
 			end
 		end)
 		it("shoppers walk the sidewalk to the store's door without setting foot in a farm", function()
