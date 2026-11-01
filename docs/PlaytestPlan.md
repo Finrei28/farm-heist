@@ -53,8 +53,10 @@ Build them in `DevCommandService` (Studio only, plus `Util/Staff` in live server
 | `/tp exchange` ✅ · `/tp shed` ✅ · `/tp dock` ✅ · `/tp store` ✅ · `/tp hiring` ✅ | to the Exchange desk, your bench or wash table, your first dock, the sidewalk outside your store's door, the Hiring Hall's job board | Stage C |
 | `/stopwatch` | prints server time to Output (for timing from logs instead of a phone) | Stage A |
 | `/shield off` | end your Sprout Shield and arrival grace now | Stage D |
-| `/ko` · `/suspect` | knock yourself out / mark yourself a Suspect | Stage D |
-| `/crimelog` | prints your visits, debts, last arrests, raid ledger | Stage D |
+| `/ko` ✅ · `/ko suspect` ✅ · `/suspect` ✅ | knock yourself out (as a Suspect: the arrest screen) / mark yourself a Suspect of the farm you're in | Stage D |
+| `/crimelog` ✅ | prints your visits, sack, cooldowns, debts, last arrests, your farm's raid ledger | Stage D |
+| `/sack Crop N` ✅ · `/debt N` ✅ · `/earn N` ✅ | stolen crops in your sack · owe N coins (to yourself) · as if you'd sold crops for N (half pays debts) | Stage D |
+| `/plant Crop` ✅ · `/tp field [N]` ✅ · `/tp back [N]` ✅ · `/tp police` ✅ | plant every open tile · stand in a farm's field · outside a farm's back fence · the police porch | Stage D |
 | `/weather X` · `/auction now` | force weather; start an auction | Stage E |
 | `/wipe` ✅ | start your save over, in place | all |
 

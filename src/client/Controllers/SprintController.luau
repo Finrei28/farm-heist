@@ -1,13 +1,15 @@
 -- Running (docs/GameDesign.md §4.10): hold Left Shift (keyboard) or press the
 -- left stick (gamepad); on touch screens a Run button above the jump button
 -- (a wooden stamp with a boot) toggles it. Changing WalkSpeed here is enough: each client moves its own
--- character, and MovementService allows for running speed. (A Loot Sack
--- stops running: the stealing week.)
+-- character, and MovementService allows for running speed. With a Loot Sack
+-- on your back (the Sack attribute, CrimeService) you only walk, at 85%, and
+-- the boot greys out; the server's movement check holds you to it.
 local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Settings = require(ReplicatedStorage:WaitForChild("Shared").Config.Settings)
+local SackRules = require(ReplicatedStorage:WaitForChild("Shared").SackRules)
 local UI = require(script.Parent.Parent.UI)
 
 local SprintController = {}
@@ -19,7 +21,10 @@ local GAP = 10 -- pixels between the Run button and the jump button
 local function applySpeed()
 	local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 	if humanoid then
-		humanoid.WalkSpeed = if running then Settings.RUN_SPEED else Settings.WALK_SPEED
+		local carrying = (player:GetAttribute("Sack") or 0) > 0
+		humanoid.WalkSpeed = if carrying then SackRules.speed(Settings.WALK_SPEED, true)
+			elseif running then Settings.RUN_SPEED
+			else Settings.WALK_SPEED
 	end
 end
 
@@ -69,6 +74,10 @@ function SprintController.Start()
 	end)
 	player.CharacterAdded:Connect(function(character)
 		character:WaitForChild("Humanoid")
+		applySpeed()
+	end)
+	player:GetAttributeChangedSignal("Sack"):Connect(function()
+		holder.BackgroundTransparency = if (player:GetAttribute("Sack") or 0) > 0 then 0.5 else 0
 		applySpeed()
 	end)
 	applySpeed()

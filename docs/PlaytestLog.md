@@ -19,6 +19,44 @@ Follow-ups: <what to test next time>
 
 ## Sessions
 
+### 2026-11-02 · week 5 smoke test (raids) · build: this session's week 5
+Testers: Claude, driving Studio (the chat's dev commands, the command bar for camera views) · Setup: solo Play for the art, then **Server & Clients with 2 players** side by side (left the farmer, right the thief), three sessions (fixes between them) · Lag: 0 (local) · Screenshots: [playtest/2026-11-02-week5/](playtest/2026-11-02-week5/)
+
+Before playing: Studio's Rojo plugin was linked to another project's server (port 34872), which had synced that project's scripts into this place in memory (a loading folder in ReplicatedFirst, a Health script, streaming off). Farm Heist's own Rojo server ran on port 34873 for the session; the stray instances were removed in memory only (the saved place file is older and clean).
+
+| Check | Result | OK? | Notes |
+|---|---|---|---|
+| The bat | the first packet in the hotbar inside your own farm (gone outside it); 1 takes it in hand; a taped grip, a knob, a wooden barrel | ✓ | a little long: shortened ([18](playtest/2026-11-02-week5/18-bat-in-hand.jpg)) |
+| Steal | on someone else's ripe crop the stamp says STEAL with the crop, and the chalkboard warns that stealing makes you a Suspect; holding it fills a ring of dots over the crop for everyone, the crop shakes; 2.5 s for a Pumpkin, then it's in your sack | ✓ | the hold bar over the stamp was half hidden under the chalkboard: moved ([08](playtest/2026-11-02-week5/08-steal-ring-mid-hold.jpg)) |
+| The alarm | the owner: a red pulse round the screen, "🚨 Player1 is stealing your 🎃 Pumpkin! Run over and press SWING…", a red ! over the thief seen from anywhere in the farm; the thief's tag turns red: TRESPASSING ([07](playtest/2026-11-02-week5/07-alarm-and-trespassing.jpg)) | ✓ | the red edge never faded (a reversing tween ends where it began): fixed |
+| The sack | on the thief's back with the Pumpkin's top poking out; "2/5 · Get home!" over the hotbar with an arrow to your barn; the travel signs hidden; walking at 13.6 studs a second (157 studs in 11.5 s); emptied at your door ([09](playtest/2026-11-02-week5/09-stolen-get-home.jpg)) | ✓ | the sack was huge and sat beside the character like an egg: smaller and snug on the back ([06](playtest/2026-11-02-week5/06-sack-on-back.jpg)) |
+| Bonk a Suspect | "BONK!" and gold stars; the thief flat on their back with dizzy stars, their screen grey and blurred: "You're a Suspect: the farmer can arrest you!"; the owner: "Recovered from Player1: 🎃 Pumpkin ×2. It's back in your barn." and an ARREST stamp ([10](playtest/2026-11-02-week5/10-bonk-suspect-recovered.jpg)) | ✓ | swings missed when the thief stood beside or behind the owner: the swing now turns you to face the nearest person in reach, waits a beat (the wind-up) so the server sees the turn, and anyone within 3 studs is hit whichever way you face |
+| Arrest | hold ARREST 1 s: the thief's BUSTED! card (their avatar in front of a height chart, a number board, the charge, the fine and who it's paid to), then the police porch; the owner's "🚔 ARRESTED!"; coins 100 → 75 and 100 → 125 ([11](playtest/2026-11-02-week5/11-busted-and-arrested.jpg)) | ✓ | |
+| Into debt | a thief with 0 coins: fine 1,131 (1.5 × a Hot Crop Pumpkin), all of it owed; both cards say so ([14](playtest/2026-11-02-week5/14-busted-into-debt.jpg)) | ✓ | "paid 0 of their fine" read oddly: "had no coins, so they owe you…" |
+| Debt paid from sales | `/earn 200` while owing: the thief kept 100, the farmer 100 → 200 | ✓ | nobody was told why: notes for both now ("100 coins of your sales went to your debts", "💰 Player1 paid you 100 coins of their fine"), at most every 30 s |
+| Police desk | the station's desk with Sheriff Clucks, E: the Police Desk window (record, "You owe 1131 coins", to whom and when it's forgiven, Pay) ([15](playtest/2026-11-02-week5/15-police-desk-window.jpg)) | ✓ | "forgiven in 6 days" a minute after the fine: rounds up now (7) |
+| An innocent visitor | bonked: "You're just stunned. You did nothing wrong." and Leave farm → "You'll wake up outside", then on the sidewalk outside the gate; the owner's stamp said "only visiting (bonking pays nothing)" ([12](playtest/2026-11-02-week5/12-innocent-stunned-leave-farm.jpg), [13](playtest/2026-11-02-week5/13-woke-up-outside.jpg)) | ✓ | |
+| Travel as a Suspect | Home: refused | ✓ | the refusal said only "You can't travel right now": now "No travel while you're a Suspect or carrying stolen crops: walk!", and the signs show 🚫 meanwhile ([20](playtest/2026-11-02-week5/20-travel-blocked.jpg)) |
+| Climbing | CLIMB at a back fence, red with "Climbing into Player2's farm makes you a Suspect!" from the trail; the character goes up and over in 1.5 s; the owner: "🚨 Player1 is climbing over your back fence!" ([16](playtest/2026-11-02-week5/16-climbing-in-alarm.jpg)) | ✓ | |
+| Quitting while knocked out as a Suspect | the thief's window closed during the knockout: "🚔 Player1 fled arrest! Fined 56 (×1.5): +56 coins." to the owner ([17](playtest/2026-11-02-week5/17-fled-arrest.jpg)) | ✓ | 25 × 1.5 (second arrest) × 1.5 (fled) = 56. A first try closed the window after the knockout had ended: no fine, which is right (awake and empty-handed) |
+| Reset | Roblox's Respawn greyed out while a Suspect; back once you're not | ✓ | |
+| The same-farm cooldown | after an arrest the thief couldn't steal there again (3 min) | ✓ | |
+
+Bugs found and fixed in the session: the hold bar under the chalkboard, the alarm's red edge stuck on, missed swings beside or behind you, the knockout card's Suspect line set once (a late attribute showed the innocent text: it updates live now). By eye: the sack's size and place, the bat's length, the porch roof (a heavy navy slab → blue and cream stripes with a striped flap along the front, since from the square the roof is seen edge-on: [01](playtest/2026-11-02-week5/01-police-station-eye-level.jpg), [02](playtest/2026-11-02-week5/02-police-awning-from-above.jpg)), Sheriff Clucks looked like a snowman (a red comb through his hat, bigger eyes: [03](playtest/2026-11-02-week5/03-sheriff-clucks-desk.jpg)), the rules poster half behind the bench ([04](playtest/2026-11-02-week5/04-rules-poster.jpg)), the door lamps glowing white, the knockout card covering your own knocked-out character (it sits higher now: [19](playtest/2026-11-02-week5/19-knocked-out-pose.jpg)); anything in hand drops on a knockout.
+Not covered: leaving with loot while chased (D2) and without (D3), dying while knocked out, rejoining within 2 minutes (Studio can't rejoin a closed client), the payout queue across servers (needs API access), a server shutdown (D8), lag (0.2 s), a phone, 8 players, the raid race with real timings (Stage D, after week 6's defences).
+
+**Would a new player understand it?**
+
+| What a new player saw | Now |
+|---|---|
+| STEAL with no warning of what follows | the chalkboard: "Stealing makes you a Suspect: the farmer can bonk and arrest you!" (once a Suspect: the hold time and the sack) |
+| SWING next to a visitor who'd done nothing | "Player1 is only visiting (bonking pays nothing)"; next to a Suspect "Player1 is a Suspect: bonk, then arrest!" (and SWING only offers itself near a visitor when the bat's already in your hand) |
+| A Suspect pressing HOME: "You can't travel right now." | the reason, and 🚫 on the signs while it lasts |
+| The farmer's coins going up from a debt with no word | "💰 Player1 paid you … of their fine" (and the debtor is told where half their sales went) |
+| "Player1 paid 0 of their 1131-coin fine to you" | "Player1 had no coins, so they owe you their 1131-coin fine: half of their sales come to you until it's paid" |
+| The back fence: can you get over? | the CLIMB stamp beside it, and a hand-painted "PRIVATE FARM · No climbing!" sign on the trail side |
+| How do arrests work? | the WANTED poster by the police station's door: "Bonk them with your bat, then ARREST them. Their fine is yours!" |
+
 ### 2026-11-01 · week 4 smoke test (warehouse levels and workers) · build: this session's week 4
 Testers: Claude, driving Studio (the chat's dev commands, the command bar for camera views) · Setup: solo Play, desktop, two fresh Play sessions (the second after the fixes below) · Lag: 0 · Screenshots: [playtest/2026-11-01-week4/](playtest/2026-11-01-week4/)
 

@@ -16,7 +16,7 @@ local REASONS = {
 	NotTouching = "Clear land next to land you've already cleared.",
 	Busy = "Finish clearing the block you started first.",
 	AlreadyOpen = "That land is already cleared.",
-	Blocked = "You can't travel right now.",
+	Blocked = "No travel while you're a Suspect or carrying stolen crops: walk!",
 	NoCharacter = nil,
 	Cooldown = nil,
 	NotLoaded = "Still loading your farm...",
@@ -44,6 +44,25 @@ local REASONS = {
 	BadName = "A store's name needs 3 to 24 letters.",
 	FilterFailed = "That name couldn't be checked right now: try again in a moment.",
 	CantSell = "You can't sell that (free items stay yours).",
+	-- raids (CrimeService)
+	NotInside = "Stand in the farm first.",
+	YourOwn = nil, -- (your own crops: harvest them)
+	KnockedOut = nil,
+	SackFull = "Your sack is full! Get home to empty it.",
+	RaidCap = "This farm has lost enough crops for now: the neighbours are watching. Try again in a few minutes.",
+	Gone = "Too late: that crop was picked first.",
+	FarmClosed = "That farm just closed.",
+	TooSoon = nil,
+	NoHold = nil,
+	NoBat = "Your bat only works inside your own farm.",
+	NotKnockedOut = "Bonk them first, then arrest them while they're down.",
+	NotSuspect = "They haven't done anything wrong: only Suspects can be arrested.",
+	OwnerOutside = "Your bat only works inside your own farm.",
+	NotAllowed = nil,
+	Holding = nil,
+	FarmCooldown = "You can't steal from this farm again yet: wait 3 minutes after getting away or getting arrested here.",
+	-- the police desk (PayoutService)
+	NoDebt = "You don't owe anyone anything.",
 }
 
 return function(reason: string?, extra: string?): string?

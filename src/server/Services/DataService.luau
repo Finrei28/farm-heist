@@ -191,18 +191,23 @@ function DataService.AddXp(player, amount: number)
 	DataService.NotifyState(player)
 end
 
+-- Takes the share of income that pays a player's debts and returns what
+-- they keep (PayoutService sets it: shared/FineRules.garnish).
+DataService.Garnish = nil :: ((Player, any, number) -> number)?
+
 -- Sales income (truck runs, your store): the coins, the last hour's
 -- earnings (fines are a share of them, shared/FineRules), and sales XP when
 -- the sale happens while you're playing (live), never for sales settled
--- while you were away. (Paying off debts from it comes with the payout
--- queue in week 4, when there can first be debts.)
+-- while you were away. Someone in debt keeps half; the rest pays the owners
+-- they owe (DataService.Garnish).
 function DataService.Earn(player, coins: number, sku: string, live: boolean)
 	local data = profiles[player]
 	if not data or not (coins > 0) then
 		return
 	end
 	FineRules.addEarnings(data.crime, os.time(), coins)
-	DataService.AddCoins(player, coins, Analytics.GAMEPLAY, sku)
+	local kept = if DataService.Garnish then DataService.Garnish(player, data, coins) else coins
+	DataService.AddCoins(player, kept, Analytics.GAMEPLAY, sku)
 	if live then
 		DataService.AddXp(player, ProgressionRules.salesXp(coins))
 	end
@@ -268,6 +273,7 @@ local function getPublicState(data)
 		defences = data.defences,
 		trusted = data.trusted,
 		debts = data.crime.debts,
+		rapSheet = { arrested = data.stats.timesArrested, lastArrestAt = data.crime.lastArrestAt },
 		guide = data.guide,
 		quests = data.quests,
 		streak = data.streak,

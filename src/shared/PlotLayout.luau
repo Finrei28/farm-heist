@@ -291,6 +291,38 @@ function PlotLayout.centre(box): Vector3
 	return (box.min + box.max) / 2
 end
 
+-- The back fence (docs/GameDesign.md §4.10) runs across the plot at z
+-- DEPTH to DEPTH + 1. Climbing it: from plot-space point p, "In" from the
+-- back trail's side, "Out" from the field's side, or nil if p isn't within
+-- `reach` of it (nor in the corners by the hedges, which can't be climbed).
+function PlotLayout.climbAt(p: Vector3, reach: number): string?
+	local z = PlotLayout.DEPTH
+	if math.abs(p.X) > PlotLayout.WIDTH / 2 - 3 then
+		return nil
+	elseif p.Z >= z - reach and p.Z < z then
+		return "Out"
+	elseif p.Z > z + 1 and p.Z <= z + 1 + reach then
+		return "In"
+	end
+	return nil
+end
+
+-- A climb's path at `x` across, in plot space, for the character's root
+-- (3 studs over the ground when standing): up the near side, over the top
+-- of the fence, down the far side.
+function PlotLayout.climbPath(x: number, direction: string): { Vector3 }
+	local z, h = PlotLayout.DEPTH, PlotLayout.FENCE_HEIGHT
+	local near = if direction == "In" then z + 2.5 else z - 1.5
+	local far = if direction == "In" then z - 3 else z + 4
+	return {
+		Vector3.new(x, 3, near),
+		Vector3.new(x, h + 1, near),
+		Vector3.new(x, h + 3.5, z + 0.5),
+		Vector3.new(x, h + 1, far),
+		Vector3.new(x, 3, far),
+	}
+end
+
 -- Where the owner appears (join, Home button): in front of the farmhouse door.
 function PlotLayout.spawnWorld(index: number): Vector3
 	return PlotLayout.toWorld(index, PlotLayout.PLOT.door)

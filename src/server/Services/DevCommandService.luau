@@ -19,6 +19,15 @@
 --   /shoppers 5          the next N shoppers come to your store one after another
 --   /store 5             your store straight to Store Level N (up only; buildings done at once)
 --   /tp town · /tp porch · /tp barley · /tp exchange · /tp hiring · /tp home · /tp shed (the bench) · /tp dock · /tp store · /tp 3 (a farm's gate)
+--   /tp back [3]         outside a farm's back fence (yours by default), facing it
+--   /tp field [3]        in a farm's field (yours by default), on its first open block
+--   /plant Pumpkin       plant that crop on every open, empty tile of your field (free; /grow ripe ripens them)
+--   /ko [suspect]        knock yourself out where you stand (as a Suspect: the arrest screen)
+--   /suspect             mark yourself a Suspect of the farm you're in
+--   /sack Pumpkin 2      put stolen crops in your sack (from your own farm: walk to your door to empty it)
+--   /debt 300            owe 300 coins (to yourself) for the police desk and paying off debts
+--   /earn 200            as if you'd sold crops for 200 coins (sales XP; half goes to any debts)
+--   /crimelog            prints your visits, sack, cooldowns, debts, arrests and your farm's raid ledger
 --   /wipe                start your save over (in place)
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -28,6 +37,9 @@ local TextChatService = game:GetService("TextChatService")
 
 local Shared = ReplicatedStorage.Shared
 local BarnRules = require(Shared.BarnRules)
+local FineRules = require(Shared.FineRules)
+local GrowthRules = require(Shared.GrowthRules)
+local LandRules = require(Shared.LandRules)
 local Crops = require(Shared.Config.Crops)
 local PlotLayout = require(Shared.PlotLayout)
 local ProgressionRules = require(Shared.ProgressionRules)
@@ -40,6 +52,7 @@ local Server = ServerScriptService.Server
 local Analytics = require(Server.Util.Analytics)
 local Notice = require(Server.Util.Notice)
 local Staff = require(Server.Util.Staff)
+local CrimeService = require(script.Parent.CrimeService)
 local DataService = require(script.Parent.DataService)
 local FieldService = require(script.Parent.FieldService)
 local LandService = require(script.Parent.LandService)
@@ -255,7 +268,19 @@ function DevCommandService.Start()
 		local frame
 		if where == "town" then
 			frame = TravelService.townFrame()
-		elseif where == "porch" then
+		elseif where == "back" then
+			local index = tonumber(args[3]) or PlotService.plotOf(player)
+			if index then
+				local at = PlotLayout.toWorld(index, Vector3.new(0, 3, PlotLayout.DEPTH + 3.5))
+				frame = CFrame.lookAt(at, PlotLayout.toWorld(index, Vector3.new(0, 3, PlotLayout.DEPTH - 20)))
+			end
+		elseif where == "field" then
+			local index = tonumber(args[3]) or PlotService.plotOf(player)
+			if index then
+				local at = PlotLayout.tileWorld(index, 10) + Vector3.new(0, 3, 0)
+				frame = CFrame.lookAt(at, PlotLayout.tileWorld(index, 12) + Vector3.new(0, 3, 0))
+			end
+		elseif where == "porch" or where == "police" then
 			local at = PlotLayout.policePorchWorld() + Vector3.new(0, 3, 0)
 			frame = CFrame.lookAt(at, Vector3.new(0, at.Y, 0))
 		elseif where == "barley" then
@@ -296,8 +321,66 @@ function DevCommandService.Start()
 		if frame then
 			TravelService.Send(player, frame)
 		else
-			reply(player, "Where? /tp town · porch · barley · exchange · hiring · home · shed · dock · store · 1–8")
+			reply(player, "Where? /tp town · porch · barley · exchange · hiring · home · shed · dock · store · back · 1–8")
 		end
+	end)
+
+	register("DevPlant", "/plant", function(player, data, args)
+		local crop = findCrop(args[2] or "Carrot")
+		if not crop then
+			reply(player, "Which crop? e.g. /plant Pumpkin")
+			return
+		end
+		local planted = 0
+		for tile = 1, 64 do
+			local key = tostring(tile)
+			if LandRules.isTileOpen(data.land, tile) and not data.field[key] then
+				data.field[key] = GrowthRules.plant(crop.id)
+				planted += 1
+			end
+		end
+		FieldService.Render(player)
+		DataService.NotifyState(player)
+		reply(player, `Planted {planted} {crop.name}. /grow ripe ripens them`)
+	end)
+
+	register("DevKnockOut", "/ko", function(player, _data, args)
+		CrimeService.DevKnockOut(player, string.lower(args[2] or "") == "suspect")
+		reply(player, "Bonk! (yourself)")
+	end)
+
+	register("DevSuspect", "/suspect", function(player)
+		local plot = CrimeService.DevSuspect(player)
+		reply(player, if plot > 0 then `You're a Suspect of farm {plot}` else "Stand in someone's farm first")
+	end)
+
+	register("DevSack", "/sack", function(player, _data, args)
+		local crop = findCrop(args[2] or "Carrot")
+		if not crop then
+			reply(player, "Which crop? e.g. /sack Pumpkin 2")
+			return
+		end
+		CrimeService.DevFillSack(player, crop.id, math.floor(tonumber(args[3]) or 1), player.UserId)
+		reply(player, `Sack: {player:GetAttribute("Sack") or 0}/5. Walk to your farmhouse door to empty it`)
+	end)
+
+	register("DevDebt", "/debt", function(player, data, args)
+		local amount = math.floor(tonumber(args[2]) or 300)
+		table.insert(data.crime.debts, { ownerId = player.UserId, ownerName = "Sheriff Clucks (a test)", amount = amount, createdAt = os.time() })
+		DataService.NotifyState(player)
+		reply(player, `You owe {FineRules.totalDebt(data.crime, os.time())} coins. Sell something (half pays it) or pay at the police desk`)
+	end)
+
+	register("DevEarn", "/earn", function(player, _data, args)
+		local amount = math.floor(tonumber(args[2]) or 200)
+		DataService.Earn(player, amount, "Dev", true)
+		reply(player, `Sold crops for {amount} coins (half goes to any debts)`)
+	end)
+
+	register("DevCrimeLog", "/crimelog", function(player)
+		local text = CrimeService.DevLog(player)
+		print(text)
+		reply(player, "Crime log printed to the Output")
 	end)
 
 	register("DevWipe", "/wipe", function(player)

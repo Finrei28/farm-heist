@@ -58,5 +58,20 @@ return function(spec, harness)
 		it("flying straight up is caught", function()
 			expect(run(MoveRules.new(), 0, 3, 40)).toBeGreaterThan(0)
 		end)
+		it("a thief with a sack who runs anyway is caught; walking with it is fine", function()
+			local scale = Settings.WALK_SPEED * 0.85 / Settings.RUN_SPEED
+			local function carry(speed, seconds)
+				local budget = MoveRules.new()
+				local rejected = 0
+				for _ = 1, math.floor(seconds / TICK + 0.5) do
+					if not MoveRules.step(budget, Vector3.new(speed * TICK, 0, 0), TICK, scale) then
+						rejected += 1
+					end
+				end
+				return rejected
+			end
+			expect(carry(Settings.WALK_SPEED * 0.85, 60)).toBe(0)
+			expect(carry(Settings.RUN_SPEED, 30)).toBeGreaterThan(0)
+		end)
 	end)
 end

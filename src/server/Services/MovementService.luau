@@ -29,7 +29,7 @@ local MovementService = {}
 local TICK = 0.1
 local GRACE = 2 -- seconds after a respawn or server teleport while the client catches up
 
-local tracked = {} -- [Player] = { trusted, budget (MoveRules), graceUntil, strikes, lastStrikeLog }
+local tracked = {} -- [Player] = { trusted, budget (MoveRules), graceUntil, strikes, lastStrikeLog, scale? }
 
 local function rootOf(player: Player): BasePart?
 	local character = player.Character
@@ -53,6 +53,15 @@ function MovementService.Allow(player: Player, seconds: number?)
 	local state = tracked[player]
 	if state then
 		state.graceUntil = math.max(state.graceUntil, os.clock() + (seconds or GRACE))
+	end
+end
+
+-- A share of the usual movement allowance (1 = sprinting is fine): a thief
+-- with a Loot Sack can only walk, slower (CrimeService).
+function MovementService.SetScale(player: Player, scale: number?)
+	local state = tracked[player]
+	if state then
+		state.scale = scale
 	end
 end
 
@@ -101,7 +110,7 @@ local function check(player: Player, state, dt: number)
 		MoveRules.refill(state.budget)
 		return
 	end
-	local ok, overBy = MoveRules.step(state.budget, position - state.trusted, dt)
+	local ok, overBy = MoveRules.step(state.budget, position - state.trusted, dt, state.scale)
 	if ok then
 		state.trusted = position
 		return

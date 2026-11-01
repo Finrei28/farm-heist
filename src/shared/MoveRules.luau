@@ -4,7 +4,9 @@
 -- far they moved across the ground. Rising has its own, smaller allowance;
 -- falling is free. Overspending is a teleport or a speed hack.
 --   local budget = MoveRules.new()
---   MoveRules.step(budget, offset, dt) -> ok: boolean, overBy: number
+--   MoveRules.step(budget, offset, dt, scale?) -> ok: boolean, overBy: number
+--     (scale: a share of the usual allowance, for someone who can't run:
+--     a thief with a Loot Sack walks at 85% and can't sprint)
 --   MoveRules.refill(budget)    (after a respawn or a server teleport)
 local Settings = require(script.Parent.Config.Settings)
 
@@ -24,8 +26,8 @@ function MoveRules.refill(budget)
 end
 
 -- offset: where they are now minus where they were last time it passed.
-function MoveRules.step(budget, offset: Vector3, dt: number): (boolean, number)
-	budget.across = math.min(MoveRules.SAVED, budget.across + MoveRules.SPEED * dt)
+function MoveRules.step(budget, offset: Vector3, dt: number, scale: number?): (boolean, number)
+	budget.across = math.min(MoveRules.SAVED, budget.across + MoveRules.SPEED * (scale or 1) * dt)
 	budget.rise = math.min(MoveRules.RISE_SAVED, budget.rise + MoveRules.RISE_SPEED * dt)
 	local across = math.sqrt(offset.X * offset.X + offset.Z * offset.Z)
 	local up = math.max(0, offset.Y)

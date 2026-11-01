@@ -7,8 +7,9 @@
 -- trusted position (MovementService) with the zone's 1-stud hysteresis
 -- (shared/ZoneRules): the player attribute InFarm = plot index, or 0. A
 -- farm's store is cut out of it (a public place, §4.8): InStore = the plot
--- index of the store you're in, or 0. The HUD's location chip reads them;
--- the bat (week 5) will too.
+-- index of the store you're in, or 0. The HUD's location chip reads them,
+-- and so does CrimeService (the bat, Suspects). Someone climbing a farm's
+-- back fence (Climbing = its index) is inside it for the whole climb.
 --
 -- Plot models (workspace.World.Plot<n>) carry OwnerId and OwnerName while
 -- someone has them; players carry Plot = their plot index.
@@ -146,6 +147,10 @@ local function release(player: Player)
 	end
 end
 
+-- Where someone spawns instead of their door, or nil: the police porch
+-- after an arrest (CrimeService sets it).
+PlotService.spawnOverride = nil :: ((Player) -> CFrame?)?
+
 -- Respawning: at your door (the first spawn too), after a death.
 local function onCharacter(player: Player, character: Model)
 	local root = character:WaitForChild("HumanoidRootPart", 10)
@@ -154,8 +159,9 @@ local function onCharacter(player: Player, character: Model)
 		return
 	end
 	local index = plots[player]
-	if index then
-		MovementService.Teleport(player, PlotService.homeFrame(index))
+	local frame = PlotService.spawnOverride and PlotService.spawnOverride(player)
+	if frame or index then
+		MovementService.Teleport(player, frame or PlotService.homeFrame(index))
 	end
 	humanoid.Died:Connect(function()
 		task.wait(Players.RespawnTime)
@@ -195,7 +201,10 @@ local function updateZones()
 	for _, player in Players:GetPlayers() do
 		local position = MovementService.positionOf(player)
 		local farm, store = 0, 0
-		if position then
+		local climbing = player:GetAttribute("Climbing") or 0
+		if climbing > 0 then
+			farm = climbing -- (partway over a farm's back fence, either way: inside it, §4.12)
+		elseif position then
 			farm = find(position, player:GetAttribute("InFarm") or 0, farmZone)
 			store = find(position, player:GetAttribute("InStore") or 0, storeZone)
 		end

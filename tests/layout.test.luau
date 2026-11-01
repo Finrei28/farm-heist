@@ -339,6 +339,32 @@ return function(spec, harness)
 		end)
 	end)
 
+	describe("climbing the back fence (§4.10)", function()
+		it("starts within reach of the fence, in from the trail and out from the field", function()
+			expect(PlotLayout.climbAt(Vector3.new(0, 0, D + 3), 4)).toBe("In")
+			expect(PlotLayout.climbAt(Vector3.new(0, 0, D - 3), 4)).toBe("Out")
+			expect(PlotLayout.climbAt(Vector3.new(0, 0, D - 6), 4)).toBe(nil)
+			expect(PlotLayout.climbAt(Vector3.new(0, 0, D + 6), 4)).toBe(nil)
+		end)
+		it("not in the corners by the hedges", function()
+			expect(PlotLayout.climbAt(Vector3.new(W / 2 - 1, 0, D - 2), 4)).toBe(nil)
+		end)
+		it("goes over the top of the fence and lands on the other side, clear of it", function()
+			local zone = PlotLayout.zone(1)
+			for _, direction in { "In", "Out" } do
+				local path = PlotLayout.climbPath(10, direction)
+				local top = 0
+				for _, point in path do
+					top = math.max(top, point.Y)
+				end
+				expect(top - 3 > PlotLayout.FENCE_HEIGHT).toBe(true) -- (the feet, 3 below the root, clear it)
+				local landing = PlotLayout.toWorld(1, path[#path])
+				expect(ZoneRules.inside(zone, landing, false)).toBe(direction == "In")
+				expect(PlotLayout.climbAt(path[#path], 4) ~= direction).toBe(true)
+			end
+		end)
+	end)
+
 	describe("the raid race (§4.11)", function()
 		local race = raidRace(harness)
 		it("an undefended back-row raid beats an owner who isn't at the field", function()

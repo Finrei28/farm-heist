@@ -7,6 +7,10 @@
 -- Hold the button (or E) and walk along a row to plant, water or harvest
 -- every tile you cross. The server checks everything (FieldService); the
 -- tiles' attributes (server/World/FarmArt) say what's on them.
+--
+-- Other controllers can put their own action on the stamp, over the tile's
+-- (FieldController.offer: CrimeController's Steal, Swing, Arrest, Climb),
+-- with a progress bar for holds (FieldController.setProgress).
 local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
@@ -64,8 +68,22 @@ UI.onLayout(function()
 	local d = if UI.compact then 92 else DIAMETER
 	holder.Size = UDim2.fromOffset(d, d)
 	holder.Position = UDim2.new(1, -right, 1, -14)
-	info.Position = UDim2.new(1, -right, 1, -(d + 26))
+	info.Position = UDim2.new(1, -right, 1, -(d + 36)) -- (room for the hold bar between them)
 end)
+
+-- A progress bar over the stamp, for holds (a steal, an arrest).
+local progress = make("Frame", {
+	Name = "Progress", AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 0, -4), Size = UDim2.new(1, 8, 0, 13),
+	BackgroundColor3 = C.cream, Visible = false, ZIndex = 3, Parent = holder,
+}, { UI.corner(6), UI.stroke(UI.SEAM, 2) })
+local progressFill = make("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = C.alarm, ZIndex = 4, Parent = progress }, { UI.corner(6) })
+
+-- fraction 0–1 (nil hides the bar); color: the fill (default alarm red).
+function FieldController.setProgress(fraction: number?, color: Color3?)
+	progress.Visible = fraction ~= nil
+	progressFill.Size = UDim2.fromScale(math.clamp(fraction or 0, 0, 1), 1)
+	progressFill.BackgroundColor3 = color or C.alarm
+end
 
 local outline = make("SelectionBox", {
 	Name = "TileOutline",
@@ -146,7 +164,30 @@ local holdStarted = 0
 local busy = false
 local lastDone = { tile = 0, kind = "", at = 0 }
 local lastError = 0
-local current = { part = nil, tile = nil, kind = nil }
+local current = { part = nil, tile = nil, kind = nil, offer = nil }
+
+-- offer = { priority, text, sub?, kind (a stamp colour), info? (the
+-- chalkboard line), press = fn, release = fn? }. The highest priority wins
+-- over the tile's own action.
+local offers = {}
+
+function FieldController.offer(id: string, offer)
+	offers[id] = offer
+end
+
+function FieldController.withdraw(id: string)
+	offers[id] = nil
+end
+
+local function bestOffer()
+	local best = nil
+	for _, offer in offers do
+		if not best or offer.priority > best.priority then
+			best = offer
+		end
+	end
+	return best
+end
 
 local function floatAtButton(text: string, color: Color3?)
 	local at = holder.AbsolutePosition + holder.AbsoluteSize / 2 - UI.screen.AbsolutePosition
@@ -188,12 +229,25 @@ local function act()
 end
 
 local function update()
+	local offer = bestOffer()
+	if offer then
+		current = { part = nil, tile = nil, kind = nil, offer = offer }
+		holder.Visible = true
+		button.Text = offer.text
+		UI.setStampKind(holder, offer.kind)
+		sub.Text = offer.sub or ""
+		sub.TextColor3 = button.TextColor3
+		info.Visible = offer.info ~= nil
+		infoLabel.Text = offer.info or ""
+		outline.Visible = false
+		return
+	end
 	local part, tile = myTile()
 	local kind, line = nil, ""
 	if part then
 		kind, line = actionFor(part)
 	end
-	current = { part = part, tile = tile, kind = kind }
+	current = { part = part, tile = tile, kind = kind, offer = nil }
 	info.Visible = part ~= nil
 	infoLabel.Text = line
 	holder.Visible = kind ~= nil
@@ -217,11 +271,27 @@ local function update()
 	end
 end
 
+local pressedOffer = nil
+
 local function press()
+	if current.offer then
+		pressedOffer = current.offer
+		task.spawn(current.offer.press)
+		return
+	end
 	holding = true
 	holdKind = current.kind
 	holdStarted = os.clock()
 	task.spawn(act)
+end
+
+local function releasePress()
+	holding = false
+	local offer = pressedOffer
+	pressedOffer = nil
+	if offer and offer.release then
+		task.spawn(offer.release)
+	end
 end
 
 ------------------------------------------------------------------------
@@ -234,7 +304,7 @@ function FieldController.Start()
 	end)
 	button.InputEnded:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			holding = false
+			releasePress()
 		end
 	end)
 
@@ -248,13 +318,13 @@ function FieldController.Start()
 	end)
 	ContextActionService:BindActionAtPriority("FieldContext", function(_, inputState)
 		if inputState == Enum.UserInputState.Begin then
-			if current.kind and promptsShown == 0 then
+			if (current.kind or current.offer) and promptsShown == 0 then
 				press()
 				return Enum.ContextActionResult.Sink
 			end
 			return Enum.ContextActionResult.Pass
 		end
-		holding = false
+		releasePress()
 		return Enum.ContextActionResult.Pass
 	end, false, Enum.ContextActionPriority.High.Value, Enum.KeyCode.E, Enum.KeyCode.ButtonX)
 

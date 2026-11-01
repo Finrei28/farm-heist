@@ -24,6 +24,15 @@
 --   ShopperEvent   S→C  ("Path", { plot, id, look, at, points, face?, say?, basket, leave? }) a walk from
 --                        server time `at` (replacing the last) · ("Paid", { plot, id, coins }) · ("Clear", { plot })
 --                        NPC shoppers in the stores, drawn by the clients (ShopperController)
+--   CrimeAction    C→S  ("Steal" tile | "StealDone" | "StealCancel" | "Swing" | "ArrestStart" userId | "Arrest" userId
+--                        | "Climb" | "LeaveFarm") -> { ok, reason?, result? }   raids (server/Services/CrimeService,
+--                        shared/CrimeRules, shared/SackRules): the server times every hold
+--   CrimeEvent     S→C  ("Alarm", { userId, name, crop, plot, tile, ends }) to an owner · ("Bonk", { userId, at, suspect })
+--                        · ("Nudge", { at }) · ("Puff", { at }) to everyone · ("Busted", { name, charge, fine, paid,
+--                        owed, owner, number }) to the thief · ("Arrested", { name, fine, paid, owed }) to the owner
+--                        · ("Deposited", { text }) to the thief   effects and cards (client CrimeController)
+--   PoliceAction   C→S  ("Pay" coins or "all") -> { ok, reason?, result? }   paying debts early at the police desk
+--                        (server/Services/PayoutService)
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
@@ -41,6 +50,9 @@ local DEFINITIONS = {
 	ShopperEvent = "RemoteEvent",
 	WorkerAction = "RemoteFunction",
 	WorkerEvent = "RemoteEvent",
+	CrimeAction = "RemoteFunction",
+	CrimeEvent = "RemoteEvent",
+	PoliceAction = "RemoteFunction",
 }
 
 local IS_SERVER = RunService:IsServer()

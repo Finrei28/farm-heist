@@ -185,7 +185,7 @@ function CrimeRules.validHit(h): (boolean, string?)
 	if h.distance > Crime.HIT_RANGE + Crime.HIT_LAG then
 		return false, "TooFar"
 	end
-	if h.angle > Crime.HIT_ARC / 2 then
+	if h.angle > Crime.HIT_ARC / 2 and h.distance > Crime.HIT_CLOSE then
 		return false, "Behind"
 	end
 	if not h.lineClear then

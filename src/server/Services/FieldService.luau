@@ -257,6 +257,32 @@ function FieldService.WorkerHarvest(player: Player, data, key: string, replant: 
 	return nil, if not stays and replant ~= "none" and not data.field[key] then "NoSeeds" else nil
 end
 
+-- The ripe crop on a tile (growth settled up to now), or nil: what a thief
+-- would get (CrimeService).
+function FieldService.RipeCrop(player: Player, data, key: string): string?
+	settle(player, data, true)
+	local tile = data.field[key]
+	return if tile and GrowthRules.isRipe(tile) then tile.crop else nil
+end
+
+-- A thief takes the ripe crop on a tile (CrimeService has checked the rest):
+-- like a harvest, but into their sack, and no XP. Regrowing plants only lose
+-- their fruit. Returns the crop id and its barn key, or nil.
+function FieldService.TakeRipe(player: Player, data, key: string): (string?, string?)
+	settle(player, data, true)
+	local index = PlotService.plotOf(player)
+	local tile = data.field[key]
+	if not index or not tile or not GrowthRules.isRipe(tile) then
+		return nil, nil
+	end
+	local _, stays = GrowthRules.harvest(tile)
+	if not stays then
+		data.field[key] = nil
+	end
+	FarmArt.showTile(tilePart(index, tonumber(key) :: number), data.field[key], now())
+	return tile.crop, BarnRules.key(tile.crop)
+end
+
 -- Ripe tiles Farmhands could harvest now (not flagged to stay), in tile order.
 function FieldService.RipeTiles(player: Player, data): { string }
 	settle(player, data, true)

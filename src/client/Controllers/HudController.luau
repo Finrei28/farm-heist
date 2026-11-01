@@ -2,8 +2,9 @@
 --   top:      a wooden sign hung on two ropes from the top of the screen
 --             with your coins, a prize rosette with your Farm Level, the XP
 --             rail, and the location chip under it (a price tag: green Your
---             Farm, gold Visiting, cream Town). (Top centre, not top left:
---             Roblox's chat window lives there.)
+--             Farm, gold Visiting, red TRESPASSING once you're a Suspect
+--             there, cream Town). (Top centre, not top left: Roblox's chat
+--             window lives there.)
 --   left:     the side bar, a stack of crates (Barn, ...)
 --   bottom:   Home and Town signposts above the hotbar, with the 3 s
 --             travel bar and their cooldowns
@@ -114,6 +115,10 @@ local function updateChip()
 		color, textColor = if inStore == mine then C.green else C.gold, if inStore == mine then C.cream else C.ink
 	elseif inFarm > 0 and inFarm == mine then
 		text, color, textColor = "Your Farm", C.green, C.cream
+	elseif inFarm > 0 and (player:GetAttribute("SuspectOf") or 0) == inFarm then
+		-- a Suspect here (§4.12): red, pulsing
+		local pulse = math.floor(os.clock() * 2) % 2 == 0
+		text, color, textColor = "🔴 TRESPASSING", if pulse then C.alarm else UI.darker(C.alarm, 0.8), C.cream
 	elseif inFarm > 0 then
 		local owner = workspace.World[`Plot{inFarm}`]:GetAttribute("OwnerName")
 		text, color = if owner then `Visiting {owner}'s farm` else `Farm {inFarm}: for rent`, C.gold
@@ -283,10 +288,13 @@ end
 -- A countdown on the sign while it's on cooldown.
 local function updateCooldowns()
 	local now = workspace:GetServerTimeNow()
+	-- (no travel while you're a Suspect, knocked out or carrying a sack: CrimeService)
+	local blocked = (player:GetAttribute("SuspectOf") or 0) > 0 or (player:GetAttribute("Sack") or 0) > 0
+		or (player:GetAttribute("KnockedOut") or 0) > now
 	for kind, sign in signs do
 		local left = (player:GetAttribute(`{kind}ReadyAt`) or 0) - now
-		sign.label.Text = if left > 0 then `⏳ {UI.formatTime(left)}` else sign.text
-		sign.label.TextTransparency = if left > 0 then 0.35 else 0
+		sign.label.Text = if blocked then `🚫 {sign.text}` elseif left > 0 then `⏳ {UI.formatTime(left)}` else sign.text
+		sign.label.TextTransparency = if left > 0 or blocked then 0.35 else 0
 	end
 end
 
@@ -417,6 +425,7 @@ function HudController.Start()
 	player:GetAttributeChangedSignal("InFarm"):Connect(updateChip)
 	player:GetAttributeChangedSignal("InStore"):Connect(updateChip)
 	player:GetAttributeChangedSignal("Plot"):Connect(updateChip)
+	player:GetAttributeChangedSignal("SuspectOf"):Connect(updateChip)
 	task.spawn(function()
 		while true do
 			updateChip()

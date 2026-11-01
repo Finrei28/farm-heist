@@ -4,7 +4,8 @@
 -- the server teleports you (MovementService.Teleport). Cooldowns go on the
 -- player as attributes (HomeReadyAt, TownReadyAt, VisitReadyAt: server
 -- time), so the HUD can grey its buttons. Suspects, knocked-out players and
--- sack carriers can't travel: that status comes with the stealing week.
+-- sack carriers can't travel (TravelService.status, set by CrimeService), and
+-- starting a steal stops a channel under way.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
@@ -45,13 +46,20 @@ local function travelOf(player: Player)
 	return travels[player]
 end
 
+-- { suspect, knockedOut, carrying } for a player (CrimeService sets it).
+TravelService.status = nil :: ((Player) -> { [string]: boolean })?
+
+local function statusOf(player: Player)
+	return if TravelService.status then TravelService.status(player) else nil
+end
+
 local function begin(player: Player, kind: string, destination: CFrame): string?
 	local position = MovementService.positionOf(player)
 	if not position then
 		return "NoCharacter"
 	end
 	local travel = travelOf(player)
-	local ok, reason = TravelRules.start(travel, kind, now(), position, nil)
+	local ok, reason = TravelRules.start(travel, kind, now(), position, statusOf(player))
 	if not ok then
 		return reason
 	end
@@ -62,12 +70,14 @@ local function begin(player: Player, kind: string, destination: CFrame): string?
 			return -- (cancelled, or they left)
 		end
 		local at = MovementService.positionOf(player) or position
-		local done, result = TravelRules.finish(travel, now(), at, nil)
+		local done, result = TravelRules.finish(travel, now(), at, statusOf(player))
 		if done then
 			player:SetAttribute(`{result}ReadyAt`, travel.readyAt[result])
 			MovementService.Teleport(player, destinations[player])
 		elseif result == "Moved" then
 			Notice.send(player, "Travel cancelled: you moved.", "Error")
+		elseif result == "Blocked" then
+			Notice.send(player, "Travel cancelled: you can't travel while you're a Suspect or carrying a sack.", "Error")
 		end
 		destinations[player] = nil
 	end)
@@ -102,6 +112,12 @@ function actions.Cancel(player, _data, _arg)
 	TravelRules.cancel(travelOf(player))
 	destinations[player] = nil
 	return nil
+end
+
+-- Stops a channel under way (a steal started).
+function TravelService.Cancel(player: Player)
+	TravelRules.cancel(travelOf(player))
+	destinations[player] = nil
 end
 
 -- Teleports a player now, with no channel (dev commands).
