@@ -2,9 +2,12 @@
 -- functions over plain tables, so they're tested (tests/growth.test.luau).
 --
 -- A tile is
---   { crop = cropId, progress = 0–1, harvestsLeft, regrowing, watered, fresh, leave }
+--   { crop = cropId, progress = 0–1, harvestsLeft, regrowing, watered, fresh, leave, yield }
 -- progress is the share of the current stage done: the first grow, or a
--- regrow for crops that give several harvests. Services settle growth from
+-- regrow for crops that give several harvests. yield: how many it gives
+-- when it's picked (6 carrots, 1 pumpkin ...: rolled when it's planted, and
+-- again for each regrow, from the crop's perPatch and the Field Level), so
+-- the patch can show them all while it grows. Services settle growth from
 -- elapsed time (FieldService online, every few seconds; DataService's
 -- welcome-back settle offline), so nothing ticks while a player is away.
 --   speed: 1 online (times weather, sprinklers, a Growth Boost);
@@ -14,8 +17,18 @@ local Growth = require(script.Parent.Config.Growth)
 
 local GrowthRules = {}
 
--- A new tile. fresh: the first crop on newly cleared land (+25% growth).
-function GrowthRules.plant(cropId: string, fresh: boolean?)
+-- How many a patch of this crop gives at a Field Level's `yield` (×
+-- perPatch): the whole part always, and one more if `roll` (0–1) falls
+-- under what's left (8.1 carrots: 8, and 9 one time in ten).
+function GrowthRules.rollYield(cropId: string, yield: number?, roll: number?): number
+	local exact = Crops.ById[cropId].perPatch * (yield or 1)
+	local whole = math.floor(exact + 1e-9)
+	return whole + (if (roll or 1) < exact - whole - 1e-9 then 1 else 0)
+end
+
+-- A new tile. fresh: the first crop on newly cleared land (+25% growth);
+-- yield: how many it'll give (default: the crop's perPatch).
+function GrowthRules.plant(cropId: string, fresh: boolean?, yield: number?)
 	local crop = Crops.ById[cropId]
 	assert(crop, `unknown crop {cropId}`)
 	return {
@@ -26,7 +39,20 @@ function GrowthRules.plant(cropId: string, fresh: boolean?)
 		watered = false,
 		fresh = fresh == true,
 		leave = false, -- the 🚩 "Leave in field" flag: Farmhands skip it
+		yield = yield or crop.perPatch,
 	}
+end
+
+-- How many the tile gives when it's picked.
+function GrowthRules.yieldOf(tile): number
+	return tile.yield or Crops.ById[tile.crop].perPatch
+end
+
+-- How many a thief can take from the tile at once: all of it, but only one
+-- at a time of the big ones (a pumpkin, a melon).
+function GrowthRules.carryOf(tile): number
+	local carry = Crops.ById[tile.crop].carry
+	return math.min(GrowthRules.yieldOf(tile), carry or math.huge)
 end
 
 -- Seconds the current stage takes at speed 1, before fresh soil.
@@ -80,8 +106,9 @@ function GrowthRules.water(tile): boolean
 end
 
 -- Picks a ripe tile. Returns ok and whether the plant stays (a crop that
--- regrows goes back to growing; anything else leaves the tile empty).
-function GrowthRules.harvest(tile): (boolean, boolean)
+-- regrows goes back to growing, giving `nextYield` next time; anything else
+-- leaves the tile empty). How many it gave: yieldOf, before picking.
+function GrowthRules.harvest(tile, nextYield: number?): (boolean, boolean)
 	if tile.progress < 1 then
 		return false, true
 	end
@@ -91,9 +118,23 @@ function GrowthRules.harvest(tile): (boolean, boolean)
 		tile.regrowing = true
 		tile.progress = 0
 		tile.watered = false
+		tile.yield = nextYield or Crops.ById[tile.crop].perPatch
 		return true, true
 	end
 	return true, false
+end
+
+-- A thief takes `count` off a ripe tile. If that's all of it, it's picked
+-- (as harvest); otherwise the rest stays ripe for the owner. Returns
+-- whether the plant stays (false: the tile is empty now).
+function GrowthRules.take(tile, count: number, nextYield: number?): boolean
+	local left = GrowthRules.yieldOf(tile) - count
+	if left > 0 then
+		tile.yield = left
+		return true
+	end
+	local _, stays = GrowthRules.harvest(tile, nextYield)
+	return stays
 end
 
 -- Harvests one seed gives over its whole life.
@@ -108,10 +149,17 @@ function GrowthRules.lifeSeconds(cropId: string): number
 	return crop.grow + (if crop.regrow then crop.regrow.times * crop.regrow.seconds else 0)
 end
 
--- Coins per tile-minute at base value, after the seed (docs §6.1).
-function GrowthRules.profitPerMinute(cropId: string): number
+-- Coins a patch gives at base value (a picking, for crops that regrow),
+-- at a Field Level's `yield` (default Level 1).
+function GrowthRules.patchValue(cropId: string, yield: number?): number
 	local crop = Crops.ById[cropId]
-	local profit = crop.value * GrowthRules.harvests(cropId) - crop.seed
+	return crop.value * crop.perPatch * (yield or 1)
+end
+
+-- Coins per tile-minute at base value, after the seed (docs §6.1).
+function GrowthRules.profitPerMinute(cropId: string, yield: number?): number
+	local crop = Crops.ById[cropId]
+	local profit = GrowthRules.patchValue(cropId, yield) * GrowthRules.harvests(cropId) - crop.seed
 	return profit / (GrowthRules.lifeSeconds(cropId) / 60)
 end
 

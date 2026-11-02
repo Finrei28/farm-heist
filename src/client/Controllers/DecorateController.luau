@@ -415,6 +415,18 @@ end
 
 local refreshDrawer
 
+-- What one of a display's slots holds, shown with the first crop it can
+-- take ("72🥕" for a Produce Crate, "1🌕" for a Velvet Pedestal).
+local function holds(def): string
+	local low = StoreLayout.rarityRange(def.id)
+	for _, crop in Crops.List do
+		if crop.rarity == low then
+			return `{def.patches * crop.perPatch}{crop.icon}`
+		end
+	end
+	return tostring(def.patches)
+end
+
 local function card(order: number, itemId: string)
 	local def = Store.ITEMS[itemId]
 	local locked = def.level > level
@@ -430,7 +442,7 @@ local function card(order: number, itemId: string)
 	local detail
 	if def.kind == "Display" then
 		local low, high = StoreLayout.rarityRange(itemId)
-		detail = `{def.slots}×{def.units} · {if low == high then low else `{low}–{high}`}`
+		detail = `{def.slots}×{holds(def)} · {if low == high then low else `{low}–{high}`}`
 	elseif def.kind == "Checkout" then
 		detail = `a shopper every {def.serve} s` .. (if def.staffed then " (staffed)" else "")
 	else

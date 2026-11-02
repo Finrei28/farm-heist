@@ -46,6 +46,12 @@ local function tilePart(index: number, tile: number): BasePart
 	return PlotService.model(index).Field[`Tile{tile}`]
 end
 
+-- How many a new patch (or a regrowing one's next picking) of this crop
+-- will give on this farm: its perPatch at the Field Level, the extra rolled.
+local function rollYield(data, cropId: string): number
+	return GrowthRules.rollYield(cropId, LandRules.fieldYield(data.land), math.random())
+end
+
 -- Redraws a player's whole field and land on their farm.
 function FieldService.Render(player: Player)
 	local index = PlotService.plotOf(player)
@@ -155,7 +161,7 @@ function actions.Plant(player, data, arg)
 	settle(player, data, true)
 	local fresh = data.land.fresh[key] == true
 	data.land.fresh[key] = nil
-	data.field[key] = GrowthRules.plant(cropId, fresh)
+	data.field[key] = GrowthRules.plant(cropId, fresh, rollYield(data, cropId))
 	local part = tilePart(index, tile)
 	FarmArt.setTileOpen(part, true, false)
 	FarmArt.showTile(part, data.field[key], now())
@@ -196,21 +202,22 @@ function actions.Harvest(player, data, arg)
 	if not GrowthRules.isRipe(planted) then
 		return "NotRipe"
 	end
-	if not BarnRules.hasRoom(data.inventory, data.silo, 1) then
+	local count = GrowthRules.yieldOf(planted)
+	if not BarnRules.hasRoom(data.inventory, data.silo, count) then
 		Notice.send(player, "Barn full! Sell some crops to make room.", "Error")
 		return "BarnFull"
 	end
 	local regrowing = planted.regrowing
-	local _, stays = GrowthRules.harvest(planted)
+	local _, stays = GrowthRules.harvest(planted, rollYield(data, planted.crop))
 	if not stays then
 		data.field[key] = nil
 	end
-	BarnRules.addCrops(data.inventory, BarnRules.key(planted.crop), 1)
-	data.stats.harvested += 1
+	BarnRules.addCrops(data.inventory, BarnRules.key(planted.crop), count)
+	data.stats.harvested += count
 	FarmArt.showTile(tilePart(index, tile), data.field[key], now())
 	Analytics.step(player, data, "FirstHarvest")
 	DataService.AddXp(player, ProgressionRules.harvestXp(planted.crop, regrowing))
-	return nil
+	return nil, { crop = planted.crop, count = count }
 end
 
 -- A Farmhand's harvest of a ripe tile (not one flagged to stay), replanted
@@ -226,13 +233,14 @@ function FieldService.WorkerHarvest(player: Player, data, key: string, replant: 
 		return "Leave"
 	elseif not GrowthRules.isRipe(planted) then
 		return "NotRipe"
-	elseif not BarnRules.hasRoom(data.inventory, data.silo, 1) then
+	elseif not BarnRules.hasRoom(data.inventory, data.silo, GrowthRules.yieldOf(planted)) then
 		return "BarnFull"
 	end
 	local regrowing = planted.regrowing
-	local _, stays = GrowthRules.harvest(planted)
-	BarnRules.addCrops(data.inventory, BarnRules.key(planted.crop), 1)
-	data.stats.harvested += 1
+	local count = GrowthRules.yieldOf(planted)
+	local _, stays = GrowthRules.harvest(planted, rollYield(data, planted.crop))
+	BarnRules.addCrops(data.inventory, BarnRules.key(planted.crop), count)
+	data.stats.harvested += count
 	if not stays then
 		data.field[key] = nil
 		local seed = nil
@@ -249,7 +257,7 @@ function FieldService.WorkerHarvest(player: Player, data, key: string, replant: 
 		if seed and BarnRules.takeSeed(data.inventory, seed) then
 			local fresh = data.land.fresh[key] == true
 			data.land.fresh[key] = nil
-			data.field[key] = GrowthRules.plant(seed, fresh)
+			data.field[key] = GrowthRules.plant(seed, fresh, rollYield(data, seed))
 		end
 	end
 	FarmArt.showTile(tilePart(index, tonumber(key) :: number), data.field[key], now())
@@ -257,30 +265,34 @@ function FieldService.WorkerHarvest(player: Player, data, key: string, replant: 
 	return nil, if not stays and replant ~= "none" and not data.field[key] then "NoSeeds" else nil
 end
 
--- The ripe crop on a tile (growth settled up to now), or nil: what a thief
--- would get (CrimeService).
-function FieldService.RipeCrop(player: Player, data, key: string): string?
+-- The ripe crop on a tile (growth settled up to now) and how many a thief
+-- would get (CrimeService), or nil.
+function FieldService.RipeCrop(player: Player, data, key: string): (string?, number)
 	settle(player, data, true)
 	local tile = data.field[key]
-	return if tile and GrowthRules.isRipe(tile) then tile.crop else nil
+	if tile and GrowthRules.isRipe(tile) then
+		return tile.crop, GrowthRules.carryOf(tile)
+	end
+	return nil, 0
 end
 
 -- A thief takes the ripe crop on a tile (CrimeService has checked the rest):
--- like a harvest, but into their hands, and no XP. Regrowing plants only lose
--- their fruit. Returns the crop id and its barn key, or nil.
-function FieldService.TakeRipe(player: Player, data, key: string): (string?, string?)
+-- like a harvest, but into their hands, and no XP. They take the whole patch,
+-- or one of the big ones (the rest stays ripe); regrowing plants only lose
+-- their fruit. Returns the crop id, its barn key and how many, or nil.
+function FieldService.TakeRipe(player: Player, data, key: string): (string?, string?, number)
 	settle(player, data, true)
 	local index = PlotService.plotOf(player)
 	local tile = data.field[key]
 	if not index or not tile or not GrowthRules.isRipe(tile) then
-		return nil, nil
+		return nil, nil, 0
 	end
-	local _, stays = GrowthRules.harvest(tile)
-	if not stays then
+	local count = GrowthRules.carryOf(tile)
+	if not GrowthRules.take(tile, count, rollYield(data, tile.crop)) then
 		data.field[key] = nil
 	end
 	FarmArt.showTile(tilePart(index, tonumber(key) :: number), data.field[key], now())
-	return tile.crop, BarnRules.key(tile.crop)
+	return tile.crop, BarnRules.key(tile.crop), count
 end
 
 -- Ripe tiles Farmhands could harvest now (not flagged to stay), in tile order.

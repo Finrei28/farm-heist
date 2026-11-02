@@ -97,7 +97,7 @@ local chip, chipLabel = UI.tag({ name = "Location", text = "Cloverdale", autoWid
 	anchor = Vector2.new(0.5, 0), position = UDim2.new(0, 95, 0, 70), parent = topLeft })
 
 local function updateState(state)
-	coinsLabel.Text = UI.formatNumber(state.coins)
+	coinsLabel.Text = UI.formatShort(state.coins)
 	local level, into, span = ProgressionRules.progress(state.xp)
 	levelLabel.Text = tostring(level)
 	railFill.Size = UDim2.fromScale(if span then math.clamp(into / span, 0, 1) else 1, 1)

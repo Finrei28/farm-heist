@@ -97,12 +97,13 @@ local function armReach(character: Model, side: string): (number, Vector3?)
 	return reach, shoulder.C0.Position
 end
 
--- The stolen crop a thief carries, held up over their head in both hands
--- (CrimeService; nil takes it away). It rests just over their head (or
--- their hat), welded to their torso; LeftHold and RightHold attachments
--- on its sides are where each client's PoseController puts the hands,
--- placed low enough for this character's arms to reach.
-function CrimeArt.showCarried(character: Model, cropId: string?)
+-- The stolen crops a thief carries, `count` of them (a whole patch: a bunch
+-- of carrots, a basket of tomatoes, a pumpkin), held up over their head in
+-- both hands (CrimeService; nil takes them away). They rest just over their
+-- head (or their hat), welded to their torso; LeftHold and RightHold
+-- attachments on the sides are where each client's PoseController puts the
+-- hands, placed low enough for this character's arms to reach.
+function CrimeArt.showCarried(character: Model, cropId: string?, count: number?)
 	local old = character:FindFirstChild("CarriedCrop")
 	if old then
 		old:Destroy()
@@ -112,7 +113,7 @@ function CrimeArt.showCarried(character: Model, cropId: string?)
 	if not cropId or not torso or not torso:IsA("BasePart") or not head or not head:IsA("BasePart") then
 		return
 	end
-	local model, core = ProduceArt.build(cropId, CFrame.new())
+	local model, core = ProduceArt.build(cropId, CFrame.new(), count)
 	model.Name = "CarriedCrop"
 	-- a little bigger than life, to be seen across a farm
 	for _, p in model:GetDescendants() do

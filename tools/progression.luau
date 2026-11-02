@@ -3,15 +3,16 @@
 --   lune run tools/progression daily      just one
 --   lune run tools/progression daily power=2.7   try another XP curve (Config/Progression XP_POWER)
 -- Plays a farm minute by minute with the game's real rules and tables
--- (growth, Barley's restocks, Land Permits, market prices, Warehouse and
--- Store Levels, workers with their levels, XP, training, wages and slots,
--- the offline pipeline) and a sensible player: harvest what's ripe, sell
--- it by truck, replant the best crop they can buy, clear land as soon as a
--- permit and the fee allow, level the warehouse and the store, hire into
--- every open slot and train workers when their bar is full, each with a
--- cushion of coins kept back. Prints when each milestone comes, then checks
--- the design doc's pacing targets (§4.1b, §4.6, §4.9, §6.2) and that wages
--- stay a small share of income. Exits with code 1 if a target is missed.
+-- (growth, Barley's restocks, Land Permits, Field Levels, market prices,
+-- Warehouse and Store Levels, workers with their levels, XP, training, wages
+-- and slots, the offline pipeline) and a sensible player: harvest what's
+-- ripe, sell it by truck, replant the best crop they can buy, clear land as
+-- soon as a permit and the fee allow, level the field, the warehouse and the
+-- store, hire into every open slot and train workers when their bar is full,
+-- each with a cushion of coins kept back. Prints when each milestone comes,
+-- then checks the design doc's pacing targets (§4.1b, §4.1c, §4.6, §4.9,
+-- §6.2) and that wages stay a small share of income. Exits with code 1 if a
+-- target is missed.
 --
 -- Left out (so real players are a little slower or faster): raids, store
 -- sales (they'd speed it up) and decor (it'd slow it down), auctions (the
@@ -52,6 +53,12 @@ local TRAIN_CUSHION = 3 -- ... training at this × the fee, hiring at 5 × the f
 local CREW = { "Farmhand", "ShedHand", "Sorter", "Packer", "Loader", "Driver" } -- (the store's crew sells nothing here: no store sales)
 
 local MILESTONE_LEVELS = { 2, 3, 5, 10, 12, 14, 16, 20, 24, 28, 32 }
+local rng = Harness.Random.new(7) -- (the Field Level's extra crop, rolled at planting)
+
+-- How many a patch of this crop planted now will give.
+local function rollYield(p, cropId: string): number
+	return GrowthRules.rollYield(cropId, LandRules.fieldYield(p.land), rng:NextNumber())
+end
 
 -- Crops best first by profit per tile-minute.
 local byProfit = table.clone(Crops.List)
@@ -74,10 +81,10 @@ local function newPlayer()
 	return {
 		coins = Settings.START_COINS, xp = 0, level = 1,
 		seeds = table.clone(Settings.START_SEEDS), seedStock = { index = -1, bought = {} },
-		land = { cleared = {} }, tiles = {}, barn = {}, workers = {},
+		land = { cleared = {}, fieldLevel = 1 }, tiles = {}, barn = {}, workers = {},
 		warehouseLevel = 1, storeLevel = 1, cropdex = {},
 		day = { income = 0, wages = 0, sunk = 0 },
-		reached = { warehouse = {}, store = {} },
+		reached = { warehouse = {}, store = {}, field = {} },
 	}
 end
 
@@ -128,8 +135,8 @@ local function harvestTile(p, key, tile, t, byWorker, online)
 	if online then
 		addXp(p, xp)
 	end
-	sell(p, tile.crop, 1, t, online)
-	local _, stays = GrowthRules.harvest(tile)
+	sell(p, tile.crop, GrowthRules.yieldOf(tile), t, online)
+	local _, stays = GrowthRules.harvest(tile, rollYield(p, tile.crop))
 	if not stays then
 		p.tiles[key] = nil
 	end
@@ -169,7 +176,17 @@ local function spend(p, day, log)
 			log(`permit {#p.land.cleared} used (block {block}, {LandRules.risk(block)})`)
 		end
 	end
-	-- The next Warehouse Level, then the next Store Level, each with a cushion.
+	-- The next Field Level (more from every patch), then the next Warehouse
+	-- Level, then the next Store Level, each with a cushion.
+	if LandRules.cannotUpgradeField(p.land, p.level, p.coins) == nil then
+		local nextLevel = LandRules.fieldLevel(p.land.fieldLevel + 1)
+		if p.coins >= nextLevel.cost * CUSHION then
+			sink(p, nextLevel.cost)
+			LandRules.upgradeField(p.land)
+			p.reached.field[p.land.fieldLevel] = day
+			log(`Field Level {p.land.fieldLevel}`)
+		end
+	end
 	if p.warehouseLevel < WarehouseRules.MAX_LEVEL then
 		local nextLevel = WarehouseRules.level(p.warehouseLevel + 1)
 		if p.level >= nextLevel.farmLevel and p.coins >= nextLevel.cost * CUSHION then
@@ -250,7 +267,7 @@ local function onlineMinute(p, t, day, log)
 			if fresh then
 				p.freshTiles[key] = nil
 			end
-			p.tiles[key] = GrowthRules.plant(cropId, fresh)
+			p.tiles[key] = GrowthRules.plant(cropId, fresh, rollYield(p, cropId))
 		end
 	end
 	-- Wages, and the crew learns (online they're kept busy).
@@ -289,6 +306,7 @@ local function away(p, seconds, leftAt)
 	local info = WarehouseRules.level(p.warehouseLevel)
 	local state = PipelineRules.newState()
 	state.tiles, state.seeds, state.barn = p.tiles, p.seeds, p.barn
+	state.fieldYield = LandRules.fieldYield(p.land)
 	local speeds, wages = WorkerRules.crew(p.workers, { conveyors = info.conveyors })
 	state.speeds, state.wages = speeds, wages
 	state.holdSize = info.hold
@@ -387,7 +405,7 @@ local function run(profile)
 		t += awayFor
 		local average, best = averageLevel(p)
 		table.insert(daysLog, { day = day, income = p.day.income, wages = p.day.wages, sunk = p.day.sunk, coins = p.coins, level = p.level,
-			permits = #p.land.cleared, workerLevel = average, bestWorker = best, warehouse = p.warehouseLevel, store = p.storeLevel })
+			permits = #p.land.cleared, workerLevel = average, bestWorker = best, warehouse = p.warehouseLevel, store = p.storeLevel, field = p.land.fieldLevel })
 	end
 	return { player = p, events = events, reached = reached, days = daysLog }
 end
@@ -442,12 +460,17 @@ for _, profile in PROFILES do
 		table.insert(ladder, `Lv {level}: warehouse day {p.reached.warehouse[level] or "-"}, store day {p.reached.store[level] or "-"}`)
 	end
 	print(`  levels  {table.concat(ladder, " · ")}`)
+	local fields = {}
+	for level = 2, LandRules.MAX_FIELD_LEVEL do
+		table.insert(fields, `{level}: day {p.reached.field[level] or "-"}`)
+	end
+	print(`  Field Levels  {table.concat(fields, " · ")}`)
 	local last = result.days[#result.days]
 	local sunk = 0
 	for _, d in result.days do
 		sunk += d.sunk
 	end
-	print(`  after {DAYS} days: Lv {last.level}, {last.permits}/12 permits used, Warehouse {last.warehouse}, Store {last.store}, {fmt(last.coins)} coins (sank {fmt(sunk)})`)
+	print(`  after {DAYS} days: Lv {last.level}, {last.permits}/12 permits used, Field {last.field}, Warehouse {last.warehouse}, Store {last.store}, {fmt(last.coins)} coins (sank {fmt(sunk)})`)
 	local line, crew = {}, {}
 	for _, d in result.days do
 		if table.find({ 1, 3, 7, 14, 21, 28, 35 }, d.day) then
@@ -481,6 +504,10 @@ for _, profile in PROFILES do
 		check(d14.workerLevel >= 5 and d14.workerLevel <= 8, `workers average Level 5–8 by day 14 ({string.format("%.1f", d14.workerLevel)})`)
 		check(d28.workerLevel >= 6.5 and d28.bestWorker >= 8, `about 7 by day 28, the first hires at 8 or more ({string.format("%.1f", d28.workerLevel)}, best {d28.bestWorker})`)
 		check(d14.bestWorker < 10, `nobody at Level 10 by day 14: a full crew is a long-term goal (best {d14.bestWorker})`)
+		local f2, f3, f5 = p.reached.field[2], p.reached.field[3], p.reached.field[5]
+		check(f2 ~= nil and f2 <= 2, `Field Level 2 in the first two days (day {f2 or "-"})`)
+		check(f3 ~= nil and f3 >= 2 and f3 <= 7, `Field Level 3 in the first week (day {f3 or "-"})`)
+		check(f5 == nil or f5 >= 21, `Field Level 5 not before week 4: a long-term goal (day {f5 or "-"})`)
 	end
 	check(worstDay == nil or worstDay.wages < worstDay.income * 0.15, "wages stay under 15% of income every day")
 end

@@ -127,7 +127,7 @@ local function actionFor(part: BasePart): (string?, string)
 	end
 	if cropId then
 		local crop = Crops.ById[cropId]
-		local name = `{crop.icon} {crop.name}`
+		local name = `{crop.icon} {Crops.count(cropId, part:GetAttribute("Yield") or crop.perPatch)}`
 		if part:GetAttribute("Stage") == "Ripe" then
 			return "Harvest", `{name} · Ripe!`
 		end
@@ -212,7 +212,7 @@ local function act()
 	local crop = cropId and Crops.ById[cropId]
 	if result.ok then
 		if kind == "Harvest" and crop then
-			floatAtButton(`+1 {crop.icon}`, C.gold)
+			floatAtButton(`+{result.result and result.result.count or 1} {crop.icon}`, C.gold)
 		elseif kind == "Water" then
 			floatAtButton("💧", C.sky)
 		elseif kind == "Plant" and crop then

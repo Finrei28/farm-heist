@@ -896,7 +896,7 @@ function StoreArt.showDisplay(model: Model, id: string, entry, prices)
 	end
 	for n = 1, def.slots do
 		local slot = entry.slots and entry.slots[n]
-		fillSlot(item, n, slot, def.units)
+		fillSlot(item, n, slot, def.patches * (if slot and slot.crop then Crops.ById[slot.crop].perPatch else 1))
 		local card = item:FindFirstChild(`Tag{n}`)
 		if card then
 			local gui = card:FindFirstChildOfClass("SurfaceGui")

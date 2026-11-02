@@ -92,10 +92,28 @@ return function(spec, harness)
 				state.tiles[tostring(tile)] = GrowthRules.plant("Carrot")
 			end
 			state.seeds.Carrot = 100
-			state.barnRoom = 5
+			state.barnRoom = 33 -- (5 patches of 6 carrots, and not a sixth)
 			state.speeds.Field = 30
 			local report = PipelineRules.simulate(state, HOUR, 1, NOW)
-			expect(report.harvested).toBe(5)
+			expect(report.harvested).toBe(30)
+		end)
+		it("pick a whole patch at a time, more of them at a higher Field Level", function()
+			local function run(fieldYield)
+				local state = PipelineRules.newState()
+				for tile = 1, 10 do
+					state.tiles[tostring(tile)] = GrowthRules.plant("Carrot")
+					GrowthRules.advance(state.tiles[tostring(tile)], 60, 1)
+				end
+				state.seeds.Carrot = 1000
+				state.fieldYield = fieldYield
+				state.speeds.Field = 30
+				local report = PipelineRules.simulate(state, 20 * 60, 1, NOW)
+				return report.harvested
+			end
+			-- the first 10 patches were planted with 6 each; what Farmhands replant gives 9 at ×1.5
+			local plain, prize = run(1), run(1.5)
+			expect(plain % 6).toBe(0)
+			expect(prize).toBeGreaterThan(plain * 1.4)
 		end)
 	end)
 
@@ -109,10 +127,10 @@ return function(spec, harness)
 		it("ship everything at the locked price when a Driver is hired", function()
 			local state = PipelineRules.newState()
 			crew(state)
-			state.barn.Carrot = 240 -- 20 crates
+			state.barn.Carrot = 1440 -- 20 crates of 72
 			local report = PipelineRules.simulate(state, HOUR, 1, NOW, flat(20))
 			expect(report.shippedCrates).toBe(20)
-			expect(report.truckCoins).toBe(240 * 20)
+			expect(report.truckCoins).toBe(1440 * 20)
 			expect(#report.runs).toBe(5)
 			expect(report.runs[1].arriveAt - report.runs[1].at).toBe(30)
 			expect(report.worked.Truck).toBeGreaterThan(0)
@@ -129,7 +147,7 @@ return function(spec, harness)
 			crew(state)
 			state.trucks[1].driver = false
 			state.holdSize = 3
-			state.barn.Carrot = 240
+			state.barn.Carrot = 1440
 			local report = PipelineRules.simulate(state, HOUR, 1, NOW, flat(20))
 			expect(report.shippedCrates).toBe(0)
 			expect(#state.trucks[1].bed).toBe(4)
@@ -142,7 +160,7 @@ return function(spec, harness)
 			state.speeds.Load = 40
 			state.trucks[1].roundTrip = 600 -- (truck 1 is still out when the next crates are ready)
 			state.trucks[2] = { crates = 4, roundTrip = 600, backAt = 0, driver = true, bed = {} }
-			state.barn.Carrot = 96 -- 8 crates
+			state.barn.Carrot = 576 -- 8 crates
 			local report = PipelineRules.simulate(state, 10 * 60, 1, NOW, flat(20))
 			local used = {}
 			for _, run in report.runs do
@@ -154,8 +172,8 @@ return function(spec, harness)
 			local state = PipelineRules.newState()
 			crew(state)
 			state.minPrice = 1.0
-			state.barn.Carrot = 240
-			local report = PipelineRules.simulate(state, HOUR, 1, NOW, flat(15)) -- below the base 18
+			state.barn.Carrot = 1440
+			local report = PipelineRules.simulate(state, HOUR, 1, NOW, flat(25)) -- below the base 30
 			expect(report.shippedCrates).toBe(0)
 		end)
 		it("split crates between truck and store as routed, and leave kept crops alone", function()
@@ -163,13 +181,13 @@ return function(spec, harness)
 			crew(state)
 			state.routes.Carrot = 0.5
 			state.routes.Tomato = "Keep"
-			state.barn.Carrot = 240
+			state.barn.Carrot = 1440
 			state.barn.Tomato = 40
 			local report = PipelineRules.simulate(state, HOUR, 1, NOW, flat(20))
 			expect(report.crates).toBe(20)
 			expect(report.shippedCrates).toBe(8) -- 10 for the truck: two full loads, 2 crates waiting
 			expect(#state.hold + #state.trucks[1].bed).toBe(2)
-			expect(state.stockroom.Carrot).toBe(120)
+			expect(state.stockroom.Carrot).toBe(720)
 			expect(state.barn.Tomato).toBe(40)
 		end)
 		it("send store crates to the truck once the stockroom is full", function()
@@ -177,9 +195,9 @@ return function(spec, harness)
 			crew(state)
 			state.routes.Carrot = 0
 			state.stockroomRoom = 2
-			state.barn.Carrot = 48
+			state.barn.Carrot = 288
 			PipelineRules.simulate(state, HOUR, 1, NOW, flat(20))
-			expect(state.stockroom.Carrot).toBe(24)
+			expect(state.stockroom.Carrot).toBe(144)
 		end)
 		it("grade the crew's share of crates A", function()
 			local state = PipelineRules.newState()
@@ -187,7 +205,7 @@ return function(spec, harness)
 			state.trucks[1].driver = false
 			state.holdSize = 100
 			state.gradeA = 0.5
-			state.barn.Carrot = 120
+			state.barn.Carrot = 720
 			PipelineRules.simulate(state, HOUR, 1, NOW, flat(20))
 			local a = 0
 			for _, crate in state.hold do
@@ -211,7 +229,7 @@ return function(spec, harness)
 			local state = PipelineRules.newState()
 			state.speeds.Shed = 4
 			state.trucks[1].driver = true
-			state.barn.Carrot = 48
+			state.barn.Carrot = 288
 			local report = PipelineRules.simulate(state, HOUR, 1, NOW, flat(20))
 			expect(report.shippedCrates).toBe(4)
 			expect(report.worked.Shed).toBeGreaterThan(0)
@@ -222,15 +240,15 @@ return function(spec, harness)
 		it("sells from the displays at your price; a silly price sells less", function()
 			local function run(price)
 				local state = PipelineRules.newState()
-				state.shelves.Carrot = 40
+				state.shelves.Carrot = 240
 				state.shop.prices.Carrot = price
-				return PipelineRules.simulate(state, HOUR, 1, NOW, flat(18))
+				return PipelineRules.simulate(state, HOUR, 1, NOW, flat(30))
 			end
-			local fair, silly = run(18), run(60)
+			local fair, silly = run(30), run(100)
 			expect(fair.shopUnits).toBeGreaterThan(silly.shopUnits)
-			expect(fair.shopCoins).toBe(fair.shopUnits * 18)
+			expect(fair.shopCoins).toBe(fair.shopUnits * 30)
 			expect(fair.sold.Carrot).toBe(fair.shopUnits)
-			expect(fair.shopUnits <= 40).toBe(true)
+			expect(fair.shopUnits <= 240).toBe(true)
 		end)
 		it("a store with only Registers needs a Cashier", function()
 			local state = PipelineRules.newState()
@@ -247,21 +265,22 @@ return function(spec, harness)
 		it("a Greeter brings more shoppers", function()
 			local function run(boost)
 				local state = PipelineRules.newState()
-				state.shelves.Carrot = 1000
-				state.shop.capacity = 1000
-				state.shop.prices.Carrot = 18
+				state.shelves.Carrot = 60_000
+				state.shop.capacity = 10_000
+				state.shop.prices.Carrot = 30
 				state.shop.boost = boost
-				return PipelineRules.simulate(state, 2 * HOUR, 1, NOW, flat(18)).shopUnits
+				return PipelineRules.simulate(state, 2 * HOUR, 1, NOW, flat(30)).shopUnits
 			end
 			expect(run(0.25)).toBeGreaterThan(run(0) * 1.15)
 		end)
-		it("Stockers fill displays from the stockroom, up to capacity", function()
+		it("Stockers fill displays from the stockroom, up to capacity (in patches' worth)", function()
 			local state = PipelineRules.newState()
 			state.stockroom.Carrot = 500
 			state.speeds.Shelves = 40
-			local report = PipelineRules.simulate(state, 10 * 60, 1, NOW, flat(18))
-			expect(state.shelves.Carrot).toBe(state.shop.capacity)
-			expect(report.stocked).toBe(state.shop.capacity)
+			local report = PipelineRules.simulate(state, 10 * 60, 1, NOW, flat(30))
+			expect(state.shelves.Carrot).toBe(state.shop.capacity * 6)
+			expect(report.stocked).toBe(state.shop.capacity * 6)
+			expect(report.stockedPatches).toBeNear(state.shop.capacity, 1e-9)
 		end)
 	end)
 

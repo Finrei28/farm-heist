@@ -19,6 +19,30 @@ Follow-ups: <what to test next time>
 
 ## Sessions
 
+### 2026-11-02 · a patch gives several, coins ×10, Field Levels · build: this session's yield change
+Testers: Claude, driving Studio · Setup: edit mode for a gallery of all 22 crops ripe on a tilled tile (as a patch comes, and a bumper patch) and what a thief carries, then solo Play on a fresh v2 save (`/level 32`, `/field 1–5`, `/plant`, `/grow ripe`, `/carry`) · Lag: 0 (local) · Screenshots: [playtest/2026-11-02-yield/](playtest/2026-11-02-yield/)
+
+| Check | Result | OK? | Notes |
+|---|---|---|---|
+| Every ripe patch, by eye | rows on the ridges, every crop it gives shown ([01](playtest/2026-11-02-yield/01-patches-common.jpg), [02](playtest/2026-11-02-yield/02-patches-uncommon.jpg), [03](playtest/2026-11-02-yield/03-patches-rare.jpg), [04](playtest/2026-11-02-yield/04-patches-epic.jpg), [05](playtest/2026-11-02-yield/05-patches-legendary-mythic.jpg)) | ✓ | fixed: the ripe glow ring (a puddle of white or rarity colour under the rows → sparkles from the whole patch), wheat (walls of bread → baguettes → yellow figures → sheaves of crossing stalks pinched at the twine), cobs like bananas (→ out of green husks, tassels), peppers hidden in green balls, melons with no stripes (built across the wrong axis), the Moonmelon blown white, tiny blueberries and strawberries, pale onions like garlic, small lettuces, the Crystal Rose and Phoenix Pepper too small for Mythics (the pepper a stack of cylinders → a long chilli curling to its glowing tip); bushes and canopies now leafy clumps, not balls |
+| What a thief carries | a whole patch: 6 carrots tied, 3 sheaves, 10 potatoes in a crate, 4 lettuces, 6 cobs, 7 onions on a string, 4 punnets on a tray, baskets of tomatoes, peppers, pods, dragonfruit, grapes, starfruit, golden apples; 2 pineapples; a pumpkin on its own ([06](playtest/2026-11-02-yield/06-carried-common-uncommon.jpg), [07](playtest/2026-11-02-yield/07-carried-rare-epic.jpg)) | ✓ | peppers tumbled like bananas → standing up; the corn bunch's cream twine like a plate → brown |
+| Held up in Play | 6 carrots, a tray of 4 punnets, 10 potatoes, 4 peppers over an R15 avatar's head, both hands on them; the sign says how many ([17](playtest/2026-11-02-yield/17-carry-6-carrots.jpg), [18](playtest/2026-11-02-yield/18-carry-strawberry-tray.jpg)) | ✓ | "4 punnets of strawberries · Get home!" wrapped: the sign is wider |
+| Field Levels 2–5 | composted soil and the compost bin, raised beds, drip lines and taps, gold caps and the PRIZE FIELD sign ([08](playtest/2026-11-02-yield/08-field-level-2-compost.jpg)–[14](playtest/2026-11-02-yield/14-compost-bin.jpg)) | ✓ | grass showed between patches inside the beds → soil under them; the compost heap was black |
+| Harvest | a Field Level 2 carrot patch: "🥕 7 carrots · Ripe!", the Barn then 7 / 1,200 crops, "the truck pays 29 each now" | ✓ | (6 × 1.1: the extra rolled) |
+| The Barn's Field tab | Level 1: the next level's card ("+10% crops from every patch you plant: 6 or 7 carrots a patch, 1 pumpkin, sometimes 2"), Upgrade 50,000, the ladder; Upgrade spent 50,000 and said "Field Level 2: Composted soil! Crops you plant from now on give 10% more."; the soil darkened ([15](playtest/2026-11-02-yield/15-barn-field-tab.jpg), [16](playtest/2026-11-02-yield/16-field-upgraded.jpg)); at Level 5 "the top … (9 carrots a patch)" ([20](playtest/2026-11-02-yield/20-field-tab-top.jpg)) | ✓ | "12,000,000" overflowed its stamp: it shrinks to fit |
+| Barley's seeds | "🥕×6 a patch · ~30 each", "×3 a patch · ~90 each" (wheat) under each seed | ✓ | (small text on the card, readable) |
+| The purse | 1,000 coins on a new save; 51,000 after `/coins` | ✓ | big amounts shorten ("12.3M") from a million |
+
+Not covered: the STEAL stamp's count and a real steal (2 players), a bumper pumpkin left behind for the owner, the offline Welcome back counts, a phone, a full 8×8 field's part count on a phone.
+
+**Would a new player understand it?**
+
+| What a new player saw | Now |
+|---|---|
+| "+1 🥕" from a patch the size of a room | "+7 🥕", and seven carrots were there to see |
+| A carrot seed "sells for ~18" | "🥕×6 a patch · ~30 each": one seed plants the whole patch |
+| One field forever | a Field tab with the next soil, what it gives in carrots and pumpkins, and its price |
+
 ### 2026-11-02 · carrying stolen crops, the bat, travel, flicker, trucks · build: this session's rework of week 5
 Testers: Claude, driving Studio · Setup: edit mode for a gallery of all 22 carried crops, solo Play for poses (one avatar, R15), then **Server & Clients with 2 players** (right the farmer, left the thief) · Lag: 0 (local) · Screenshots: [playtest/2026-11-02-carry/](playtest/2026-11-02-carry/)
 

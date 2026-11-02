@@ -26,6 +26,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage.Shared
+local CrateRules = require(Shared.CrateRules)
 local PlotLayout = require(Shared.PlotLayout)
 local Warehouse = require(Shared.Config.Warehouse)
 local WarehouseRules = require(Shared.WarehouseRules)
@@ -102,7 +103,7 @@ function YardArt.crate(crate, cframe: CFrame, parent: Instance): Model
 	end
 	local color = FarmArt.cropColor(crate.crop)
 	for i, offset in { Vector3.new(-0.7, 0, -0.6), Vector3.new(0.7, 0, -0.5), Vector3.new(0, 0, 0.7), Vector3.new(0, 0.5, 0) } do
-		if i <= math.ceil(crate.units / 3) then -- (an empty crate has none)
+		if i <= math.ceil(4 * crate.units / CrateRules.size(crate.crop) - 1e-9) then -- (as full as the crate is; an empty one has none)
 			ball("Produce", cframe * CFrame.new(offset + Vector3.new(0, CRATE.Y + 0.15, 0)), 1.2, { Color = color }, model)
 		end
 	end

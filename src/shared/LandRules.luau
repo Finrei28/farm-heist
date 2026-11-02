@@ -6,7 +6,8 @@
 -- Permits aren't stored: they're worked out from the level and the blocks
 -- already cleared, so they can't drift out of step. tests/land.test.luau.
 --
--- land (in the save) = { cleared = { block numbers }, clearing = { block, obstacles }? }
+-- land (in the save) = { cleared = { block numbers }, clearing = { block, obstacles }?,
+--   fresh = { ["tile"] = true }, fieldLevel = 1–5 }
 local Land = require(script.Parent.Config.Land)
 
 local LandRules = {}
@@ -184,6 +185,44 @@ function LandRules.finishClearing(land): number?
 	end
 	clearing.obstacles = 1
 	return LandRules.clearObstacle(land)
+end
+
+------------------------------------------------------------------------
+-- Field Levels (§4.1c): more crops from every patch
+
+LandRules.MAX_FIELD_LEVEL = #Land.FIELD_LEVELS
+
+-- A Field Level's entry in Land.FIELD_LEVELS (clamped to the ladder).
+function LandRules.fieldLevel(n: number?)
+	return Land.FIELD_LEVELS[math.clamp(math.floor(n or 1), 1, LandRules.MAX_FIELD_LEVEL)]
+end
+
+-- How many a patch gives on this land, × the crop's perPatch.
+function LandRules.fieldYield(land): number
+	return LandRules.fieldLevel(land.fieldLevel).yield
+end
+
+-- Whether the field can go up a level now: nil, or why not:
+-- "MaxLevel" · "NeedLevel" · "NoCoins".
+function LandRules.cannotUpgradeField(land, farmLevel: number, coins: number): string?
+	local level = land.fieldLevel or 1
+	if level >= LandRules.MAX_FIELD_LEVEL then
+		return "MaxLevel"
+	end
+	local nextLevel = LandRules.fieldLevel(level + 1)
+	if farmLevel < nextLevel.farmLevel then
+		return "NeedLevel"
+	elseif coins < nextLevel.cost then
+		return "NoCoins"
+	end
+	return nil
+end
+
+-- Goes up a Field Level (the caller has taken the coins). Crops already in
+-- the ground keep what they were planted with; the next ones get more.
+function LandRules.upgradeField(land): number
+	land.fieldLevel = math.min((land.fieldLevel or 1) + 1, LandRules.MAX_FIELD_LEVEL)
+	return land.fieldLevel
 end
 
 return LandRules

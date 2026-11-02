@@ -4,6 +4,8 @@
 --   Land:  the 4×4 block map (farmhouse at the bottom, back fence at the
 --          top), Land Permits waiting, and which blocks one can go on
 --          (Safer / Riskier), each with a Clear button.
+--   Field: the next Field Level on blueprint paper (better soil: more from
+--          every patch), and the ladder.
 local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -27,7 +29,7 @@ local LandAction = Remotes.func("LandAction")
 
 local BarnController = {}
 
-local panel = UI.panel("Barn", { tabs = { "Crops", "Seeds", "Land" }, accent = C.red, toolbar = true, width = 560, height = 400 })
+local panel = UI.panel("Barn", { tabs = { "Crops", "Seeds", "Land", "Field" }, accent = C.red, toolbar = true, width = 560, height = 400 })
 local listLayout = make("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder, Parent = panel.list })
 
 -- A crate label: a stencilled name, a handwritten note, the count stamped
@@ -51,10 +53,10 @@ local function row(order: number, icon: string, title: string, detail: string, r
 		AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.fromOffset(76, 32),
 		BackgroundColor3 = C.kraft, Rotation = -4, ZIndex = 23, Parent = frame,
 	}, { UI.corner(4), UI.stroke(C.red, 2) })
-	UI.label({
-		Size = UDim2.fromScale(1, 1), Font = UI.HEAD, TextSize = 19, TextColor3 = C.red, TextXAlignment = Enum.TextXAlignment.Center,
+	UI.fit(UI.label({
+		Size = UDim2.new(1, -6, 1, 0), Position = UDim2.fromOffset(3, 0), Font = UI.HEAD, TextSize = 19, TextColor3 = C.red, TextXAlignment = Enum.TextXAlignment.Center,
 		Text = right, ZIndex = 24, Parent = count,
-	})
+	}), 11)
 	count.Visible = right ~= ""
 	return frame
 end
@@ -172,7 +174,77 @@ local function landTab(state)
 	})
 end
 
-local TABS = { Crops = cropsTab, Seeds = seedsTab, Land = landTab }
+------------------------------------------------------------------------
+-- Field Levels
+
+local BLUEPRINT = Color3.fromRGB(44, 84, 132)
+local WHITE = Color3.fromRGB(236, 244, 255)
+
+-- "6 or 7 carrots a patch", "1 pumpkin, sometimes 2", at a Field Level's yield.
+local function example(cropId: string, yield: number): string
+	local exact = Crops.ById[cropId].perPatch * yield
+	local whole = math.floor(exact + 1e-9)
+	if exact - whole < 1e-9 then
+		return `{Crops.count(cropId, whole)} a patch`
+	elseif whole == 1 then
+		return `{Crops.count(cropId, 1)}, sometimes 2`
+	end
+	return `{whole} or {Crops.count(cropId, whole + 1)} a patch`
+end
+
+local function percent(yield: number): string
+	return `+{math.floor((yield - 1) * 100 + 0.5)}%`
+end
+
+local function fieldTab(state)
+	local level = state.land.fieldLevel or 1
+	local now = LandRules.fieldLevel(level)
+	panel.toolbar.Text = `🌱 Field Level {level}: {now.name}{if level > 1 then ` · {percent(now.yield)} crops` else ""}`
+	if level >= LandRules.MAX_FIELD_LEVEL then
+		local card = make("Frame", { Size = UDim2.new(1, 0, 0, 70), BackgroundColor3 = BLUEPRINT, LayoutOrder = 1, ZIndex = 22, Parent = panel.list },
+			{ UI.corner(4), UI.stroke(Color3.fromRGB(200, 224, 250), 2, 0.2) })
+		UI.label({ Position = UDim2.fromOffset(16, 0), Size = UDim2.new(1, -32, 1, 0), Font = UI.HEAD, TextSize = 19, TextColor3 = WHITE, TextWrapped = true,
+			Text = `★ Field Level {level}: the top. Every patch gives half as much again ({example("Carrot", now.yield)}).`, ZIndex = 23, Parent = card })
+	else
+		local nextLevel = LandRules.fieldLevel(level + 1)
+		local card = make("Frame", { Size = UDim2.new(1, 0, 0, 118), BackgroundColor3 = BLUEPRINT, LayoutOrder = 1, ZIndex = 22, Parent = panel.list },
+			{ UI.corner(4), UI.stroke(Color3.fromRGB(200, 224, 250), 2, 0.2) })
+		UI.label({ Position = UDim2.fromOffset(16, 8), Size = UDim2.new(1, -200, 0, 26), Font = UI.HEAD, TextSize = 20, TextColor3 = WHITE,
+			Text = `Field Level {level} → {level + 1}: {nextLevel.name}`, ZIndex = 23, Parent = card })
+		local enough = state.level >= nextLevel.farmLevel
+		UI.label({ Position = UDim2.fromOffset(16, 34), Size = UDim2.new(1, -200, 0, 22), Font = UI.HAND, TextSize = 18,
+			TextColor3 = if enough then Color3.fromRGB(170, 240, 160) else Color3.fromRGB(255, 170, 150),
+			Text = if enough then `✓ Farm Level {nextLevel.farmLevel}` else `Needs Farm Level {nextLevel.farmLevel} (you're {state.level})`, ZIndex = 23, Parent = card })
+		UI.fit(UI.label({ Position = UDim2.fromOffset(16, 56), Size = UDim2.new(1, -200, 0, 56), Font = UI.HAND, TextSize = 17, TextColor3 = WHITE, TextWrapped = true,
+			TextYAlignment = Enum.TextYAlignment.Top, ZIndex = 23, Parent = card,
+			Text = `{percent(nextLevel.yield)} crops from every patch you plant: {example("Carrot", nextLevel.yield)}, {example("Pumpkin", nextLevel.yield)}. A new look for your whole field.`,
+		}), 11)
+		local _, upgrade = UI.button({ text = `Upgrade  {UI.formatNumber(nextLevel.cost)}`, kind = if enough and state.coins >= nextLevel.cost then "gold" else "cream",
+			size = UDim2.fromOffset(170, 48), anchor = Vector2.new(1, 0.5), position = UDim2.new(1, -14, 0.5, 0), textSize = 18, zIndex = 23, parent = card })
+		upgrade.Activated:Connect(function()
+			if not enough then
+				UI.toast(`Your field's next level needs Farm Level {nextLevel.farmLevel}.`, "Error", 3)
+				return
+			end
+			task.spawn(function()
+				local result = LandAction:InvokeServer("UpgradeField")
+				if not result.ok then
+					local text = Reasons(result.reason)
+					if text then
+						UI.toast(text, "Error", 3)
+					end
+				end
+			end)
+		end)
+	end
+	-- the ladder: the levels after the next
+	for n = level + 2, LandRules.MAX_FIELD_LEVEL do
+		local info = LandRules.fieldLevel(n)
+		row(n, "🌱", `Level {n}: {info.name}`, `{percent(info.yield)} crops · Farm Lv {info.farmLevel}`, UI.formatNumber(info.cost), C.green)
+	end
+end
+
+local TABS = { Crops = cropsTab, Seeds = seedsTab, Land = landTab, Field = fieldTab }
 
 -- Rebuilds the tab, but only when something it shows has changed (the
 -- save syncs every minute: rebuilding then would make the window blink).

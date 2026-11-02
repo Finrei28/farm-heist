@@ -46,7 +46,7 @@ return {
 	-- Fines (shared/FineRules)
 	FINE_RATE = 0.08, -- of the thief's sales income in the last hour
 	FLOOR_LOOT = 1.5, -- the fine is at least this many times the loot's market value ...
-	FLOOR_MIN = 25, -- ... and never less than this
+	FLOOR_MIN = 250, -- ... and never less than this
 	REPEAT_WINDOW = 30 * 60,
 	REPEAT = { 1, 1.5, 2 }, -- multiplier for the 1st, 2nd, 3rd-and-later arrest in the window
 	FLEE = 1.5, -- extra multiplier for fleeing (quitting while knocked out, or while chased)
@@ -59,6 +59,6 @@ return {
 
 	-- Boards and XP: staged arrests between friends don't count
 	ARREST_XP = 50,
-	BOARD_MIN_LOOT = 50,
+	BOARD_MIN_LOOT = 500,
 	BOARD_PAIR_LIMIT = 3, -- arrests per thief–owner pair per UTC day
 }

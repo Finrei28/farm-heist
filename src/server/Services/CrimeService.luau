@@ -139,12 +139,13 @@ end
 -- The stolen crop in their hands
 
 local function showCarried(player: Player, state)
-	local cropId = LootRules.crop(state.loot)
+	local cropId, count = LootRules.crop(state.loot)
 	player:SetAttribute("StolenCrop", cropId)
+	player:SetAttribute("StolenCount", if cropId then count else nil)
 	-- carrying it you only walk, slower (shared/LootRules; the client sets the speed)
 	MovementService.SetScale(player, if cropId then Settings.WALK_SPEED * Crime.CARRY_SPEED / Settings.RUN_SPEED else nil)
 	if player.Character then
-		CrimeArt.showCarried(player.Character, cropId)
+		CrimeArt.showCarried(player.Character, cropId, count)
 	end
 end
 
@@ -164,7 +165,7 @@ local function returnLoot(player: Player, state, stopper: Player?)
 		local data = owner and DataService.Get(owner)
 		if data then
 			for _, item in list do
-				BarnRules.addCrops(data.inventory, item.key, 1) -- (returns always fit, §4.5)
+				BarnRules.addCrops(data.inventory, item.key, item.count or 1) -- (returns always fit, §4.5)
 				if item.entry and item.ownerId == owner.UserId then
 					CrimeRules.raidRemove(ledgerOf(owner.UserId), item.entry)
 				end
@@ -342,8 +343,8 @@ local function knockOut(owner: Player, target: Player, plot: number)
 	local loot = LootRules.value(state.loot.items, priceOf)
 	local taken = table.clone(state.loot.items)
 	if state.hold then
-		loot += priceOf(state.hold.crop)
-		table.insert(taken, { crop = state.hold.crop })
+		loot += priceOf(state.hold.crop) * (state.hold.count or 1)
+		table.insert(taken, { crop = state.hold.crop, count = state.hold.count or 1 })
 	end
 	cancelHold(state)
 	cancelClimb(target, state)
@@ -549,7 +550,7 @@ local function deposit(player: Player, state)
 	end
 	local items = LootRules.takeAll(state.loot)
 	for _, item in items do
-		BarnRules.addCrops(data.inventory, item.key, 1) -- (always fits, §4.5)
+		BarnRules.addCrops(data.inventory, item.key, item.count or 1) -- (always fits, §4.5)
 	end
 	data.stats.stolenValue += LootRules.value(items, priceOf)
 	showCarried(player, state)
@@ -633,7 +634,7 @@ function actions.Steal(player, _data, arg)
 	if not position or Vector2.new(position.X - centre.X, position.Z - centre.Z).Magnitude > FieldService.REACH then
 		return "TooFar"
 	end
-	local cropId = FieldService.RipeCrop(owner, ownerData, tostring(tile))
+	local cropId, count = FieldService.RipeCrop(owner, ownerData, tostring(tile))
 	local rarity = if cropId then Crops.ById[cropId].rarity else "Common"
 	local ok, why = CrimeRules.canSteal({
 		now = t, inside = true, knockedOut = isKnockedOut(state, t),
@@ -645,7 +646,7 @@ function actions.Steal(player, _data, arg)
 		return if why == "Cooldown" then "FarmCooldown" else why
 	end
 	local seconds = CrimeRules.stealHold(rarity)
-	state.hold = { plot = plot, tile = tile, key = tostring(tile), crop = cropId, ownerId = owner.UserId, startedAt = t, seconds = seconds }
+	state.hold = { plot = plot, tile = tile, key = tostring(tile), crop = cropId, count = count, ownerId = owner.UserId, startedAt = t, seconds = seconds }
 	CrimeRules.markSuspect(visitOf(state, plot), t)
 	player:SetAttribute("SuspectOf", plot)
 	local part = tilePart(plot, tile)
@@ -696,16 +697,16 @@ function actions.StealDone(player, _data, _arg)
 	if CrimeRules.raidUsed(ledger, t) + weight > Crime.RAID_CAP_WEIGHT then
 		return "RaidCap"
 	end
-	local cropId, key = FieldService.TakeRipe(owner, ownerData, hold.key)
+	local cropId, key, count = FieldService.TakeRipe(owner, ownerData, hold.key)
 	if not cropId then
 		return "Gone"
 	end
-	LootRules.add(state.loot, cropId, key :: string, owner.UserId, CrimeRules.raidAdd(ledger, t, weight))
+	LootRules.add(state.loot, cropId, key :: string, owner.UserId, CrimeRules.raidAdd(ledger, t, weight), count)
 	showCarried(player, state)
 	DataService.NotifyState(owner)
 	local crop = Crops.ById[cropId]
-	Notice.send(owner, `😠 {player.DisplayName} stole your {crop.icon} {crop.name}!`, "Error")
-	return nil, { crop = cropId }
+	Notice.send(owner, `😠 {player.DisplayName} stole your {crop.icon} {Crops.count(cropId, count)}!`, "Error")
+	return nil, { crop = cropId, count = count }
 end
 
 function actions.StealCancel(player, _data, _arg)
@@ -1036,12 +1037,14 @@ function CrimeService.DevSuspect(player: Player): number
 	return plot
 end
 
--- Puts a stolen crop in your hands (nil: empties them; the crop is lost).
-function CrimeService.DevCarry(player: Player, cropId: string?, ownerId: number)
+-- Puts a stolen crop in your hands, `count` of it (default: a patch's
+-- worth a thief could carry; nil crop: empties them, the crop is lost).
+function CrimeService.DevCarry(player: Player, cropId: string?, ownerId: number, count: number?)
 	local state = stateOf(player)
 	LootRules.takeAll(state.loot)
 	if cropId then
-		LootRules.add(state.loot, cropId, BarnRules.key(cropId), ownerId)
+		local crop = Crops.ById[cropId]
+		LootRules.add(state.loot, cropId, BarnRules.key(cropId), ownerId, nil, count or math.min(crop.perPatch, crop.carry or math.huge))
 	end
 	showCarried(player, state)
 end

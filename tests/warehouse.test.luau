@@ -46,7 +46,7 @@ return function(spec, harness)
 				expect(#WarehouseRules.news(n) > 0).toBe(true)
 			end
 		end)
-		it("cost more each level, need a higher Farm Level, and come to about 4.1 million", function()
+		it("cost more each level, need a higher Farm Level, and come to about 81 million", function()
 			local total = 0
 			for n = 2, WarehouseRules.MAX_LEVEL do
 				local info, before = Warehouse.LEVELS[n], Warehouse.LEVELS[n - 1]
@@ -54,7 +54,7 @@ return function(spec, harness)
 				expect(info.farmLevel > before.farmLevel).toBe(true)
 				total += info.cost
 			end
-			expect(total > 4_000_000 and total < 4_200_000).toBe(true)
+			expect(total > 80_000_000 and total < 83_000_000).toBe(true)
 		end)
 		it("say what's new, including the building and worker slots", function()
 			local news = table.concat(WarehouseRules.news(5), " | ")
@@ -73,9 +73,9 @@ return function(spec, harness)
 	describe("levelling up", function()
 		it("needs the Farm Level and the coins, one level at a time", function()
 			local warehouse = newWarehouse()
-			expect(WarehouseRules.cannotUpgrade(warehouse, 1, 10_000)).toBe("NeedLevel")
-			expect(WarehouseRules.cannotUpgrade(warehouse, 2, 799)).toBe("NoCoins")
-			expect(WarehouseRules.cannotUpgrade(warehouse, 2, 800)).toBe(nil)
+			expect(WarehouseRules.cannotUpgrade(warehouse, 1, 100_000)).toBe("NeedLevel")
+			expect(WarehouseRules.cannotUpgrade(warehouse, 2, 7_999)).toBe("NoCoins")
+			expect(WarehouseRules.cannotUpgrade(warehouse, 2, 8_000)).toBe(nil)
 			expect(WarehouseRules.upgrade(warehouse)).toBe("Built")
 			expect(warehouse.level).toBe(2)
 			expect(WarehouseRules.cannotUpgrade(newWarehouse(20), 50, 1e9)).toBe("MaxLevel")

@@ -34,6 +34,12 @@ local HOLD_SLACK = 0.25 -- seconds of lag allowed off a hold
 
 local holdStarted = {} -- [Player] = { [ProximityPrompt] = os.clock() }
 
+-- 20000 → "20,000"
+local function commas(n: number): string
+	local digits = tostring(math.floor(n)):reverse():gsub("(%d%d%d)", "%1,"):reverse()
+	return (digits:gsub("^,", ""))
+end
+
 local function prompt(parent: Instance, owner: Player, props): ProximityPrompt
 	local p = Instance.new("ProximityPrompt")
 	p.KeyboardKeyCode = Enum.KeyCode.E
@@ -183,7 +189,7 @@ function refresh(player: Player)
 		}, post)
 		prompt(post, player, {
 			Name = "ClearLandPrompt",
-			ActionText = `Clear here ({permit.fee} coins)`,
+			ActionText = `Clear here ({commas(permit.fee)} coins)`,
 			ObjectText = `{LandRules.risk(block)}: {if LandRules.risk(block) == "Riskier" then "near the back fence" else "near the farmhouse"}`,
 			HoldDuration = 0.5,
 			MaxActivationDistance = 14,
@@ -194,7 +200,7 @@ function refresh(player: Player)
 			end
 			local failure = startClearing(who, whoData, block)
 			if failure == "TooPoor" then
-				Notice.send(who, `Clearing this block costs {permit.fee} coins.`, "Error")
+				Notice.send(who, `Clearing this block costs {commas(permit.fee)} coins.`, "Error")
 			elseif failure then
 				Notice.send(who, `Can't clear that block ({failure}).`, "Error")
 			end
@@ -213,6 +219,24 @@ function actions.Clear(player, data, arg)
 		return "BadRequest"
 	end
 	return startClearing(player, data, block)
+end
+
+-- The next Field Level (§4.1c): pays, and the whole field gets its new
+-- look. Crops already in the ground keep what they were planted with.
+function actions.UpgradeField(player, data)
+	local failure = LandRules.cannotUpgradeField(data.land, data.level, data.coins)
+	if failure then
+		return failure
+	end
+	local to = (data.land.fieldLevel or 1) + 1
+	if not DataService.SpendCoins(player, LandRules.fieldLevel(to).cost, Analytics.SHOP, `Field{to}`) then
+		return "NoCoins"
+	end
+	LandRules.upgradeField(data.land)
+	local info = LandRules.fieldLevel(to)
+	FieldService.Render(player)
+	Notice.send(player, `🌱 Field Level {to}: {info.name}! Crops you plant from now on give {math.floor((info.yield - 1) * 100 + 0.5)}% more.`, "Good")
+	return nil, { level = to }
 end
 
 function LandService.Start()

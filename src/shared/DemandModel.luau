@@ -54,10 +54,11 @@ function DemandModel.shopperInterval(level: number, stars: number): number
 	return base / (1 + Shop.FLOW_PER_STAR * (math.clamp(stars, 1, 5) - 3))
 end
 
--- Units of a crop sold a minute, on average: `shoppers` a minute, `share`
--- of them wanting it, each buying with this chance.
-function DemandModel.salesPerMinute(chance: number, shoppers: number, share: number): number
-	return shoppers * share * Shop.UNITS_PER_SHOPPER * chance
+-- How many of a crop sell a minute, on average: `shoppers` a minute, `share`
+-- of them wanting it, each buying with this chance a basket of 1–4
+-- patches' worth (`perPatch` each: 6 carrots, 1 pumpkin).
+function DemandModel.salesPerMinute(chance: number, shoppers: number, share: number, perPatch: number?): number
+	return shoppers * share * Shop.UNITS_PER_SHOPPER * (perPatch or 1) * chance
 end
 
 -- The demand face on a price tag.

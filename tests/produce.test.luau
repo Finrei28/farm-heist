@@ -12,9 +12,17 @@ return function(spec, harness)
 
 	describe("carried crops (World/ProduceArt)", function()
 		local ProduceArt = harness.loadServerWith("World/ProduceArt", globals)
-		it("builds every crop, the size it says, with nothing solid", function()
+		it("builds every crop, as many as a patch gives (and a bumper patch), the size it says, with nothing solid", function()
 			for _, crop in Crops.List do
-				local model, core = ProduceArt.build(crop.id, roblox.CFrame.new())
+			for _, count in { 1, crop.perPatch, math.ceil(crop.perPatch * 1.5 - 1e-9) } do
+				local model, core = ProduceArt.build(crop.id, roblox.CFrame.new(), count)
+				local parts = 0
+				for _, part in model:GetDescendants() do
+					parts += if part:IsA("BasePart") then 1 else 0
+				end
+				if parts > 160 then
+					error(`{crop.id} ×{count}: {parts} parts (keep a carried crop under 160)`)
+				end
 				local width, height, hold = core:GetAttribute("Width"), core:GetAttribute("Height"), core:GetAttribute("HoldY")
 				expect(width > 0.5 and height > 0.5 and hold > 0 and hold < height).toBe(true)
 				for _, part in model:GetDescendants() do
@@ -26,10 +34,11 @@ return function(spec, harness)
 						local p = part.CFrame.Position
 						local slack = part.Size.Magnitude / 2
 						if math.abs(p.X) > width / 2 + slack or p.Y < -0.3 or p.Y > height + 0.3 then
-							error(`{crop.id}: {part.Name} at {p} is outside {width} × {height}`)
+							error(`{crop.id} ×{count}: {part.Name} at {p} is outside {width} × {height}`)
 						end
 					end
 				end
+			end
 			end
 		end)
 	end)

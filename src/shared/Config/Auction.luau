@@ -7,8 +7,8 @@ return {
 	WARNING = 60, -- the "auction starting" toast
 	OPENING = 0.4, -- opening bid, as a share of the estimate
 	MIN_RAISE = 0.05,
-	MIN_STEP = 10, -- coins
-	ROUND_TO = 10, -- quick bids round up to this
+	MIN_STEP = 100, -- coins
+	ROUND_TO = 100, -- quick bids round up to this
 	QUICK = { 0.05, 0.10, 0.25 },
 	SNIPE = 10, -- a bid with less than this left puts the clock back to it
 
@@ -23,9 +23,9 @@ return {
 		{ kind = "Cosmetic", weight = 5 },
 	},
 	ITEMS = { -- estimates for the lots that aren't seeds
-		GoldenTool = { { id = "GoldenWateringCan", estimate = 8_000 }, { id = "GoldenHoe", estimate = 8_000 } },
-		WorkerContract = { { id = "GrandmaRose", estimate = 20_000 }, { id = "SpeedySam", estimate = 9_000 } },
-		Defence = { { id = "GuardDog", estimate = 6_000 }, { id = "SecurityCamera", estimate = 4_000 }, { id = "GlassCloche", estimate = 400 } },
-		Cosmetic = { { id = "ScarecrowPumpkinKing", estimate = 5_000 }, { id = "TruckPaintHay", estimate = 3_000 } },
+		GoldenTool = { { id = "GoldenWateringCan", estimate = 80_000 }, { id = "GoldenHoe", estimate = 80_000 } },
+		WorkerContract = { { id = "GrandmaRose", estimate = 200_000 }, { id = "SpeedySam", estimate = 90_000 } },
+		Defence = { { id = "GuardDog", estimate = 60_000 }, { id = "SecurityCamera", estimate = 40_000 }, { id = "GlassCloche", estimate = 4_000 } },
+		Cosmetic = { { id = "ScarecrowPumpkinKing", estimate = 50_000 }, { id = "TruckPaintHay", estimate = 30_000 } },
 	},
 }

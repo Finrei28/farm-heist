@@ -27,11 +27,12 @@ local TEMPLATE = {
 	-- blocks aren't listed). While a block is being cleared there's also
 	-- clearing = { block, obstacles }. Permits come from the level (shared/LandRules).
 	-- fresh: ["tile"] = true for newly cleared tiles not planted yet (+25% growth).
-	land = { cleared = {}, fresh = {} },
+	-- fieldLevel: the Field Level (better soil: more from every patch).
+	land = { cleared = {}, fresh = {}, fieldLevel = 1 },
 	silo = 0, -- Silo upgrades bought (barn capacity)
 
 	inventory = {
-		crops = {}, -- ["cropId|mutation|giant"] = units
+		crops = {}, -- ["cropId|mutation|giant"] = how many (carrots, pumpkins, punnets ...)
 		seeds = Settings.START_SEEDS, -- [cropId] = seeds
 		items = {}, -- [itemId] = count (tools, defences not placed, auction prizes)
 	},

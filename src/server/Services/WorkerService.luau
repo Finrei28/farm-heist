@@ -341,14 +341,15 @@ function JOBS.Sorter(_player, data, st, entry, speed, _index)
 		return false
 	end
 	local size = CrateRules.size(cropId)
-	local budget = charge(st, entry.uid, speed, size)
-	if budget >= size then
+	local work = CrateRules.patches(cropId, size) -- (a Sorter's speed is in patches' worth)
+	local budget = charge(st, entry.uid, speed, work)
+	if budget >= work - 1e-9 then
 		local info = WarehouseRules.level(data.warehouse.level)
 		local grade = if rng:NextNumber() < WorkerRules.gradeAChance(entry.worker, info.washLine) then "A" else "B"
 		local units = math.min(size, data.inventory.crops[key] or 0)
 		if units > 0 and BarnRules.takeCrops(data.inventory, key, units) then
 			table.insert(data.warehouse.sorted, { crop = cropId, key = key, units = units, grade = grade })
-			budget -= size
+			budget -= work
 		end
 	end
 	st.budgets[entry.uid] = budget
@@ -451,11 +452,11 @@ function JOBS.Stocker(player, data, st, entry, speed, _index)
 		return false
 	end
 	local budget = charge(st, entry.uid, speed, 1)
-	local units = math.floor(budget)
-	if units < 1 then
+	local patches = math.floor(budget)
+	if patches < 1 then
 		return true
 	end
-	local moved = StoreService.Restock(player, units)
+	local moved = StoreService.Restock(player, patches) -- (patches' worth)
 	if moved == 0 then
 		rest(st, entry.uid)
 		return false
@@ -548,6 +549,7 @@ local function pipelineState(player: Player, data)
 	state.tiles = data.field
 	state.seeds = data.inventory.seeds
 	state.replant = data.crew.replant
+	state.fieldYield = LandRules.fieldYield(data.land)
 	for key, units in data.inventory.crops do
 		local cropId, mutation, giant = BarnRules.parse(key)
 		if Crops.ById[cropId] and not mutation and not giant then
@@ -673,7 +675,7 @@ local function settleAway(player: Player, data, away: number)
 			end
 		end
 	end
-	local stockLeft, soldLeft, storeCoins, storeUnits = report.stocked, table.clone(report.sold), 0, 0
+	local stockLeft, soldLeft, storeCoins, storeUnits = report.stockedPatches, table.clone(report.sold), 0, 0
 	local price = MarketService.priceAt()
 	for _ = 1, 100 do
 		local moved = if stockLeft > 0 then ShopRules.restockDisplays(store, price, stockLeft) else 0

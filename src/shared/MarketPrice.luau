@@ -80,7 +80,7 @@ end
 -- below SUPPLY_MIN.
 function MarketPrice.supply(cropId: string, sold: number): number
 	local crop = Crops.ById[cropId]
-	local expected = Config.EXPECTED[crop.rarity]
+	local expected = Config.EXPECTED[crop.rarity] * crop.perPatch
 	local value = 1 - Config.SUPPLY_SLOPE * math.log(1 + math.max(0, sold) / expected, 2)
 	return math.clamp(value, Config.SUPPLY_MIN, 1)
 end

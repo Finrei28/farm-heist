@@ -1,14 +1,14 @@
 -- Chat commands for play-testing (docs/PlaytestPlan.md, "Dev commands").
 -- Registered in Studio only, for everyone there (Util/Staff); never in live
 -- servers yet.
---   /coins 5000          add coins (default 10,000)
+--   /coins 50000         add coins (default 100,000)
 --   /level 5             set your Farm Level (XP to the start of it)
 --   /xp 120              add Farm XP
 --   /grow 60             grow your crops N seconds at online speed (/grow ripe = all ripe)
 --   /away 2              as if you'd been away N hours (growth, the crew at 25%, store sales: the Welcome back card)
 --   /restock [full]      Barley moves to the next restock now (full = every seed in)
 --   /seeds Pumpkin 10    give seeds by crop id (/seeds all 5 = 5 of each)
---   /crops Pumpkin 40    put harvested crops in your barn (past its capacity)
+--   /crops Carrot 72     put harvested crops in your barn (past its capacity; default a crate's worth)
 --   /truck               your trucks reach the City and come home now
 --   /warehouse 5         your warehouse straight to Warehouse Level N (up only; buildings done at once)
 --   /hire Packer 3       a worker of that type joins at that level (free, past the slots)
@@ -22,11 +22,12 @@
 --   /tp back [3]         outside a farm's back fence (yours by default), facing it
 --   /tp field [3]        in a farm's field (yours by default), on its first open block
 --   /plant Pumpkin       plant that crop on every open, empty tile of your field (free; /grow ripe ripens them)
+--   /field 3             your field straight to Field Level N (crops planted after it give more)
 --   /ko [suspect]        knock yourself out where you stand (as a Suspect: the arrest screen)
 --   /suspect             mark yourself a Suspect of the farm you're in
---   /carry Pumpkin       a stolen crop in your hands (from your own farm: walk to your door to put it away); /carry none empties them
---   /debt 300            owe 300 coins (to yourself) for the police desk and paying off debts
---   /earn 200            as if you'd sold crops for 200 coins (sales XP; half goes to any debts)
+--   /carry Carrot 8      stolen crops in your hands (default: what a thief takes from a patch; from your own farm: walk to your door to put them away); /carry none empties them
+--   /debt 3000           owe 3,000 coins (to yourself) for the police desk and paying off debts
+--   /earn 2000           as if you'd sold crops for 2,000 coins (sales XP; half goes to any debts)
 --   /crimelog            prints your visits, what you carry, cooldowns, debts, arrests and your farm's raid ledger
 --   /wipe                start your save over (in place)
 local Players = game:GetService("Players")
@@ -119,7 +120,7 @@ function DevCommandService.Start()
 	end
 
 	register("DevCoins", "/coins", function(player, _data, args)
-		local amount = tonumber(args[2]) or 10_000
+		local amount = tonumber(args[2]) or 100_000
 		DataService.AddCoins(player, amount, Analytics.GAMEPLAY, "Dev")
 		reply(player, `+{amount} coins`)
 	end)
@@ -176,13 +177,13 @@ function DevCommandService.Start()
 	register("DevCrops", "/crops", function(player, data, args)
 		local crop = findCrop(args[2])
 		if not crop then
-			reply(player, "Which crop? e.g. /crops Pumpkin 40")
+			reply(player, "Which crop? e.g. /crops Pumpkin 40 (default: a crate's worth)")
 			return
 		end
-		local count = math.clamp(math.floor(tonumber(args[3]) or 24), 1, 9999)
+		local count = math.clamp(math.floor(tonumber(args[3]) or crop.crate), 1, 99999)
 		BarnRules.addCrops(data.inventory, BarnRules.key(crop.id), count)
 		DataService.NotifyState(player)
-		reply(player, `+{count} {crop.name} in your barn`)
+		reply(player, `+{Crops.count(crop.id, count)} in your barn`)
 	end)
 
 	register("DevTruck", "/truck", function(player)
@@ -335,7 +336,7 @@ function DevCommandService.Start()
 		for tile = 1, 64 do
 			local key = tostring(tile)
 			if LandRules.isTileOpen(data.land, tile) and not data.field[key] then
-				data.field[key] = GrowthRules.plant(crop.id)
+				data.field[key] = GrowthRules.plant(crop.id, false, GrowthRules.rollYield(crop.id, LandRules.fieldYield(data.land), math.random()))
 				planted += 1
 			end
 		end
@@ -362,22 +363,31 @@ function DevCommandService.Start()
 		end
 		local crop = findCrop(args[2] or "Carrot")
 		if not crop then
-			reply(player, "Which crop? e.g. /carry Pumpkin")
+			reply(player, "Which crop? e.g. /carry Pumpkin, /carry Carrot 8")
 			return
 		end
-		CrimeService.DevCarry(player, crop.id, player.UserId)
-		reply(player, `Carrying a stolen {crop.name}. Walk to your farmhouse door to put it in your barn`)
+		local count = tonumber(args[3])
+		CrimeService.DevCarry(player, crop.id, player.UserId, if count then math.clamp(math.floor(count), 1, 50) else nil)
+		reply(player, `Carrying stolen crops ({crop.name}). Walk to your farmhouse door to put them in your barn`)
+	end)
+
+	register("DevField", "/field", function(player, data, args)
+		local to = math.clamp(math.floor(tonumber(args[2]) or (data.land.fieldLevel or 1) + 1), 1, LandRules.MAX_FIELD_LEVEL)
+		data.land.fieldLevel = to
+		FieldService.Render(player)
+		DataService.NotifyState(player)
+		reply(player, `Field Level {to}: {LandRules.fieldLevel(to).name} (crops planted from now on)`)
 	end)
 
 	register("DevDebt", "/debt", function(player, data, args)
-		local amount = math.floor(tonumber(args[2]) or 300)
+		local amount = math.floor(tonumber(args[2]) or 3_000)
 		table.insert(data.crime.debts, { ownerId = player.UserId, ownerName = "Sheriff Clucks (a test)", amount = amount, createdAt = os.time() })
 		DataService.NotifyState(player)
 		reply(player, `You owe {FineRules.totalDebt(data.crime, os.time())} coins. Sell something (half pays it) or pay at the police desk`)
 	end)
 
 	register("DevEarn", "/earn", function(player, _data, args)
-		local amount = math.floor(tonumber(args[2]) or 200)
+		local amount = math.floor(tonumber(args[2]) or 2_000)
 		DataService.Earn(player, amount, "Dev", true)
 		reply(player, `Sold crops for {amount} coins (half goes to any debts)`)
 	end)

@@ -42,25 +42,25 @@ Store.BUILDINGS = {
 -- checkouts allowed and how many crops a shopper wants (StoreLayout.level).
 Store.LEVELS = {
 	{ cost = 0, farmLevel = 1, floor = { 6, 4 } },
-	{ cost = 300, farmLevel = 1, floor = { 7, 4 } },
-	{ cost = 900, farmLevel = 3, floor = { 7, 5 } },
-	{ cost = 2_500, farmLevel = 4, floor = { 8, 6 } },
-	{ cost = 6_000, farmLevel = 5, floor = { 9, 7 } },
-	{ cost = 10_000, farmLevel = 6, floor = { 10, 7 } },
-	{ cost = 16_000, farmLevel = 7, floor = { 10, 8 } },
-	{ cost = 24_000, farmLevel = 8, floor = { 11, 8 } },
-	{ cost = 35_000, farmLevel = 10, floor = { 11, 9 } },
-	{ cost = 55_000, farmLevel = 12, floor = { 12, 10 } },
-	{ cost = 75_000, farmLevel = 13, floor = { 13, 10 } },
-	{ cost = 100_000, farmLevel = 14, floor = { 14, 10 } },
-	{ cost = 130_000, farmLevel = 16, floor = { 14, 11 } },
-	{ cost = 170_000, farmLevel = 18, floor = { 15, 11 } },
-	{ cost = 240_000, farmLevel = 20, floor = { 16, 12 }, billboard = true },
-	{ cost = 330_000, farmLevel = 22, floor = { 17, 12 } },
-	{ cost = 440_000, farmLevel = 24, floor = { 17, 13 } },
-	{ cost = 580_000, farmLevel = 26, floor = { 18, 13 } },
-	{ cost = 760_000, farmLevel = 28, floor = { 19, 13 } },
-	{ cost = 1_000_000, farmLevel = 30, floor = { 20, 14 }, goldStar = true },
+	{ cost = 3_000, farmLevel = 1, floor = { 7, 4 } },
+	{ cost = 9_000, farmLevel = 3, floor = { 7, 5 } },
+	{ cost = 25_000, farmLevel = 4, floor = { 8, 6 } },
+	{ cost = 60_000, farmLevel = 5, floor = { 9, 7 } },
+	{ cost = 200_000, farmLevel = 6, floor = { 10, 7 } },
+	{ cost = 320_000, farmLevel = 7, floor = { 10, 8 } },
+	{ cost = 480_000, farmLevel = 8, floor = { 11, 8 } },
+	{ cost = 700_000, farmLevel = 10, floor = { 11, 9 } },
+	{ cost = 1_100_000, farmLevel = 12, floor = { 12, 10 } },
+	{ cost = 1_500_000, farmLevel = 13, floor = { 13, 10 } },
+	{ cost = 2_000_000, farmLevel = 14, floor = { 14, 10 } },
+	{ cost = 2_600_000, farmLevel = 16, floor = { 14, 11 } },
+	{ cost = 3_400_000, farmLevel = 18, floor = { 15, 11 } },
+	{ cost = 4_800_000, farmLevel = 20, floor = { 16, 12 }, billboard = true },
+	{ cost = 6_600_000, farmLevel = 22, floor = { 17, 12 } },
+	{ cost = 8_800_000, farmLevel = 24, floor = { 17, 13 } },
+	{ cost = 11_600_000, farmLevel = 26, floor = { 18, 13 } },
+	{ cost = 15_200_000, farmLevel = 28, floor = { 19, 13 } },
+	{ cost = 20_000_000, farmLevel = 30, floor = { 20, 14 }, goldStar = true },
 }
 Store.STOCKROOM = 6 -- crates at Level 1 ...
 Store.STOCKROOM_PER_LEVEL = 2 -- ... and this many more a level
@@ -76,52 +76,53 @@ Store.CHARM_MAX_STARS = 1
 
 -- The catalog. kind: Display · Checkout · Decor · Wall. size = { across,
 -- deep } in cells (a wall item: cells along the wall). Displays: slots ×
--- units each, the rarities they hold, and `present`: what shoppers will pay
+-- patches' worth each (a Produce Crate's 12: 72 carrots, 60 tomatoes;
+-- ShopRules.slotRoom), the rarities they hold, and `present`: what shoppers will pay
 -- there (× their willingness). Checkouts: seconds per shopper (`serve`);
 -- `staffed`: only while you (or a Cashier, week 4) stand behind it. flat:
 -- shoppers walk over it. level: the Store Level that unlocks buying it.
 Store.ITEMS = {
 	-- Displays
-	ProduceCrate = { kind = "Display", name = "Produce Crate", size = { 1, 1 }, slots = 1, units = 12,
-		rarities = { "Common", "Uncommon" }, present = 1.00, cost = 150, level = 1 },
-	WoodenShelf = { kind = "Display", name = "Wooden Shelf", size = { 2, 1 }, slots = 2, units = 15,
-		rarities = { "Common", "Uncommon", "Rare" }, present = 1.00, cost = 600, level = 1 },
-	BulkBin = { kind = "Display", name = "Bulk Bin", size = { 1, 1 }, slots = 1, units = 40,
-		rarities = { "Common" }, present = 0.95, cost = 900, level = 3 },
-	TieredRack = { kind = "Display", name = "Tiered Produce Rack", size = { 2, 1 }, slots = 3, units = 15,
-		rarities = { "Common", "Uncommon", "Rare" }, present = 1.05, cost = 2_500, level = 5, charm = 1 },
-	ChillerCabinet = { kind = "Display", name = "Chiller Cabinet", size = { 2, 1 }, slots = 2, units = 12,
-		rarities = { "Uncommon", "Rare", "Epic" }, present = 1.10, cost = 8_000, level = 8 },
-	GlassShowcase = { kind = "Display", name = "Glass Showcase", size = { 1, 1 }, slots = 1, units = 4,
-		rarities = { "Rare", "Epic", "Legendary", "Mythic" }, present = 1.15, cost = 25_000, level = 10, charm = 2 },
-	VelvetPedestal = { kind = "Display", name = "Velvet Pedestal", size = { 1, 1 }, slots = 1, units = 1,
-		rarities = { "Legendary", "Mythic" }, present = 1.25, cost = 120_000, level = 15, charm = 4 },
+	ProduceCrate = { kind = "Display", name = "Produce Crate", size = { 1, 1 }, slots = 1, patches = 12,
+		rarities = { "Common", "Uncommon" }, present = 1.00, cost = 1_500, level = 1 },
+	WoodenShelf = { kind = "Display", name = "Wooden Shelf", size = { 2, 1 }, slots = 2, patches = 15,
+		rarities = { "Common", "Uncommon", "Rare" }, present = 1.00, cost = 6_000, level = 1 },
+	BulkBin = { kind = "Display", name = "Bulk Bin", size = { 1, 1 }, slots = 1, patches = 40,
+		rarities = { "Common" }, present = 0.95, cost = 9_000, level = 3 },
+	TieredRack = { kind = "Display", name = "Tiered Produce Rack", size = { 2, 1 }, slots = 3, patches = 15,
+		rarities = { "Common", "Uncommon", "Rare" }, present = 1.05, cost = 25_000, level = 5, charm = 1 },
+	ChillerCabinet = { kind = "Display", name = "Chiller Cabinet", size = { 2, 1 }, slots = 2, patches = 12,
+		rarities = { "Uncommon", "Rare", "Epic" }, present = 1.10, cost = 80_000, level = 8 },
+	GlassShowcase = { kind = "Display", name = "Glass Showcase", size = { 1, 1 }, slots = 1, patches = 4,
+		rarities = { "Rare", "Epic", "Legendary", "Mythic" }, present = 1.15, cost = 250_000, level = 10, charm = 2 },
+	VelvetPedestal = { kind = "Display", name = "Velvet Pedestal", size = { 1, 1 }, slots = 1, patches = 1,
+		rarities = { "Legendary", "Mythic" }, present = 1.25, cost = 1_200_000, level = 15, charm = 4 },
 
 	-- Checkouts
-	HonourBox = { kind = "Checkout", name = "Honour Box", size = { 1, 1 }, serve = 6, cost = 500, level = 1 },
-	Register = { kind = "Checkout", name = "Register", size = { 2, 1 }, serve = 3, staffed = true, cost = 3_000, level = 3 },
-	SelfCheckout = { kind = "Checkout", name = "Self-checkout", size = { 1, 1 }, serve = 4, cost = 60_000, level = 15 },
+	HonourBox = { kind = "Checkout", name = "Honour Box", size = { 1, 1 }, serve = 6, cost = 5_000, level = 1 },
+	Register = { kind = "Checkout", name = "Register", size = { 2, 1 }, serve = 3, staffed = true, cost = 30_000, level = 3 },
+	SelfCheckout = { kind = "Checkout", name = "Self-checkout", size = { 1, 1 }, serve = 4, cost = 600_000, level = 15 },
 
 	-- Decor (Charm)
-	PottedPlant = { kind = "Decor", name = "Potted Plant", size = { 1, 1 }, charm = 2, cost = 200, level = 1 },
-	HayBaleSeat = { kind = "Decor", name = "Hay Bale Seat", size = { 1, 1 }, charm = 2, cost = 400, level = 1 },
-	FlowerBarrel = { kind = "Decor", name = "Flower Barrel", size = { 1, 1 }, charm = 3, cost = 500, level = 2 },
-	PumpkinPile = { kind = "Decor", name = "Pumpkin Pile", size = { 1, 1 }, charm = 3, cost = 800, level = 3 },
-	LampPost = { kind = "Decor", name = "Lamp Post", size = { 1, 1 }, charm = 4, cost = 1_500, level = 5 },
-	Rug = { kind = "Decor", name = "Rug", size = { 1, 1 }, charm = 3, cost = 1_200, level = 5, flat = true },
-	FruitCart = { kind = "Decor", name = "Fruit Cart", size = { 2, 1 }, charm = 6, cost = 5_000, level = 6 },
-	Bench = { kind = "Decor", name = "Bench", size = { 2, 1 }, charm = 4, cost = 2_500, level = 9 },
-	Fountain = { kind = "Decor", name = "Fountain", size = { 2, 2 }, charm = 12, cost = 40_000, level = 10 },
-	FlowerArch = { kind = "Decor", name = "Flower Arch", size = { 2, 1 }, charm = 10, cost = 30_000, level = 12 },
-	GoldenScarecrow = { kind = "Decor", name = "Golden Scarecrow", size = { 1, 1 }, charm = 20, cost = 250_000, level = 17 },
+	PottedPlant = { kind = "Decor", name = "Potted Plant", size = { 1, 1 }, charm = 2, cost = 2_000, level = 1 },
+	HayBaleSeat = { kind = "Decor", name = "Hay Bale Seat", size = { 1, 1 }, charm = 2, cost = 4_000, level = 1 },
+	FlowerBarrel = { kind = "Decor", name = "Flower Barrel", size = { 1, 1 }, charm = 3, cost = 5_000, level = 2 },
+	PumpkinPile = { kind = "Decor", name = "Pumpkin Pile", size = { 1, 1 }, charm = 3, cost = 8_000, level = 3 },
+	LampPost = { kind = "Decor", name = "Lamp Post", size = { 1, 1 }, charm = 4, cost = 15_000, level = 5 },
+	Rug = { kind = "Decor", name = "Rug", size = { 1, 1 }, charm = 3, cost = 12_000, level = 5, flat = true },
+	FruitCart = { kind = "Decor", name = "Fruit Cart", size = { 2, 1 }, charm = 6, cost = 50_000, level = 6 },
+	Bench = { kind = "Decor", name = "Bench", size = { 2, 1 }, charm = 4, cost = 25_000, level = 9 },
+	Fountain = { kind = "Decor", name = "Fountain", size = { 2, 2 }, charm = 12, cost = 400_000, level = 10 },
+	FlowerArch = { kind = "Decor", name = "Flower Arch", size = { 2, 1 }, charm = 10, cost = 300_000, level = 12 },
+	GoldenScarecrow = { kind = "Decor", name = "Golden Scarecrow", size = { 1, 1 }, charm = 20, cost = 2_500_000, level = 17 },
 
 	-- On the walls
-	PaintedSign = { kind = "Wall", name = "Painted Sign", size = { 1, 1 }, charm = 3, cost = 1_000, level = 4 },
-	ChalkBoard = { kind = "Wall", name = "Chalk Board", size = { 1, 1 }, charm = 3, cost = 600, level = 4 },
-	Clock = { kind = "Wall", name = "Clock", size = { 1, 1 }, charm = 3, cost = 2_000, level = 4 },
-	FairyLights = { kind = "Wall", name = "Fairy Lights", size = { 1, 1 }, charm = 5, cost = 3_000, level = 6 },
-	Mural = { kind = "Wall", name = "Mural", size = { 2, 1 }, charm = 8, cost = 20_000, level = 9 },
-	NeonSign = { kind = "Wall", name = "Neon Sign", size = { 1, 1 }, charm = 8, cost = 25_000, level = 12 },
+	PaintedSign = { kind = "Wall", name = "Painted Sign", size = { 1, 1 }, charm = 3, cost = 10_000, level = 4 },
+	ChalkBoard = { kind = "Wall", name = "Chalk Board", size = { 1, 1 }, charm = 3, cost = 6_000, level = 4 },
+	Clock = { kind = "Wall", name = "Clock", size = { 1, 1 }, charm = 3, cost = 20_000, level = 4 },
+	FairyLights = { kind = "Wall", name = "Fairy Lights", size = { 1, 1 }, charm = 5, cost = 30_000, level = 6 },
+	Mural = { kind = "Wall", name = "Mural", size = { 2, 1 }, charm = 8, cost = 200_000, level = 9 },
+	NeonSign = { kind = "Wall", name = "Neon Sign", size = { 1, 1 }, charm = 8, cost = 250_000, level = 12 },
 }
 
 -- The drawer's tabs, in order, and the order of cards in each.

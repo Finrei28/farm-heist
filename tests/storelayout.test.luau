@@ -20,7 +20,7 @@ return function(spec, harness)
 	end
 
 	describe("levels", function()
-		it("run 1–20, costing about 3.9 million in all, each needing a higher or equal Farm Level", function()
+		it("run 1–20, costing about 79 million in all, each needing a higher or equal Farm Level", function()
 			expect(#Store.LEVELS).toBe(20)
 			local total = 0
 			for n, row in Store.LEVELS do
@@ -30,7 +30,7 @@ return function(spec, harness)
 					expect(row.farmLevel >= Store.LEVELS[n - 1].farmLevel).toBe(true)
 				end
 			end
-			expect(total).toBeNear(3_900_000, 120_000)
+			expect(total).toBeNear(79_400_000, 1_200_000)
 		end)
 		it("open floor at every level (a row or a column; both at 4, 5, 10, 15 and 20), inside each level's building", function()
 			for n = 1, 20 do

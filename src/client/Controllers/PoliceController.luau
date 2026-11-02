@@ -70,7 +70,7 @@ local function render()
 	for i, debt in debts do
 		local who = debt.ownerName or "a farmer"
 		local left = Crime.DEBT_EXPIRY - (now - debt.createdAt)
-		line(1 + i, `• {debt.amount} coins to {who} (fined {ago(now - debt.createdAt)}; forgiven in {math.max(1, math.ceil(left / 86400))} days)`)
+		line(1 + i, `• {UI.formatNumber(debt.amount)} coins to {who} (fined {ago(now - debt.createdAt)}; forgiven in {math.max(1, math.ceil(left / 86400))} days)`)
 	end
 	line(50, "Half of everything you sell goes to your debts until they're paid. Pay now to keep all your sales again.", { color = C.soil })
 	local row = make("Frame", { Size = UDim2.new(1, -8, 0, 50), BackgroundTransparency = 1, LayoutOrder = 60, ZIndex = 23, Parent = panel.list },

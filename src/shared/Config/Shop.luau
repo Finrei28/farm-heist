@@ -11,7 +11,7 @@ return {
 	GRADE_A = 1.15,
 	PRICE_MIN = 0.5, -- allowed prices, as a share of the reference
 	PRICE_MAX = 3.0,
-	UNITS_PER_SHOPPER = 2.5, -- 1–4 units, on average
+	UNITS_PER_SHOPPER = 2.5, -- patches' worth a shopper takes of a crop, on average: 1–4 (6–24 carrots, 1–4 pumpkins)
 	RATING_WINDOW = 50, -- shoppers the rating averages over
 	START_STARS = 3, -- a store nobody has visited yet ...
 	RATING_SETTLE = 10, -- ... counts as this many 3★ shoppers until real ones replace them

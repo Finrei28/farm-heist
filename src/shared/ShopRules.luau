@@ -12,8 +12,10 @@
 -- store (in the save) = { level, build?, name?, layout, owned, gifts, nextId,
 --   stockroom = { crate }, prices = { [cropId] = coins }, rating = { scores = { 1–5 } } }
 -- A display's slots: { { set = cropId?, crop = cropId?, units, a } } (set:
--- the crop it's kept to, nil for Auto; crop: what's on it; a: how many of
--- the units are grade A).
+-- the crop it's kept to, nil for Auto; crop: what's on it; units: how many
+-- carrots, pumpkins ...; a: how many of them are grade A). A slot holds the
+-- display's patches' worth of its crop (slotRoom), and a Stocker's work is
+-- counted in patches' worth too, so 72 carrots take as long as 12 pumpkins.
 -- marketPrice(cropId) gives the truck price right now (MarketService).
 local Crops = require(script.Parent.Config.Crops)
 local Shop = require(script.Parent.Config.Shop)
@@ -159,6 +161,12 @@ function ShopRules.canHold(itemId: string, cropId: string): boolean
 	return Crops.ById[cropId] ~= nil and StoreLayout.holds(itemId, rarityOf(cropId))
 end
 
+-- How many of a crop one of this display's slots holds (def: its catalog
+-- entry): its patches' worth.
+function ShopRules.slotRoom(def, cropId: string?): number
+	return def.patches * (if cropId then Crops.ById[cropId].perPatch else 1)
+end
+
 -- Moves units of the slot's crop from the stockroom onto it, up to `room`:
 -- grade A first, the smallest crates first (so crates empty and free up
 -- stockroom space). Returns units moved.
@@ -222,17 +230,18 @@ end
 -- Fills one display from the stockroom: each slot topped up with its crop,
 -- an empty slot given its set crop or (Auto) a crop chosen for it. A crop
 -- going out for the first time is priced at the reference. limit: at most
--- this many units (a Stocker's work). Returns units moved.
-function ShopRules.fill(store, id: string, marketPrice, limit: number?): number
+-- this many patches' worth (a Stocker's work). Returns how many it moved
+-- and the patches' worth that was.
+function ShopRules.fill(store, id: string, marketPrice, limit: number?): (number, number)
 	local entry = store.layout[id]
 	local def = entry and Store.ITEMS[entry.item]
 	if not def or def.kind ~= "Display" then
-		return 0
+		return 0, 0
 	end
-	local moved = 0
+	local moved, used = 0, 0
 	local left = limit or math.huge
 	for _, slot in entry.slots do
-		if left - moved <= 0 then
+		if left - used <= 1e-9 then
 			break
 		end
 		if slot.units <= 0 then
@@ -240,7 +249,10 @@ function ShopRules.fill(store, id: string, marketPrice, limit: number?): number
 			slot.crop = if slot.set then slot.set else autoCrop(store, entry)
 		end
 		if slot.crop then
-			moved += topUp(store, slot, math.min(def.units - slot.units, left - moved))
+			local per = Crops.ById[slot.crop].perPatch
+			local take = topUp(store, slot, math.min(ShopRules.slotRoom(def, slot.crop) - slot.units, math.floor((left - used) * per + 1e-9)))
+			moved += take
+			used += take / per
 			if slot.units > 0 and not store.prices[slot.crop] then
 				ShopRules.setPrice(store, slot.crop, ShopRules.reference(slot.crop, marketPrice(slot.crop)), marketPrice(slot.crop))
 			end
@@ -249,20 +261,22 @@ function ShopRules.fill(store, id: string, marketPrice, limit: number?): number
 			end
 		end
 	end
-	return moved
+	return moved, used
 end
 
--- How full a display is (0–1), and whether the stockroom has something for
--- it (a crop it can hold that it has room for).
+-- How full a display is (0–1, in patches' worth), and whether the
+-- stockroom has something for it (a crop it can hold that it has room for).
 local function fullness(store, id: string): (number, boolean)
 	local entry = store.layout[id]
 	local def = Store.ITEMS[entry.item]
-	local units, room, wanted = 0, 0, false
+	local full, room, wanted = 0, 0, false
 	local waiting = ShopRules.stockroomUnits(store)
 	for _, slot in entry.slots do
-		units += slot.units
-		room += def.units
-		if slot.units < def.units then
+		if slot.crop and slot.units > 0 then
+			full += slot.units / Crops.ById[slot.crop].perPatch
+		end
+		room += def.patches
+		if slot.units < ShopRules.slotRoom(def, if slot.units > 0 then slot.crop else slot.set) then
 			local crop = if slot.units > 0 then slot.crop else slot.set
 			if crop then
 				wanted = wanted or (waiting[crop] or 0) > 0
@@ -273,11 +287,11 @@ local function fullness(store, id: string): (number, boolean)
 			end
 		end
 	end
-	return if room > 0 then units / room else 1, wanted
+	return if room > 0 then full / room else 1, wanted
 end
 
 -- A Stocker's round: fills the emptiest displays first, up to `limit`
--- units. Returns units moved.
+-- patches' worth. Returns the patches' worth moved.
 function ShopRules.restockDisplays(store, marketPrice, limit: number): number
 	local list = {}
 	for _, id in StoreLayout.ofKind(store.layout, "Display") do
@@ -292,14 +306,15 @@ function ShopRules.restockDisplays(store, marketPrice, limit: number): number
 		end
 		return a.id < b.id
 	end)
-	local moved = 0
+	local used = 0
 	for _, entry in list do
-		if moved >= limit then
+		if used >= limit - 1e-9 then
 			break
 		end
-		moved += ShopRules.fill(store, entry.id, marketPrice, limit - moved)
+		local _, patches = ShopRules.fill(store, entry.id, marketPrice, limit - used)
+		used += patches
 	end
-	return moved
+	return used
 end
 
 -- Units of a crop sold off the displays while you were away (the offline
@@ -329,12 +344,12 @@ function ShopRules.sellOff(store, cropId: string, units: number): (number, numbe
 	return taken, coins
 end
 
--- Units the displays hold when full (for the offline settlement).
+-- Patches' worth the displays hold when full (for the offline settlement).
 function ShopRules.displayRoom(store): number
 	local room = 0
 	for _, id in StoreLayout.ofKind(store.layout, "Display") do
 		local def = Store.ITEMS[store.layout[id].item]
-		room += def.units * #(store.layout[id].slots or {})
+		room += def.patches * #(store.layout[id].slots or {})
 	end
 	return room
 end
@@ -343,7 +358,7 @@ end
 function ShopRules.fillAll(store, marketPrice): number
 	local moved = 0
 	for _, id in StoreLayout.ofKind(store.layout, "Display") do
-		moved += ShopRules.fill(store, id, marketPrice)
+		moved += (ShopRules.fill(store, id, marketPrice))
 	end
 	return moved
 end
@@ -465,8 +480,9 @@ end
 
 -- A shopper at display `id` looking for `cropId`. Rolls what they'd pay
 -- (their willingness × the rating bonus × the display's presentation) and,
--- if your price is low enough, takes 1–4 units off the display into their
--- basket. Returns "Bought", line · "TooDear" · "SoldOut", where
+-- if your price is low enough, takes 1–4 patches' worth off the display
+-- into their basket (6–24 carrots, 1–4 pumpkins). Returns "Bought", line ·
+-- "TooDear" · "SoldOut", where
 -- line = { display, crop, units, a, coins } (paid at the checkout).
 function ShopRules.pick(store, id: string, cropId: string, rng, marketPrice)
 	local entry = store.layout[id]
@@ -486,7 +502,8 @@ function ShopRules.pick(store, id: string, cropId: string, rng, marketPrice)
 	if price > willing then
 		return "TooDear", nil
 	end
-	local want = math.min(rng:NextInteger(1, 4), have)
+	local per = Crops.ById[cropId].perPatch
+	local want = math.min(rng:NextInteger(per, 4 * per), have)
 	local line = { display = id, crop = cropId, units = 0, a = 0, coins = 0 }
 	for _, slot in entry.slots do
 		if slot.crop == cropId and want > 0 then
@@ -518,7 +535,7 @@ function ShopRules.putBack(store, line)
 	if def and def.kind == "Display" then
 		for _, slot in entry.slots do
 			if units > 0 and (slot.crop == line.crop or (slot.units <= 0 and (slot.set == nil or slot.set == line.crop))) then
-				local room = def.units - (if slot.crop == line.crop then slot.units else 0)
+				local room = ShopRules.slotRoom(def, line.crop) - (if slot.crop == line.crop then slot.units else 0)
 				local back = math.min(units, room)
 				if back > 0 then
 					if slot.crop ~= line.crop then

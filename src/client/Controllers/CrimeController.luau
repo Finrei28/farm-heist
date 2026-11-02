@@ -328,17 +328,20 @@ local function updateOffers()
 			local suspect = (player:GetAttribute("SuspectOf") or 0) == here
 			if holding then
 				local inHand = Crops.ById[holding]
+				local what = Crops.count(holding, player:GetAttribute("StolenCount") or 1)
 				FieldController.offer("Steal", {
 					priority = 20, text = "HANDS\nFULL", sub = `{inHand.icon} {inHand.name}`, kind = "wood",
-					info = `You can carry one crop at a time: take the {inHand.name} home first`,
+					info = `You can carry one patch at a time: take your {what} home first`,
 					press = function()
-						UI.toast(`Your hands are full! Take the {inHand.name} home first.`, "Error", 2.5)
+						UI.toast(`Your hands are full! Take your {what} home first.`, "Error", 2.5)
 					end,
 				})
 			else
+				-- the whole patch, or one of the big ones (a pumpkin, a melon)
+				local count = math.min(part:GetAttribute("Yield") or crop.perPatch, crop.carry or math.huge)
 				FieldController.offer("Steal", {
-					priority = 20, text = "STEAL\n ", sub = `{crop.icon} {crop.name}`, kind = "red",
-					info = if suspect then `Hold {CrimeRules.stealHold(crop.rarity)} s, then carry it home over your head`
+					priority = 20, text = "STEAL\n ", sub = `{crop.icon} ×{count}`, kind = "red",
+					info = if suspect then `Hold {CrimeRules.stealHold(crop.rarity)} s, then carry {if count == 1 then "it" else "them"} home over your head`
 						else "Stealing makes you a Suspect: the farmer can bonk and arrest you!",
 					press = function()
 						steal(here, tile, part)
@@ -571,7 +574,7 @@ end
 -- The crop in your hands: a sign over the hotbar with an arrow to your barn
 
 local carrySign = make("Frame", {
-	Name = "CarrySign", AnchorPoint = Vector2.new(0.5, 1), Size = UDim2.fromOffset(290, 44), Visible = false, Parent = UI.screen,
+	Name = "CarrySign", AnchorPoint = Vector2.new(0.5, 1), Size = UDim2.fromOffset(340, 44), Visible = false, Parent = UI.screen,
 }, { UI.corner(6), UI.stroke(UI.SEAM, 3) })
 UI.wood(carrySign, 2, false, C.red)
 local carryLabel = UI.label({
@@ -602,7 +605,8 @@ local function updateCarrySign()
 	local crop = Crops.ById[cropId]
 	local mine = myPlot()
 	local home = mine > 0 and inFarm(player) == mine
-	carryLabel.Text = if home then `{crop.icon} {crop.name} · to your door!` else `{crop.icon} {crop.name} · Get home!`
+	local what = `{crop.icon} {Crops.count(cropId, player:GetAttribute("StolenCount") or 1)}`
+	carryLabel.Text = if home then `{what} · to your door!` else `{what} · Get home!`
 	local root = rootOf(player)
 	local camera = workspace.CurrentCamera
 	arrowDisc.Visible = mine > 0 and root ~= nil
@@ -759,7 +763,7 @@ local function bustedCard(info)
 		TextStrokeColor3 = C.cream, TextStrokeTransparency = 0, Rotation = -6, LayoutOrder = 1, ZIndex = 63, Parent = file })
 	local lines = {
 		info.charge,
-		`Fine: {info.fine} coins, paid to {info.owner}`,
+		`Fine: {UI.formatNumber(info.fine)} coins, paid to {info.owner}`,
 	}
 	if info.owed > 0 then
 		table.insert(lines, if info.paid > 0

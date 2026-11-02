@@ -95,11 +95,13 @@ local function packet(crop, order: number, state)
 		Position = UDim2.fromOffset(56, 16), Size = UDim2.new(1, -62, 0, 22), Font = UI.HEAD, TextSize = 18,
 		TextColor3 = C.ink, Text = crop.name, ZIndex = 23, Parent = card,
 	}), 11)
-	UI.label({
+	-- (a seed plants a whole patch: say what it grows)
+	UI.fit(UI.label({
 		Position = UDim2.fromOffset(56, 38), Size = UDim2.new(1, -62, 0, 34), TextWrapped = true, Font = UI.HAND, TextSize = 17,
 		TextYAlignment = Enum.TextYAlignment.Top, ZIndex = 23, Parent = card,
-		Text = `⏱ {minutes(crop.grow)}{if crop.regrow then ` · ×{GrowthRules.harvests(crop.id)} picks` else ""}\nsells for ~{UI.formatNumber(crop.value)}`,
-	})
+		Text = `⏱ {minutes(crop.grow)}{if crop.regrow then ` · {GrowthRules.harvests(crop.id)} picks` else ""}\n`
+			.. `{crop.icon}×{crop.perPatch} a {if crop.regrow then "pick" else "patch"} · ~{UI.formatNumber(crop.value)} each`,
+	}), 11)
 	-- the price tag on its string, and the stock
 	UI.tag({ text = UI.formatNumber(crop.seed), coin = true, color = C.gold, size = UDim2.fromOffset(92, 26), position = UDim2.fromOffset(6, 76),
 		textSize = 15, zIndex = 23, parent = card })

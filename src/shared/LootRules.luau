@@ -7,8 +7,9 @@
 -- raid ledger), so it can go back. Pure functions over plain tables
 -- (tests/loot.test.luau); CrimeService keeps one per player.
 --
--- loot = { items = { { crop, key, ownerId, entry? } } } (at most one item;
--- a list so the crop mid-steal can join it for a fine)
+-- loot = { items = { { crop, key, ownerId, entry?, count } } } (at most one
+-- item: a whole patch's carrots, or one pumpkin; a list so the crop
+-- mid-steal can join it for a fine)
 local Crime = require(script.Parent.Config.Crime)
 local Crops = require(script.Parent.Config.Crops)
 local Rarities = require(script.Parent.Config.Rarities)
@@ -23,10 +24,10 @@ function LootRules.isEmpty(loot): boolean
 	return #loot.items == 0
 end
 
--- The crop in their hands, if any.
-function LootRules.crop(loot): string?
+-- The crop in their hands, if any, and how many.
+function LootRules.crop(loot): (string?, number)
 	local item = loot.items[1]
-	return item and item.crop
+	return item and item.crop, if item then item.count or 1 else 0
 end
 
 -- Whether they can take another: only with empty hands.
@@ -39,19 +40,20 @@ function LootRules.raidWeight(cropId: string): number
 	return Rarities.ById[Crops.ById[cropId].rarity].raidWeight
 end
 
--- Puts a stolen crop in their hands. key: its barn stack key; entry: its
--- line in the farm's raid ledger (shared/CrimeRules.raidAdd).
-function LootRules.add(loot, cropId: string, key: string, ownerId: number, entry)
-	local item = { crop = cropId, key = key, ownerId = ownerId, entry = entry }
+-- Puts a stolen crop in their hands: `count` of it (default 1). key: its
+-- barn stack key; entry: its line in the farm's raid ledger
+-- (shared/CrimeRules.raidAdd).
+function LootRules.add(loot, cropId: string, key: string, ownerId: number, entry, count: number?)
+	local item = { crop = cropId, key = key, ownerId = ownerId, entry = entry, count = count or 1 }
 	table.insert(loot.items, item)
 	return item
 end
 
--- The loot's market value: priceOf(cropId) per unit (default: base values).
+-- The loot's market value: priceOf(cropId) each (default: base values).
 function LootRules.value(items, priceOf: ((string) -> number)?): number
 	local total = 0
 	for _, item in items do
-		total += if priceOf then priceOf(item.crop) else Crops.ById[item.crop].value
+		total += (item.count or 1) * (if priceOf then priceOf(item.crop) else Crops.ById[item.crop].value)
 	end
 	return total
 end
@@ -92,7 +94,7 @@ function LootRules.returns(items, present: (number) -> boolean, stopperId: numbe
 	return out
 end
 
--- "🎃 Pumpkin ×2, 🥕 Carrot" (in the order they were taken).
+-- "🎃 1 pumpkin, 🥕 6 carrots" (in the order they were taken).
 function LootRules.summary(items): string
 	local order, counts = {}, {}
 	for _, item in items do
@@ -100,13 +102,11 @@ function LootRules.summary(items): string
 			table.insert(order, item.crop)
 			counts[item.crop] = 0
 		end
-		counts[item.crop] += 1
+		counts[item.crop] += item.count or 1
 	end
 	local parts = {}
 	for _, cropId in order do
-		local crop = Crops.ById[cropId]
-		local count = counts[cropId]
-		table.insert(parts, `{crop.icon} {crop.name}{if count > 1 then ` ×{count}` else ""}`)
+		table.insert(parts, `{Crops.ById[cropId].icon} {Crops.count(cropId, counts[cropId])}`)
 	end
 	return table.concat(parts, ", ")
 end

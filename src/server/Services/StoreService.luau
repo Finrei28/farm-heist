@@ -132,7 +132,7 @@ local function drawDisplays(player: Player)
 			local units, room = 0, 0
 			for _, slot in entry.slots do
 				units += slot.units
-				room += def.units
+				room += ShopRules.slotRoom(def, if slot.units > 0 then slot.crop else slot.set)
 			end
 			local canFill = 0
 			for cropId, n in waiting do
@@ -688,15 +688,16 @@ function StoreService.SetLevel(player: Player, to: number)
 	redraw(player)
 end
 
--- A Stocker's round: up to `units` from the stockroom onto the emptiest
--- displays (not while you're decorating). Returns units moved.
-function StoreService.Restock(player: Player, units: number): number
+-- A Stocker's round: up to `patches` worth from the stockroom onto the
+-- emptiest displays (not while you're decorating). Returns the patches'
+-- worth moved.
+function StoreService.Restock(player: Player, patches: number): number
 	local st = stores[player]
 	local data = DataService.Get(player)
-	if not st or not data or st.decorating or units < 1 then
+	if not st or not data or st.decorating or patches < 1 then
 		return 0
 	end
-	local moved = ShopRules.restockDisplays(data.store, MarketService.priceAt(), units)
+	local moved = ShopRules.restockDisplays(data.store, MarketService.priceAt(), patches)
 	if moved > 0 then
 		drawDisplays(player)
 		drawStockroom(player)

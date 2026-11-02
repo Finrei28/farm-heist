@@ -12,7 +12,9 @@
 --   tiles      { ["tile"] = tile }  planted tiles (shared/GrowthRules)
 --   seeds      { [cropId] = n }     Farmhands replant from these
 --   replant    "same" | "cheapest" | "none"
---   barn       { [cropId] = units } waiting for the warehouse
+--   fieldYield the Field Level's yield (× perPatch) for what Farmhands plant
+--   barn       { [cropId] = units } waiting for the warehouse (units: carrots,
+--                                   pumpkins, punnets ... one by one)
 --   barnRoom   units the barn still holds (Farmhands stop when it's full)
 --   sorted     { [cropId] = units } washed and graded, waiting to be packed
 --   hold       { crate }            crates waiting for a truck (rack / Cold Room) ...
@@ -21,22 +23,24 @@
 --   stockroom  { [cropId] = units } packed for the store ...
 --   stockroomRoom ... and crates it still takes (then crates go to the truck)
 --   shelves    { [cropId] = units } on the store's displays
+-- The Sorters, Stockers and the store's displays work in patches' worth
+-- (shared/CrateRules.patches), so 72 carrots are as much work as 6 pumpkins.
 --   routes     { [cropId] = share for the truck 0–1 (default 1) or "Keep" }
 --   speeds     { Field, Shed, Sort, Pack, Load, Shelves, Register } a minute (WorkerRules.crew)
 --   gradeA     share of the crew's batches that come out grade A
 --   minPrice   the Drivers' rule: send only at ≥ this × base value (0: when full)
 --   premium    Premium contracts: Legendary and Mythic crates this much more by truck
---   shop       { level, stars, prices = { [cropId] = coins }, capacity, staffed, boost }
+--   shop       { level, stars, prices = { [cropId] = coins }, capacity (patches' worth), staffed, boost }
 --              (staffed: only staffed checkouts, so shoppers need a Cashier;
 --              boost: the Greeter's extra shoppers)
 --   wages      coins a minute for the whole crew, online
 --   coins      the owner's coins (wages come out of them; sales go in)
 -- A crate here is { crop, units, grade }.
 local Crops = require(script.Parent.Config.Crops)
-local Rarities = require(script.Parent.Config.Rarities)
 local Shop = require(script.Parent.Config.Shop)
 local Warehouse = require(script.Parent.Config.Warehouse)
 local Workers = require(script.Parent.Config.Workers)
+local CrateRules = require(script.Parent.CrateRules)
 local DemandModel = require(script.Parent.DemandModel)
 local GrowthRules = require(script.Parent.GrowthRules)
 local MarketPrice = require(script.Parent.MarketPrice)
@@ -74,12 +78,16 @@ local function refill(budget: number, perMinute: number): number
 end
 
 local function crateSize(cropId: string): number
-	return Rarities.ById[Crops.ById[cropId].rarity].crate
+	return CrateRules.size(cropId)
+end
+
+local function perPatch(cropId: string): number
+	return Crops.ById[cropId].perPatch
 end
 
 function PipelineRules.newState()
 	return {
-		tiles = {}, seeds = {}, replant = "same", barn = {}, barnRoom = math.huge, sorted = {}, hold = {}, holdSize = 6,
+		tiles = {}, seeds = {}, replant = "same", fieldYield = 1, barn = {}, barnRoom = math.huge, sorted = {}, hold = {}, holdSize = 6,
 		trucks = { { crates = 4, roundTrip = 60, backAt = 0, driver = false, bed = {} } },
 		stockroom = {}, stockroomRoom = math.huge, shelves = {}, routes = {}, speeds = {}, gradeA = 0, minPrice = 0, premium = 0,
 		shop = { level = 1, stars = 3, prices = {}, capacity = 40, staffed = false, boost = 0 },
@@ -113,7 +121,7 @@ end
 -- `startTime` at `rate` (Workers.OFFLINE_RATE). priceAt(cropId, t) gives the
 -- truck price (default: MarketPrice with supply 1). Returns a report:
 --   { minutes, harvested, crates, shippedCrates, truckCoins, runs = { run }, shopUnits, shopCoins,
---     sold = { [cropId] = units }, stocked, wages, strikeMinutes, worked = { [station] = minutes } }
+--     sold = { [cropId] = units }, stocked, stockedPatches, wages, strikeMinutes, worked = { [station] = minutes } }
 -- run = { truck, at, arriveAt, returnAt, crates = { crate + price + coins }, coins }
 function PipelineRules.simulate(state, seconds: number, rate: number, startTime: number, priceAt)
 	priceAt = priceAt or function(cropId, t)
@@ -124,10 +132,11 @@ function PipelineRules.simulate(state, seconds: number, rate: number, startTime:
 	state.routeAcc = state.routeAcc or {}
 	state.salesAcc = state.salesAcc or {}
 	state.gradeAcc = state.gradeAcc or 0
+	state.yieldAcc = state.yieldAcc or 0
 	local budget = { harvest = 0, shed = 0, sort = 0, pack = 0, load = 0, stock = 0, shoppers = 0, register = 0 }
 	local report = {
 		minutes = minutes, harvested = 0, crates = 0, shippedCrates = 0, truckCoins = 0, runs = {},
-		shopUnits = 0, shopCoins = 0, sold = {}, stocked = 0, wages = 0, strikeMinutes = 0, worked = {},
+		shopUnits = 0, shopCoins = 0, sold = {}, stocked = 0, stockedPatches = 0, wages = 0, strikeMinutes = 0, worked = {},
 	}
 	local pending = {} -- runs on the road, not paid yet (their coins come in at arriveAt)
 
@@ -143,6 +152,19 @@ function PipelineRules.simulate(state, seconds: number, rate: number, startTime:
 			return "A"
 		end
 		return "B"
+	end
+
+	-- How many a patch Farmhands plant (or a regrowing one) gives: the Field
+	-- Level's extra kept exact over many patches (no randomness).
+	local function yieldFor(cropId: string): number
+		local exact = perPatch(cropId) * (state.fieldYield or 1)
+		local whole = math.floor(exact + 1e-9)
+		state.yieldAcc += exact - whole
+		if state.yieldAcc >= 1 - 1e-9 then
+			state.yieldAcc -= 1
+			return whole + 1
+		end
+		return whole
 	end
 
 	-- Room for one more crate waiting for a truck.
@@ -214,16 +236,17 @@ function PipelineRules.simulate(state, seconds: number, rate: number, startTime:
 					break
 				end
 				local tile = state.tiles[key]
-				if tile and not tile.leave and GrowthRules.isRipe(tile) then
+				if tile and not tile.leave and GrowthRules.isRipe(tile) and GrowthRules.yieldOf(tile) <= state.barnRoom then
+					local count = GrowthRules.yieldOf(tile)
 					budget.harvest -= 1
-					report.harvested += 1
+					report.harvested += count
 					picked = true
-					state.barnRoom -= 1
-					add(state.barn, tile.crop, 1)
-					local _, stays = GrowthRules.harvest(tile)
+					state.barnRoom -= count
+					add(state.barn, tile.crop, count)
+					local _, stays = GrowthRules.harvest(tile, yieldFor(tile.crop))
 					if not stays then
 						local seed = replantSeed(state, tile.crop)
-						state.tiles[key] = if seed then GrowthRules.plant(seed) else nil
+						state.tiles[key] = if seed then GrowthRules.plant(seed, false, yieldFor(seed)) else nil
 					end
 				end
 			end
@@ -245,12 +268,12 @@ function PipelineRules.simulate(state, seconds: number, rate: number, startTime:
 				end
 			end
 
-			-- ... Sorters wash and grade (warehouses) ...
+			-- ... Sorters wash and grade (warehouses; their speed is in patches' worth) ...
 			budget.sort = refill(budget.sort, (speeds.Sort or 0) * rate)
 			for _, cropId in keysOf(state.barn) do
-				local units = if routed(cropId) then math.min(math.floor(budget.sort), state.barn[cropId] or 0) else 0
+				local units = if routed(cropId) then math.min(math.floor(budget.sort * perPatch(cropId) + 1e-9), state.barn[cropId] or 0) else 0
 				if units > 0 then
-					budget.sort -= units
+					budget.sort -= units / perPatch(cropId)
 					add(state.barn, cropId, -units)
 					add(state.sorted, cropId, units)
 					worked("Sort")
@@ -317,18 +340,21 @@ function PipelineRules.simulate(state, seconds: number, rate: number, startTime:
 				end
 			end
 
-			-- Stockers move stock onto the displays, up to their capacity.
+			-- Stockers move stock onto the displays, up to their capacity (all
+			-- in patches' worth).
 			budget.stock = refill(budget.stock, (speeds.Shelves or 0) * rate)
 			local onShelves = 0
-			for _, units in state.shelves do
-				onShelves += units
+			for cropId, units in state.shelves do
+				onShelves += units / perPatch(cropId)
 			end
 			for _, cropId in keysOf(state.stockroom) do
-				local units = math.min(math.floor(budget.stock), state.stockroom[cropId] or 0, state.shop.capacity - onShelves)
+				local per = perPatch(cropId)
+				local units = math.min(math.floor(math.min(budget.stock, state.shop.capacity - onShelves) * per + 1e-9), state.stockroom[cropId] or 0)
 				if units > 0 then
-					budget.stock -= units
-					onShelves += units
+					budget.stock -= units / per
+					onShelves += units / per
 					report.stocked += units
+					report.stockedPatches += units / per
 					add(state.stockroom, cropId, -units)
 					add(state.shelves, cropId, units)
 					worked("Shelves")
@@ -361,7 +387,7 @@ function PipelineRules.simulate(state, seconds: number, rate: number, startTime:
 			if price and served > 0 then
 				local ref = DemandModel.reference(Crops.ById[cropId].value, priceAt(cropId, t))
 				local chance = DemandModel.buyChance(price, ref, shop.stars)
-				local acc = (state.salesAcc[cropId] or 0) + served * Shop.UNITS_PER_SHOPPER * chance / #stocked
+				local acc = (state.salesAcc[cropId] or 0) + served * Shop.UNITS_PER_SHOPPER * perPatch(cropId) * chance / #stocked
 				local sold = math.min(math.floor(acc), state.shelves[cropId] or 0)
 				state.salesAcc[cropId] = if sold < (state.shelves[cropId] or 0) then acc - sold else 0
 				if sold > 0 then

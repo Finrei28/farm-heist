@@ -231,10 +231,10 @@ local function pricesTab(state)
 		end
 		local chance = DemandModel.buyChance(price, ref, starsNow, false, if count > 0 then present / count else 1)
 		local share = if slots > 0 and onDisplay[cropId] then math.min(1, onDisplay[cropId].slots / slots * averageWants) else 0
-		local perMinute = DemandModel.salesPerMinute(chance, shoppers, share)
+		local perMinute = DemandModel.salesPerMinute(chance, shoppers, share, crop.perPatch)
 		local out = if onDisplay[cropId] then onDisplay[cropId].units else 0
 		local frame = labelRow(i, 74, crop.icon or "🌱", crop.name,
-			`Shoppers expect ~{math.floor(ref + 0.5)} · truck pays {market} now\n{out} out on display · {inStock[cropId] or 0} in the stockroom`,
+			`Shoppers expect ~{math.floor(ref + 0.5)} each · truck pays {market} now\n{out} out on display · {inStock[cropId] or 0} in the stockroom`,
 			Rarities.ById[crop.rarity].color)
 		local low, high = DemandModel.priceRange(ref)
 		local step = math.max(1, math.floor(ref * 0.05 + 0.5))
@@ -350,7 +350,7 @@ local function stockTab(state)
 			local y = 26 + (n - 1) * 34
 			UI.label({ AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -150, 0, y + 4), Size = UDim2.fromOffset(170, 26), Font = UI.HEAD, TextSize = 16,
 				TextXAlignment = Enum.TextXAlignment.Right,
-				Text = if crop and slot.units > 0 then `{crop.icon or ""} {slot.units}/{def.units}` .. (if slot.a > 0 then ` ({slot.a} A)` else "")
+				Text = if crop and slot.units > 0 then `{crop.icon or ""} {slot.units}/{ShopRules.slotRoom(def, slot.crop)}` .. (if slot.a > 0 then ` ({slot.a} A)` else "")
 					elseif crop then `{crop.icon or ""} empty` else "empty",
 				ZIndex = 23, Parent = frame })
 			local set = slot.set and Crops.ById[slot.set]

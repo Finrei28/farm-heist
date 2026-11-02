@@ -18,13 +18,13 @@ return {
 	CLAMP_MIN = 0.5,
 	CLAMP_MAX = 2.0,
 
-	-- Player-driven supply: units sold to the market by every server in a
+	-- Player-driven supply: crops sold to the market by every server in a
 	-- 10-minute window (MemoryStore counters, sharded). Selling `expected`
-	-- units in a window takes 12% off; selling more takes more, down to 30%.
+	-- in a window takes 12% off; selling more takes more, down to 30%.
 	SUPPLY_WINDOW = 600,
 	SUPPLY_SLOPE = 0.12,
 	SUPPLY_MIN = 0.7,
-	EXPECTED = { -- units per window, by rarity (tune with live data)
+	EXPECTED = { -- patches' worth per window, by rarity (× the crop's perPatch; tune with live data)
 		Common = 2000,
 		Uncommon = 800,
 		Rare = 300,

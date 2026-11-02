@@ -1,21 +1,28 @@
 -- Crates (docs/GameDesign.md §4.6). At the Packing Shed bench a crate is
--- packed from one barn stack, up to the rarity's crate size (a crate can go
+-- packed from one barn stack, up to the crop's crate size (a crate can go
 -- out part-full), and washed by hand to grade A (×1.15) or B. A crate is
 --   { crop = cropId, key = barn stack key, units = n, grade = "A" | "B" }
--- and goes to the truck (priced when it leaves) or your store's
--- stockroom (shared/ShopRules). tests/crate.test.luau.
+-- (units: how many carrots, pumpkins, punnets ... are in it) and goes to
+-- the truck (priced when it leaves) or your store's stockroom
+-- (shared/ShopRules). tests/crate.test.luau.
 local BarnRules = require(script.Parent.BarnRules)
 local Crops = require(script.Parent.Config.Crops)
-local Rarities = require(script.Parent.Config.Rarities)
 local Warehouse = require(script.Parent.Config.Warehouse)
 
 local WASH = Warehouse.WASH
 
 local CrateRules = {}
 
--- Units that fit in one crate of this crop.
+-- How many of this crop fit in one crate.
 function CrateRules.size(cropId: string): number
-	return Rarities.ById[Crops.ById[cropId].rarity].crate
+	return Crops.ById[cropId].crate
+end
+
+-- How many patches' worth `units` of this crop is: the crew's work and the
+-- store's shelves are measured in patches, so a crate of 72 carrots is as
+-- much work as a crate of 6 pumpkins was meant to be (12 patches vs 6).
+function CrateRules.patches(cropId: string, units: number): number
+	return units / Crops.ById[cropId].perPatch
 end
 
 -- The wash meter (0–1) after holding for `seconds`. It stays full if you

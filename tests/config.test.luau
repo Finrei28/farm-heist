@@ -49,10 +49,50 @@ return function(spec, harness)
 			end
 		end)
 		it("match the doc's profit column", function()
-			expect(GrowthRules.profitPerMinute("Carrot")).toBeNear(8, 0.01)
-			expect(GrowthRules.profitPerMinute("Tomato")).toBeNear(12.35, 0.01)
-			expect(GrowthRules.profitPerMinute("Pumpkin")).toBeNear(14, 0.01)
-			expect(GrowthRules.profitPerMinute("GoldenApple")).toBeNear(29.8, 0.05)
+			expect(GrowthRules.profitPerMinute("Carrot")).toBeNear(80, 0.1)
+			expect(GrowthRules.profitPerMinute("Tomato")).toBeNear(123.5, 0.1)
+			expect(GrowthRules.profitPerMinute("Pumpkin")).toBeNear(140, 0.1)
+			expect(GrowthRules.profitPerMinute("GoldenApple")).toBeNear(298, 0.5)
+		end)
+		it("give several a patch, fewer the bigger they are, and each one's worth a whole number of coins", function()
+			for _, crop in Crops.List do
+				expect(crop.perPatch).toBeAtLeast(1)
+				expect(crop.perPatch == math.floor(crop.perPatch)).toBe(true)
+				expect(crop.value == math.floor(crop.value)).toBe(true)
+				-- every crop is worth at least 30 coins, so prices move in steps of 3% or less
+				expect(crop.value).toBeAtLeast(30)
+			end
+			expect(Crops.ById.Carrot.perPatch).toBe(6)
+			expect(Crops.ById.Potato.perPatch).toBe(10)
+			expect(Crops.ById.Pumpkin.perPatch).toBe(1)
+			expect(Crops.ById.CrystalRose.perPatch).toBe(1)
+		end)
+		it("crate a whole number of patches, no more than their rarity's crate", function()
+			for _, crop in Crops.List do
+				local patches = crop.crate / crop.perPatch
+				expect(patches == math.floor(patches)).toBe(true)
+				expect(patches <= Rarities.ById[crop.rarity].cratePatches).toBe(true)
+				expect(patches).toBeAtLeast(Rarities.ById[crop.rarity].cratePatches / 2)
+			end
+		end)
+		it("let a thief carry the whole patch, except the big ones, one at a time", function()
+			for _, crop in Crops.List do
+				if crop.carry then
+					expect(crop.carry).toBe(1)
+					expect(crop.perPatch).toBe(1) -- (so at Field Level 1 a thief still takes the whole patch)
+				end
+			end
+			expect(Crops.ById.Pumpkin.carry).toBe(1)
+			expect(Crops.ById.Carrot.carry).toBe(nil)
+		end)
+		it("say how many in words", function()
+			expect(Crops.count("Carrot", 6)).toBe("6 carrots")
+			expect(Crops.count("Carrot", 1)).toBe("1 carrot")
+			expect(Crops.count("Potato", 10)).toBe("10 potatoes")
+			expect(Crops.count("Strawberry", 4)).toBe("4 punnets of strawberries")
+			expect(Crops.count("Wheat", 1)).toBe("1 sheaf of wheat")
+			expect(Crops.count("GoldenApple", 5)).toBe("5 golden apples")
+			expect(Crops.count("DragonsEyePumpkin", 1)).toBe("1 dragon's eye pumpkin")
 		end)
 	end)
 

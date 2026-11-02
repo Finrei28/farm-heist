@@ -38,7 +38,7 @@ Build them in `DevCommandService` (Studio only, plus `Util/Staff` in live server
 
 | Command | Does | Needed from |
 |---|---|---|
-| `/coins N` ✅ | add coins | Stage B |
+| `/coins N` ✅ | add coins (default 100,000) | Stage B |
 | `/level N` ✅ · `/xp N` ✅ | set XP to reach level N (and its Land Permits) · add XP | Stage B |
 | `/grow S` ✅ · `/grow ripe` ✅ | fast-forward your field S seconds online · ripen everything | Stage B |
 | `/away H` ✅ | settle H hours away: growth, the crew at 25% for up to 8 h, store sales, the Welcome back card | Stage B–C |
@@ -47,7 +47,8 @@ Build them in `DevCommandService` (Studio only, plus `Util/Staff` in live server
 | `/restock` ✅ · `/restock full` ✅ | Barley's next restock now · with everything in stock | Stage B |
 | `/seeds Crop N` ✅ · `/seeds all N` ✅ | give seeds | Stage B |
 | `/tp N` ✅ · `/tp town` ✅ · `/tp porch` ✅ · `/tp barley` ✅ · `/tp home` ✅ | teleport (through `MovementService.Teleport`) | Stage A–B |
-| `/crops Crop N` ✅ | put harvested crops in your barn (C2's "tester with 40 Pumpkins") | Stage C |
+| `/crops Crop N` ✅ | put harvested crops in your barn (C2's "tester with 40 Pumpkins"; default a crate's worth) | Stage C |
+| `/field N` ✅ | your field straight to Field Level N (crops planted after it give more) | Stage C |
 | `/truck` ✅ | your trucks reach the City and come home now | Stage C |
 | `/shoppers N` ✅ | the next N shoppers come to your store 1.5 s apart (C3) | Stage C |
 | `/tp exchange` ✅ · `/tp shed` ✅ · `/tp dock` ✅ · `/tp store` ✅ · `/tp hiring` ✅ | to the Exchange desk, your bench or wash table, your first dock, the sidewalk outside your store's door, the Hiring Hall's job board | Stage C |
@@ -55,7 +56,7 @@ Build them in `DevCommandService` (Studio only, plus `Util/Staff` in live server
 | `/shield off` | end your Sprout Shield and arrival grace now | Stage D |
 | `/ko` ✅ · `/ko suspect` ✅ · `/suspect` ✅ | knock yourself out (as a Suspect: the arrest screen) / mark yourself a Suspect of the farm you're in | Stage D |
 | `/crimelog` ✅ | prints your visits, what you carry, cooldowns, debts, last arrests, your farm's raid ledger | Stage D |
-| `/carry Crop` ✅ · `/carry none` · `/debt N` ✅ · `/earn N` ✅ | a stolen crop held up in your hands (or empty them) · owe N coins (to yourself) · as if you'd sold crops for N (half pays debts) | Stage D |
+| `/carry Crop [N]` ✅ · `/carry none` · `/debt N` ✅ · `/earn N` ✅ | stolen crops held up in your hands (default what a thief takes from a patch; or empty them) · owe N coins (to yourself) · as if you'd sold crops for N (half pays debts) | Stage D |
 | `/plant Crop` ✅ · `/tp field [N]` ✅ · `/tp back [N]` ✅ · `/tp police` ✅ | plant every open tile · stand in a farm's field · outside a farm's back fence · the police porch | Stage D |
 | `/weather X` · `/auction now` | force weather; start an auction | Stage E |
 | `/wipe` ✅ | start your save over, in place | all |

@@ -13,21 +13,33 @@ return {
 
 	-- In order: each permit is earned at its level; using the nth permit costs the nth fee.
 	PERMITS = {
-		{ level = 2, fee = 250 }, -- cheap: the Farm Guide ends by pointing at it
-		{ level = 4, fee = 2_000 },
-		{ level = 6, fee = 4_000 },
-		{ level = 8, fee = 7_000 },
-		{ level = 10, fee = 12_000 },
-		{ level = 12, fee = 20_000 },
-		{ level = 14, fee = 35_000 },
-		{ level = 17, fee = 55_000 },
-		{ level = 20, fee = 85_000 },
-		{ level = 24, fee = 130_000 },
-		{ level = 28, fee = 190_000 },
-		{ level = 32, fee = 250_000 },
+		{ level = 2, fee = 2_500 }, -- cheap: the Farm Guide ends by pointing at it
+		{ level = 4, fee = 20_000 },
+		{ level = 6, fee = 40_000 },
+		{ level = 8, fee = 70_000 },
+		{ level = 10, fee = 120_000 },
+		{ level = 12, fee = 200_000 },
+		{ level = 14, fee = 350_000 },
+		{ level = 17, fee = 550_000 },
+		{ level = 20, fee = 850_000 },
+		{ level = 24, fee = 1_300_000 },
+		{ level = 28, fee = 1_900_000 },
+		{ level = 32, fee = 2_500_000 },
 	},
 
 	OBSTACLES = 4, -- a stump, a rock, weeds, a bush
 	OBSTACLE_HOLD = 2, -- seconds per obstacle by hand
 	FARMHAND_CLEAR_SECONDS = 30,
+
+	-- Field Levels (§4.1c): better soil, more crops from every patch, and a
+	-- new look for the whole field each time. yield: how many a patch gives,
+	-- × the crop's perPatch (the part after the point is the chance of one
+	-- more, rolled when it's planted); cost and the Farm Level it needs.
+	FIELD_LEVELS = {
+		{ cost = 0, farmLevel = 1, yield = 1.0, name = "Tilled rows", look = "Rows" },
+		{ cost = 50_000, farmLevel = 5, yield = 1.1, name = "Composted soil", look = "Compost" },
+		{ cost = 500_000, farmLevel = 10, yield = 1.2, name = "Raised beds", look = "Beds" },
+		{ cost = 3_000_000, farmLevel = 18, yield = 1.35, name = "Drip lines", look = "Drip" },
+		{ cost = 12_000_000, farmLevel = 26, yield = 1.5, name = "Prize beds", look = "Prize" },
+	},
 }

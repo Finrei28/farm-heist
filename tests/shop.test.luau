@@ -34,14 +34,20 @@ return function(spec, harness)
 	describe("filling", function()
 		it("tops each slot up from the stockroom, grade A first, emptying small crates first", function()
 			local store = newStore({ s = "WoodenShelf" })
-			store.stockroom = { crate("Carrot", 12, "B"), crate("Carrot", 3, "B"), crate("Carrot", 2, "A") }
-			local moved = ShopRules.fill(store, "s", market(18))
-			expect(moved).toBe(17)
+			store.stockroom = { crate("Carrot", 72, "B"), crate("Carrot", 18, "B"), crate("Carrot", 12, "A") }
+			local moved, patches = ShopRules.fill(store, "s", market(30))
+			expect(moved).toBe(102)
+			expect(patches).toBeNear(17, 1e-9)
 			expect(slot(store, "s", 1).crop).toBe("Carrot")
-			expect(slot(store, "s", 1).units).toBe(15)
-			expect(slot(store, "s", 1).a).toBe(2)
-			expect(slot(store, "s", 2).units).toBe(2) -- (Auto: the second slot takes what's left)
+			expect(slot(store, "s", 1).units).toBe(90) -- (a Wooden Shelf slot: 15 patches' worth)
+			expect(slot(store, "s", 1).a).toBe(12)
+			expect(slot(store, "s", 2).units).toBe(12) -- (Auto: the second slot takes what's left)
 			expect(#store.stockroom).toBe(0)
+		end)
+		it("holds a patches' worth of whatever's on a slot: 90 carrots or 15 pumpkins on a shelf", function()
+			expect(ShopRules.slotRoom(Store.ITEMS.WoodenShelf, "Carrot")).toBe(90)
+			expect(ShopRules.slotRoom(Store.ITEMS.WoodenShelf, "Pumpkin")).toBe(15)
+			expect(ShopRules.slotRoom(Store.ITEMS.VelvetPedestal, "GoldenApple")).toBe(5)
 		end)
 		it("puts a different crop on each Auto slot while there are different ones", function()
 			local store = newStore({ s = "WoodenShelf" })
@@ -72,22 +78,22 @@ return function(spec, harness)
 		end)
 		it("prices a crop going out for the first time at the reference, and keeps your price after", function()
 			local store = newStore({ c = "ProduceCrate" })
-			store.stockroom = { crate("Carrot", 12) }
-			ShopRules.fill(store, "c", market(22))
-			expect(store.prices.Carrot).toBe(20) -- ½ × 18 + ½ × 22
-			store.prices.Carrot = 30
+			store.stockroom = { crate("Carrot", 72) }
+			ShopRules.fill(store, "c", market(34))
+			expect(store.prices.Carrot).toBe(32) -- ½ × 30 + ½ × 34
+			store.prices.Carrot = 40
 			ShopRules.empty(store, "c")
-			ShopRules.fill(store, "c", market(22))
-			expect(store.prices.Carrot).toBe(30)
+			ShopRules.fill(store, "c", market(34))
+			expect(store.prices.Carrot).toBe(40)
 		end)
 		it("empties a display back into the stockroom, topping up part-full crates", function()
 			local store = newStore({ s = "WoodenShelf" })
-			store.stockroom = { crate("Carrot", 12), crate("Carrot", 12), crate("Carrot", 6, "A") }
-			ShopRules.fill(store, "s", market(18))
+			store.stockroom = { crate("Carrot", 72), crate("Carrot", 72), crate("Carrot", 36, "A") }
+			ShopRules.fill(store, "s", market(30))
 			expect(#store.stockroom).toBe(0)
-			expect(ShopRules.empty(store, "s")).toBe(30)
-			expect(ShopRules.stockroomUnits(store).Carrot).toBe(30)
-			expect(#store.stockroom).toBe(3) -- 6 A, then 24 B in two full crates
+			expect(ShopRules.empty(store, "s")).toBe(180)
+			expect(ShopRules.stockroomUnits(store).Carrot).toBe(180)
+			expect(#store.stockroom).toBe(3) -- 36 A, then 144 B in two full crates
 		end)
 		it("counts the stockroom's room at this level", function()
 			local store = newStore()
@@ -102,13 +108,12 @@ return function(spec, harness)
 	end)
 
 	describe("a Stocker", function()
-		it("fills only as many units as their round allows, the emptiest display first", function()
+		it("fills only as many patches' worth as their round allows, the emptiest display first", function()
 			local store = newStore({ a = "WoodenShelf", b = "WoodenShelf" })
-			store.stockroom = { crate("Carrot", 12), crate("Wheat", 12) }
-			slot(store, "a", 1).crop, slot(store, "a", 1).units = "Carrot", 4
-			store.stockroom[1].units = 8
-			local moved = ShopRules.restockDisplays(store, market(18), 5)
-			expect(moved).toBe(5)
+			store.stockroom = { crate("Carrot", 48), crate("Wheat", 24) }
+			slot(store, "a", 1).crop, slot(store, "a", 1).units = "Carrot", 24
+			local moved = ShopRules.restockDisplays(store, market(30), 5)
+			expect(moved).toBeNear(5, 1e-9)
 			local onA, onB = 0, 0
 			for _, s in store.layout.a.slots do
 				onA += s.units
@@ -116,8 +121,8 @@ return function(spec, harness)
 			for _, s in store.layout.b.slots do
 				onB += s.units
 			end
-			expect(onA).toBe(4) -- (b was emptier)
-			expect(onB).toBe(5)
+			expect(onA).toBe(24) -- (b was emptier)
+			expect(onB).toBe(15) -- (5 patches of wheat: 3 sheaves each)
 		end)
 		it("leaves displays alone when there's nothing for them", function()
 			local store = newStore({ a = "WoodenShelf" })
@@ -145,9 +150,9 @@ return function(spec, harness)
 	describe("prices", function()
 		it("stay within 50–300% of the reference", function()
 			local store = newStore()
-			expect(ShopRules.setPrice(store, "Carrot", 1, 18)).toBe(9)
-			expect(ShopRules.setPrice(store, "Carrot", 1000, 18)).toBe(54)
-			expect(ShopRules.setPrice(store, "Carrot", 25.4, 18)).toBe(25)
+			expect(ShopRules.setPrice(store, "Carrot", 1, 30)).toBe(15)
+			expect(ShopRules.setPrice(store, "Carrot", 1000, 30)).toBe(90)
+			expect(ShopRules.setPrice(store, "Carrot", 25.4, 30)).toBe(25)
 		end)
 	end)
 
@@ -175,8 +180,8 @@ return function(spec, harness)
 		end)
 		it("buy as often as DemandModel says, presentation included (the window's estimate)", function()
 			local rng = harness.Random.new(7)
-			for _, case in { { item = "ProduceCrate", price = 18, stars = 3 }, { item = "ProduceCrate", price = 22, stars = 5 },
-				{ item = "BulkBin", price = 18, stars = 3 }, { item = "TieredRack", price = 24, stars = 1 } } do
+			for _, case in { { item = "ProduceCrate", price = 30, stars = 3 }, { item = "ProduceCrate", price = 36, stars = 5 },
+				{ item = "BulkBin", price = 30, stars = 3 }, { item = "TieredRack", price = 40, stars = 1 } } do
 				local bought, visits = 0, 4000
 				local present = Store.ITEMS[case.item].present
 				for _ = 1, visits do
@@ -186,51 +191,61 @@ return function(spec, harness)
 					for _ = 1, 10 do
 						table.insert(store.rating.scores, case.stars)
 					end
-					if ShopRules.pick(store, "d", "Carrot", rng, market(18)) == "Bought" then
+					if ShopRules.pick(store, "d", "Carrot", rng, market(30)) == "Bought" then
 						bought += 1
 					end
 				end
-				expect(bought / visits).toBeNear(DemandModel.buyChance(case.price, 18, case.stars, false, present), 0.03)
+				expect(bought / visits).toBeNear(DemandModel.buyChance(case.price, 30, case.stars, false, present), 0.03)
 			end
 		end)
-		it("take 1–4 units (2.5 on average), grade A first at 15% more", function()
+		it("take 1–4 patches' worth (6–24 carrots, 15 on average), grade A first at 15% more", function()
 			local rng = harness.Random.new(3)
 			local units, buyers = 0, 0
 			for _ = 1, 2000 do
 				local store = newStore({ c = "ProduceCrate" })
-				slot(store, "c", 1).crop, slot(store, "c", 1).units, slot(store, "c", 1).a = "Carrot", 12, 12
-				store.prices.Carrot = 6 -- cheap: everyone buys
-				local result, line = ShopRules.pick(store, "c", "Carrot", rng, market(18))
+				slot(store, "c", 1).crop, slot(store, "c", 1).units, slot(store, "c", 1).a = "Carrot", 72, 72
+				store.prices.Carrot = 10 -- cheap: everyone buys
+				local result, line = ShopRules.pick(store, "c", "Carrot", rng, market(30))
 				expect(result).toBe("Bought")
-				expect(line.units >= 1 and line.units <= 4).toBe(true)
-				expect(line.coins).toBe(line.units * 7) -- 6 × 1.15, rounded
-				expect(slot(store, "c", 1).a).toBe(12 - line.units)
+				expect(line.units >= 6 and line.units <= 24).toBe(true)
+				expect(line.coins).toBe(line.units * 12) -- 10 × 1.15, rounded
+				expect(slot(store, "c", 1).a).toBe(72 - line.units)
 				units += line.units
 				buyers += 1
 			end
-			expect(units / buyers).toBeNear(Shop.UNITS_PER_SHOPPER, 0.1)
+			expect(units / buyers).toBeNear(Shop.UNITS_PER_SHOPPER * 6, 0.5)
+		end)
+		it("take 1–4 pumpkins", function()
+			local rng = harness.Random.new(8)
+			for _ = 1, 200 do
+				local store = newStore({ s = "WoodenShelf" })
+				slot(store, "s", 1).crop, slot(store, "s", 1).units = "Pumpkin", 15
+				store.prices.Pumpkin = 3_050
+				local _, line = ShopRules.pick(store, "s", "Pumpkin", rng, market(6_100))
+				expect(line.units >= 1 and line.units <= 4).toBe(true)
+			end
 		end)
 		it("find a display sold out, and never take more than is on it", function()
 			local store = newStore({ c = "ProduceCrate" })
 			slot(store, "c", 1).crop, slot(store, "c", 1).units = "Carrot", 1
-			store.prices.Carrot = 9
-			local result, line = ShopRules.pick(store, "c", "Carrot", harness.Random.new(5), market(18))
+			store.prices.Carrot = 15
+			local result, line = ShopRules.pick(store, "c", "Carrot", harness.Random.new(5), market(30))
 			expect(result).toBe("Bought")
 			expect(line.units).toBe(1)
 			expect(slot(store, "c", 1).crop).toBe(nil)
 			expect(ShopRules.isOpen(store)).toBe(false)
-			expect((ShopRules.pick(store, "c", "Carrot", harness.Random.new(5), market(18)))).toBe("SoldOut")
+			expect((ShopRules.pick(store, "c", "Carrot", harness.Random.new(5), market(30)))).toBe("SoldOut")
 		end)
 		it("put their basket back on the display when they give up in the queue", function()
 			local store = newStore({ c = "ProduceCrate" })
-			slot(store, "c", 1).crop, slot(store, "c", 1).units, slot(store, "c", 1).a = "Carrot", 12, 2
-			store.prices.Carrot = 6
-			local _, line = ShopRules.pick(store, "c", "Carrot", harness.Random.new(9), market(18))
+			slot(store, "c", 1).crop, slot(store, "c", 1).units, slot(store, "c", 1).a = "Carrot", 60, 2
+			store.prices.Carrot = 16
+			local _, line = ShopRules.pick(store, "c", "Carrot", harness.Random.new(9), market(30))
 			ShopRules.putBack(store, line)
-			expect(slot(store, "c", 1).units).toBe(12)
+			expect(slot(store, "c", 1).units).toBe(60)
 			expect(slot(store, "c", 1).a).toBe(2)
 			-- ... or to the stockroom if the display's gone
-			_, line = ShopRules.pick(store, "c", "Carrot", harness.Random.new(9), market(18))
+			_, line = ShopRules.pick(store, "c", "Carrot", harness.Random.new(9), market(30))
 			store.layout.c = nil
 			ShopRules.putBack(store, line)
 			expect(ShopRules.stockroomUnits(store).Carrot).toBe(line.units)

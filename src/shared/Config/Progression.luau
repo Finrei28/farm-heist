@@ -22,9 +22,9 @@ return {
 	},
 	WORKER_HARVEST = 0.5, -- a Farmhand's harvest (while you're online) gives this share
 
-	SALES_COINS_PER_XP = 50, -- truck and shop sales while you're online
+	SALES_COINS_PER_XP = 500, -- truck and shop sales while you're online
 	ARREST_XP = 50, -- only arrests that count for the Sheriff board (CrimeRules.countsForBoard)
 	CROPDEX_XP = 25, -- each new Cropdex entry
 
-	GUIDE_COINS = 300, -- the Farm Guide's reward
+	GUIDE_COINS = 3_000, -- the Farm Guide's reward
 }

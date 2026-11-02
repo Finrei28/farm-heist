@@ -58,11 +58,11 @@ lune run tests/run
 
 | Test | What it checks |
 |---|---|
-| `growth` | growing online and offline (25%), fresh soil, watering, regrowing crops |
+| `growth` | growing online and offline (25%), fresh soil, watering, regrowing crops, how many a patch gives (and a thief takes) |
 | `seedstock` | Barley's restocks: the same everywhere, Commons unlimited, level locks |
 | `market` | the global price: waves, Hot Crop and Glut, supply, the 0.5–2× clamp |
 | `demand` | how shoppers react to your prices and your rating |
-| `land` | Land Permits: earned by level, touching blocks only, fees in order |
+| `land` | Land Permits: earned by level, touching blocks only, fees in order; Field Levels |
 | `crime` | who may steal, Suspects, bat hits, knockouts, arrests, every way of dodging an arrest |
 | `fine` | the fine formula, repeat offenders, fleeing, debt and its expiry |
 | `travel` | the Home / Town / Visit buttons: channels, no cooldowns, no escaping a raid |

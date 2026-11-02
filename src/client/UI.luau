@@ -107,6 +107,21 @@ function UI.formatNumber(n: number): string
 	return (digits:gsub("^,", ""))
 end
 
+-- For tight spots (the purse): "987,654", then "1.23M", "45.6M", "789M", "1.23B".
+function UI.formatShort(n: number): string
+	local a = math.abs(n)
+	if a < 1e6 then
+		return UI.formatNumber(n)
+	end
+	local value, suffix = n / 1e6, "M"
+	if a >= 1e9 then
+		value, suffix = n / 1e9, "B"
+	end
+	local places = if math.abs(value) >= 100 then 0 elseif math.abs(value) >= 10 then 1 else 2
+	local text = string.format(`%.{places}f`, math.floor(value * 10 ^ places) / 10 ^ places) -- (rounded down: never more than you have)
+	return text .. suffix
+end
+
 -- 75 → "1:15", 3725 → "1:02:05"
 function UI.formatTime(seconds: number): string
 	seconds = math.max(0, math.ceil(seconds))
