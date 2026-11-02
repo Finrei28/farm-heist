@@ -7,7 +7,9 @@
 --
 -- Every action is checked here: it's your farm, you're standing within
 -- REACH of the tile (trusted position), the land is open, you have the seed
--- and the level for it, the crop is ripe, the barn has room.
+-- and the level for it, the crop is ripe, the barn has room. Friends on
+-- your Trusted list can water and harvest for you while they stand in your
+-- farm (§4.1): the crops go to your barn.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
@@ -15,9 +17,11 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local Shared = ReplicatedStorage.Shared
 local BarnRules = require(Shared.BarnRules)
 local Crops = require(Shared.Config.Crops)
+local DefenceRules = require(Shared.DefenceRules)
 local GrowthRules = require(Shared.GrowthRules)
 local LandRules = require(Shared.LandRules)
 local PlotLayout = require(Shared.PlotLayout)
+local Progression = require(Shared.Config.Progression)
 local ProgressionRules = require(Shared.ProgressionRules)
 local Rarities = require(Shared.Config.Rarities)
 local Remotes = require(Shared.Remotes)
@@ -114,12 +118,28 @@ local function parseTile(arg: string?): number?
 	return nil
 end
 
--- The checks every action shares. Returns the plot index, or nil and why.
-local function reach(player: Player, tile: number?): (number?, string?)
+-- Whose field you'd water or harvest: a friend's that you're standing in
+-- and Trusted on, else your own. Returns the owner and their save.
+local function workFarm(player: Player, data)
+	local farm = PlotService.inFarm(player)
+	local owner = if farm > 0 then PlotService.ownerOf(farm) else nil
+	if owner and owner ~= player then
+		local ownerData = DataService.Get(owner)
+		if ownerData and DefenceRules.isTrusted(ownerData.trusted, player.UserId) then
+			return owner, ownerData
+		end
+	end
+	return player, data
+end
+
+-- The checks every action shares: `player` stands within reach of the tile
+-- on `owner`'s farm (their own, unless they're helping). Returns the plot
+-- index, or nil and why.
+local function reach(player: Player, tile: number?, owner: Player?): (number?, string?)
 	if not tile then
 		return nil, "BadRequest"
 	end
-	local index = PlotService.plotOf(player)
+	local index = PlotService.plotOf(owner or player)
 	if not index then
 		return nil, "NoFarm"
 	end
@@ -171,15 +191,16 @@ end
 
 function actions.Water(player, data, arg)
 	local tile = parseTile(arg)
-	local index, failure = reach(player, tile)
+	local owner, ownerData = workFarm(player, data)
+	local index, failure = reach(player, tile, owner)
 	if not index then
 		return failure
 	end
-	local planted = data.field[tostring(tile)]
+	local planted = ownerData.field[tostring(tile)]
 	if not planted then
 		return "Empty"
 	end
-	settle(player, data, true)
+	settle(owner, ownerData, true)
 	if not GrowthRules.water(planted) then
 		return "NotNeeded"
 	end
@@ -187,37 +208,47 @@ function actions.Water(player, data, arg)
 	return nil
 end
 
+-- Your own crops, or a friend's (they go to the friend's barn, and the
+-- friend gets the XP a Farmhand's harvest gives).
 function actions.Harvest(player, data, arg)
 	local tile = parseTile(arg)
-	local index, failure = reach(player, tile)
+	local owner, ownerData = workFarm(player, data)
+	local helping = owner ~= player
+	local index, failure = reach(player, tile, owner)
 	if not index then
 		return failure
 	end
 	local key = tostring(tile)
-	local planted = data.field[key]
+	local planted = ownerData.field[key]
 	if not planted then
 		return "Empty"
 	end
-	settle(player, data, true)
+	settle(owner, ownerData, true)
 	if not GrowthRules.isRipe(planted) then
 		return "NotRipe"
 	end
 	local count = GrowthRules.yieldOf(planted)
-	if not BarnRules.hasRoom(data.inventory, data.silo, count) then
-		Notice.send(player, "Barn full! Sell some crops to make room.", "Error")
+	if not BarnRules.hasRoom(ownerData.inventory, ownerData.silo, count) then
+		Notice.send(player, if helping then `{owner.DisplayName}'s barn is full.` else "Barn full! Sell some crops to make room.", "Error")
 		return "BarnFull"
 	end
 	local regrowing = planted.regrowing
-	local _, stays = GrowthRules.harvest(planted, rollYield(data, planted.crop))
+	local _, stays = GrowthRules.harvest(planted, rollYield(ownerData, planted.crop))
 	if not stays then
-		data.field[key] = nil
+		ownerData.field[key] = nil
 	end
-	BarnRules.addCrops(data.inventory, BarnRules.key(planted.crop), count)
-	data.stats.harvested += count
-	FarmArt.showTile(tilePart(index, tile), data.field[key], now())
-	Analytics.step(player, data, "FirstHarvest")
-	DataService.AddXp(player, ProgressionRules.harvestXp(planted.crop, regrowing))
-	return nil, { crop = planted.crop, count = count }
+	BarnRules.addCrops(ownerData.inventory, BarnRules.key(planted.crop), count)
+	ownerData.stats.harvested += count
+	FarmArt.showTile(tilePart(index, tile), ownerData.field[key], now())
+	local xp = ProgressionRules.harvestXp(planted.crop, regrowing)
+	if helping then
+		DataService.AddXp(owner, xp * Progression.WORKER_HARVEST)
+		DataService.NotifyState(owner)
+	else
+		Analytics.step(player, data, "FirstHarvest")
+		DataService.AddXp(player, xp)
+	end
+	return nil, { crop = planted.crop, count = count, owner = if helping then owner.DisplayName else nil }
 end
 
 -- A Farmhand's harvest of a ripe tile (not one flagged to stay), replanted

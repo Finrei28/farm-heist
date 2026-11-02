@@ -4,6 +4,9 @@
 -- character, and MovementService allows for running speed. Carrying a
 -- stolen crop (the StolenCrop attribute, CrimeService) you only walk, at 85%,
 -- and the boot greys out; the server's movement check holds you to it.
+-- Defences slow you too (§4.11): the guard dog has you by the trousers
+-- (Slow until SlowUntil, DefenceService), or you're in someone's mud
+-- (GateController calls setMud).
 local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -16,15 +19,36 @@ local SprintController = {}
 
 local player = Players.LocalPlayer
 local running = false
+local mud = 0
 local GAP = 10 -- pixels between the Run button and the jump button
+
+-- What slows you now (0–1 of your speed taken away, the dog and mud together).
+local function slowed(): number
+	local keep = 1 - mud
+	if (player:GetAttribute("SlowUntil") or 0) > workspace:GetServerTimeNow() then
+		keep *= 1 - (player:GetAttribute("Slow") or 0)
+	end
+	return 1 - keep
+end
 
 local function applySpeed()
 	local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 	if humanoid then
 		local carrying = player:GetAttribute("StolenCrop") ~= nil
-		humanoid.WalkSpeed = if carrying then LootRules.speed(Settings.WALK_SPEED, true)
+		local speed = if carrying then LootRules.speed(Settings.WALK_SPEED, true)
 			elseif running then Settings.RUN_SPEED
 			else Settings.WALK_SPEED
+		speed *= 1 - slowed()
+		if math.abs(humanoid.WalkSpeed - speed) > 0.01 then
+			humanoid.WalkSpeed = speed
+		end
+	end
+end
+
+function SprintController.setMud(slow: number)
+	if slow ~= mud then
+		mud = slow
+		applySpeed()
 	end
 end
 
@@ -70,6 +94,13 @@ function SprintController.Start()
 		while true do
 			place()
 			task.wait(1)
+		end
+	end)
+	-- (the dog lets go when SlowUntil passes)
+	task.spawn(function()
+		while true do
+			task.wait(0.25)
+			applySpeed()
 		end
 	end)
 	player.CharacterAdded:Connect(function(character)

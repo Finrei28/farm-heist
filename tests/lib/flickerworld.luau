@@ -3,8 +3,9 @@
 -- town and police station, a warehouse side at each building's levels, a
 -- store at each building's levels with every catalog item, scaffolding, a
 -- whole field at every Field Level, every crop at every stage on a tilled
--- tile (ripe as it comes and on a bumper patch), crates, the carried crops
--- and the bat.
+-- tile (ripe as it comes and on a bumper patch), crates, the carried crops,
+-- the bat, and every defence set out (the tall fence, the gate shut and
+-- locked, the Watchman's gatehouse, a dome).
 local roblox = require("@lune/roblox")
 
 return function(harness)
@@ -20,6 +21,9 @@ return function(harness)
 	local FarmArt = harness.loadServerWith("World/FarmArt", globals)
 	local CrimeArt = harness.loadServerWith("World/CrimeArt", globals)
 	local ProduceArt = harness.loadServerWith("World/ProduceArt", globals)
+	local DefenceArt = harness.loadServerWith("World/DefenceArt", globals)
+	local DefenceRules = harness.load("DefenceRules")
+	local Defences = harness.load("Config/Defences")
 	local world = WorldBuilder.Build()
 
 	-- warehouses (Plot 1 keeps the Packing Shed) and stores, one level a plot
@@ -83,5 +87,32 @@ return function(harness)
 	end
 	local bat = CrimeArt.bat()
 	bat.Parent = gallery
+
+	-- every defence on Plot 8 (cloches over its first open tiles), its gate
+	-- shut and locked, the gatehouse, a dome; Plot 7's gate shut, unlocked
+	local d = { owned = {}, placed = {} }
+	for _, itemId in Defences.ORDER do
+		for _ = 1, math.min(Defences.ITEMS[itemId].max, 4) do
+			DefenceRules.buy(d, itemId)
+		end
+	end
+	DefenceRules.place(d, "Scarecrow", "yard:4")
+	DefenceRules.place(d, "GuardDog", "yard:13")
+	for _, n in { 10, 12, 15, 17 } do
+		DefenceRules.place(d, "MudPatch", `yard:{n}`)
+	end
+	local land = { cleared = {}, fresh = {}, fieldLevel = 1 }
+	local cloches = 0
+	for tile = 1, 64 do
+		if cloches < 4 and DefenceRules.canPlace(d, land, "Cloche", `tile:{tile}`) then
+			DefenceRules.place(d, "Cloche", `tile:{tile}`)
+			cloches += 1
+		end
+	end
+	DefenceArt.show(world.Plot8, PlotLayout.frame(8), 8, d)
+	DefenceArt.setGate(world.Plot8, false, true)
+	DefenceArt.gatehouse(world.Plot8, PlotLayout.frame(8), 8, true)
+	DefenceArt.dome(world.Plot8, PlotLayout.frame(8), "Shield", 100)
+	DefenceArt.setGate(world.Plot7, false, false)
 	return world, workspace
 end

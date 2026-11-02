@@ -49,11 +49,13 @@ Build them in `DevCommandService` (Studio only, plus `Util/Staff` in live server
 | `/tp N` ✅ · `/tp town` ✅ · `/tp porch` ✅ · `/tp barley` ✅ · `/tp home` ✅ | teleport (through `MovementService.Teleport`) | Stage A–B |
 | `/crops Crop N` ✅ | put harvested crops in your barn (C2's "tester with 40 Pumpkins"; default a crate's worth) | Stage C |
 | `/field N` ✅ | your field straight to Field Level N (crops planted after it give more) | Stage C |
+| `/land all` ✅ · `/land none` | every block of your field cleared (64 tiles) · back to the 4 start blocks (crops on the rest go) | Stage D (the dog behind the field) |
 | `/truck` ✅ | your trucks reach the City and come home now | Stage C |
 | `/shoppers N` ✅ | the next N shoppers come to your store 1.5 s apart (C3) | Stage C |
 | `/tp exchange` ✅ · `/tp shed` ✅ · `/tp dock` ✅ · `/tp store` ✅ · `/tp hiring` ✅ | to the Exchange desk, your bench or wash table, your first dock, the sidewalk outside your store's door, the Hiring Hall's job board | Stage C |
 | `/stopwatch` | prints server time to Output (for timing from logs instead of a phone) | Stage A |
-| `/shield off` | end your Sprout Shield and arrival grace now | Stage D |
+| `/shield off` ✅ · `/shield on` ✅ | end your Sprout Shield and arrival grace now · start them again, as a new player | Stage D |
+| `/defences all` ✅ · `/defences none` ✅ · `/trust Name` ✅ | one of every defence set out round your field (4 mud patches, 4 cloches, the dog behind the field) · none · put a player here on your Trusted list (`/trust none` empties it) | Stage D |
 | `/ko` ✅ · `/ko suspect` ✅ · `/suspect` ✅ | knock yourself out (as a Suspect: the arrest screen) / mark yourself a Suspect of the farm you're in | Stage D |
 | `/crimelog` ✅ | prints your visits, what you carry, cooldowns, debts, last arrests, your farm's raid ledger | Stage D |
 | `/carry Crop [N]` ✅ · `/carry none` · `/debt N` ✅ · `/earn N` ✅ | stolen crops held up in your hands (default what a thief takes from a patch; or empty them) · owe N coins (to yourself) · as if you'd sold crops for N (half pays debts) | Stage D |
@@ -140,6 +142,11 @@ If A3 is off by more than 0.7 s, or A4 fails, fix `PlotLayout` before week 1 and
 | D10 | Two friends stage arrests with 20-coin loot | Sheriff board and XP don't count them |
 | D11 | Steal past the raid cap (10 weight in 10 min) | blocked, and the Neighbourhood Watch dome shows |
 | D12 | Climb in, then out, as an innocent visitor | climbing *out* never makes you a Suspect |
+| D13 | Walk through a locked gate as a stranger; then climb it | stopped in the gateway (sent back if you slip through); the first climb asks first; climbing in takes 2 s, makes you a Suspect and sets off the owner's alarm |
+| D14 | Steal on a farm with a Watchman, then run for the gate | the bell rings and the spotlight follows you as the alarm goes off; once you have the crop the gate shuts on you (10–20 s by his level) and the owner's alarm says so: climb out or be caught; other visitors, and you with empty hands, still walk through; it doesn't shut again unless you steal again |
+| D15 | A Trusted friend walks in through the locked gate and the staff door, waters and harvests | gets in; the crops land in the owner's barn; Steal never offered; the bat can't hit them |
+| D16 | Steal within 30 studs of a kennel; walk through mud; climb a Tall Back Fence in, then out with a crop | the dog barks as you start, runs at you once you have the crop, WOOF!, slowed 30% for 2 s (once per 20 s); mud slows strangers 20%, not the owner; the tall fence takes 1.5 s in, 3 s out with the crop |
+| D17 | Bonk a thief carrying your crop; then let a second player grab it; then let one lie 30 s | it falls past their head with a "Dropped!" label and a bar; the farmer's stamp says TAKE BACK (1.5 s hold, back in the barn); a stranger's says GRAB (1.5 s, a Suspect, the alarm "is grabbing the dropped …", the crop in their hands); holding both at once, the first to finish gets it; left alone, it goes back to the barn by itself; arresting still fines for it |
 
 **D-fun** (4–6 friends, 30 min of free play, swapping roles): after each raid, both sides answer three questions on a 1–5 scale. "That felt **fair**." "That was **fun**." "I **knew what to do**." Also count raids and arrests.
 

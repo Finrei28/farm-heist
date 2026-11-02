@@ -77,10 +77,13 @@ PlotLayout.PLOT = {
 	farmhouse = { min = Vector3.new(-70, 0, 72), max = Vector3.new(-26, 18, 114) },
 	door = Vector3.new(-20, 0, 93), -- in front of the farmhouse door: the owner's spawn and the barn's deposit point
 	field = { across = -48, depth = 138, tile = 12, size = 8 }, -- corner (row 1, column 1) and tiles
-	scarecrow = Vector3.new(-58, 0, 186),
-	kennel = Vector3.new(67, 0, 145),
+	camera = Vector3.new(-53.4, 9.5, 112.6), -- the Security Camera, on the barn's back corner, looking over the field
 	backFence = 252,
 }
+
+PlotLayout.TALL_FENCE_HEIGHT = 11 -- the Tall Back Fence (a defence): close-boarded, as high as the invisible wall
+PlotLayout.YARD_SPOT = 12 -- a yard spot's side (Config/Defences: the scarecrow, the kennel, mud)
+PlotLayout.YARD_SPOTS = 26
 
 -- The warehouse's buildings by stage (Config/Warehouse.BUILDINGS), in plot
 -- space: the box (max.Y = wall height), the docks (each truck's middle
@@ -309,9 +312,9 @@ end
 
 -- A climb's path at `x` across, in plot space, for the character's root
 -- (3 studs over the ground when standing): up the near side, over the top
--- of the fence, down the far side.
-function PlotLayout.climbPath(x: number, direction: string): { Vector3 }
-	local z, h = PlotLayout.DEPTH, PlotLayout.FENCE_HEIGHT
+-- of the fence (`height`: the Tall Back Fence's is higher), down the far side.
+function PlotLayout.climbPath(x: number, direction: string, height: number?): { Vector3 }
+	local z, h = PlotLayout.DEPTH, height or PlotLayout.FENCE_HEIGHT
 	local near = if direction == "In" then z + 2.5 else z - 1.5
 	local far = if direction == "In" then z - 3 else z + 4
 	return {
@@ -321,6 +324,62 @@ function PlotLayout.climbPath(x: number, direction: string): { Vector3 }
 		Vector3.new(x, h + 1, far),
 		Vector3.new(x, 3, far),
 	}
+end
+
+-- The gate (when it's locked, or the Watchman has shut it on a Suspect)
+-- can be climbed like the back fence: "In" from the sidewalk, "Out" from
+-- the yard, or nil if p (plot space) isn't within `reach` of it.
+function PlotLayout.gateClimbAt(p: Vector3, reach: number): string?
+	local gate = PlotLayout.PLOT.gate
+	if math.abs(p.X - gate.across) > gate.width / 2 - 1 then
+		return nil
+	elseif p.Z < -1.5 and p.Z >= -1.5 - reach then
+		return "In"
+	elseif p.Z > 0.5 and p.Z <= 0.5 + reach then
+		return "Out"
+	end
+	return nil
+end
+
+-- A climb over the gate at `x` across (plot space), like climbPath.
+function PlotLayout.gateClimbPath(x: number, direction: string): { Vector3 }
+	local h = PlotLayout.FENCE_HEIGHT
+	local near = if direction == "In" then -3 else 2.5
+	local far = if direction == "In" then 2.5 else -3.5
+	return {
+		Vector3.new(x, 3, near),
+		Vector3.new(x, h + 1, near),
+		Vector3.new(x, h + 3.5, -0.5),
+		Vector3.new(x, h + 1, far),
+		Vector3.new(x, 3, far),
+	}
+end
+
+-- The yard spots (docs/GameDesign.md §4.11): 12-stud squares in a ring
+-- round the field, 3 studs off it, where the scarecrow, the kennel and mud
+-- patches stand. 1–8 run down the farmhouse side from the front, 9 is the
+-- back corner, 10–17 run along the strip behind the field (by the back
+-- fence, where thieves leave), 18 is the other back corner and 19–26 run up
+-- the warehouse side to the front. The middle of spot n in plot space.
+function PlotLayout.yardSpot(n: number): Vector3
+	local field = PlotLayout.PLOT.field
+	local half = PlotLayout.YARD_SPOT / 2
+	local left = field.across - 3 - half
+	local right = field.across + field.size * field.tile + 3 + half
+	local back = field.depth + field.size * field.tile + 3 + half
+	local function along(i: number): number
+		return field.depth + (i - 0.5) * field.tile
+	end
+	if n <= 8 then
+		return Vector3.new(left, 0, along(n))
+	elseif n == 9 then
+		return Vector3.new(left, 0, back)
+	elseif n <= 17 then
+		return Vector3.new(field.across + (n - 9.5) * field.tile, 0, back)
+	elseif n == 18 then
+		return Vector3.new(right, 0, back)
+	end
+	return Vector3.new(right, 0, along(27 - n))
 end
 
 -- Where the owner appears (join, Home button): in front of the farmhouse door.

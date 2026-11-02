@@ -19,6 +19,60 @@ Follow-ups: <what to test next time>
 
 ## Sessions
 
+### 2026-11-02 · dropped crops and the raid rebalance · build: week 6 + the rebalance (uncommitted), with the fixes below
+Testers: Claude, driving Studio · Setup: solo Play on my own field (`/carry Pumpkin`, `/ko`), then Server & Clients × 2 twice (Player2 the farmer on Farm 8 with `/defences all`, a Level 5 Watchman and a ripe pumpkin field; Player1 the thief), the second time after fixing what the first found · Lag: 0 (local) · Screenshots: [playtest/2026-11-02-drop/](playtest/2026-11-02-drop/)
+
+| Check | Result | OK? | Notes |
+|---|---|---|---|
+| A bonked thief's crop on the ground | the pumpkin lands past their head, on the soil, with a "Dropped! 🎃 ×1" label and a bar running down ([01](playtest/2026-11-02-drop/01-dropped-pumpkin.jpg)); left alone it went back by itself after 30 s ("Nobody picked up 🎃 1 pumpkin: it's back in your barn") | ✓ | fixed: the label floated 5 studs up, over the character beside it (just over the crop now) |
+| TAKE BACK | on my own dropped crop, and the farmer's after a bonk and an arrest: a green 1.5 s hold, "Taken back: 🎃 1 pumpkin. It's in your barn." ([06](playtest/2026-11-02-drop/06-take-back-green-bar.jpg)) | ✓ | fixed: the crop line sat on top of "BACK" in the stamp ([02](playtest/2026-11-02-drop/02-first-take-back-stamp-overlap.jpg); two-word stamps have no crop line now, it's in the hint; the steal's HANDS FULL had the same overlap), the hold bar filled red like a crime (green now) |
+| The bonk on a carrier | "Player1 dropped 🎃 1 pumpkin: hold TAKE BACK before someone grabs it!", ARREST first on the stamp ([03](playtest/2026-11-02-drop/03-bonk-drops-it-arrest-first.jpg)); arresting still fined for the pumpkin on the ground | ✓ | |
+| GRAB by the thief who dropped it, once awake | GRAB on their stamp; the farmer's alarm "Player1 is grabbing the dropped 🎃 Pumpkin!", then "grabbed your dropped 🎃 1 pumpkin!" and the Watchman shut the gate again ([04](playtest/2026-11-02-drop/04-thief-grabs-farmer-alarmed.jpg), [05](playtest/2026-11-02-drop/05-grabbed-watchman-shuts-gate.jpg)) | ✓ | fixed: the thief read "A thief dropped it" about their own crop ("You dropped it! Grabbing it back makes you a Suspect again…") |
+| The farmer beside the dropped crop as the thief wakes | was: SWING on the stamp, though for 6 s a bonk only nudges them, so TAKE BACK was hidden just when the thief could grab | ✗ → ✓ | fixed: while someone's immune SWING drops below TAKE BACK and says why ("Player1 just woke up: for a few seconds a bonk only nudges them") ([07](playtest/2026-11-02-drop/07-immune-thief-take-back-first.jpg)); a pick-up hold keeps the stamp while it runs (my press landed as the immunity ended and swung instead) |
+| The Watchman | shut the gate once the thief had the crop (14 s at Level 5), the line joining the alarm card; not when they climbed in | ✓ | |
+| A cloche, the Tall Back Fence | a cloched pumpkin: 3.5 s ([08](playtest/2026-11-02-drop/08-cloche-steal-3-5-s.jpg)); timed on the Climbing attribute: over the tall fence in, with a pumpkin, 1.50 s; out with it 3.00 s ([09](playtest/2026-11-02-drop/09-tall-fence-climb-timer.jpg)) | ✓ | |
+| The Farm Rules card's new words | "SWING to bonk them: they drop your crop." · "They're fined. Then TAKE BACK your crop!" ([10](playtest/2026-11-02-drop/10-farm-rules-card.jpg)) | ✓ | |
+
+Noticed in passing (any part of the game, with a verdict):
+
+| Seen | Verdict |
+|---|---|
+| During the 2.5 s mugshot the farmer's stamp still said ARREST over the arrested thief (from week 5) | Fixed now: a `Busted` attribute takes them off it |
+| The dog never ran: at Field Level 1 the open crops are 72 studs from the kennel spot behind the field that `/defences all` uses (the back half is wild land) | Done next day (below), with a new `/land all` |
+| Two players racing for one dropped crop at once | Done next day (below) |
+| The two last fixes (pick-up keeps the stamp, no ARREST after an arrest) | Not played again |
+
+**Then, 2026-11-03** (the user: "Can't you give yourself commands to unlock those areas and levels so you can test it?" and "Make sure only one person can get it"): a new dev command `/land all` opens every block of your field ([13]({D}13-land-all-whole-field.jpg)); Server & Clients × 2 again (Player1 the farmer on Farm 1 with `/land all`, `/defences all`, a Watchman; Player2 the thief).
+
+| Check | Result | OK? | Notes |
+|---|---|---|---|
+| Two people finishing a pick-up at the same moment | both clients ran a script that, 6 s after the drop, called PickUpStart then PickUp through the real remote at the same server time. Race 1: started 4 ms apart, the thief's GRAB finished first and had the pumpkin, the farmer's TAKE BACK got "Gone" and nothing reached the barn ([11]({D}11-race-1-grab-wins-take-back-gone.jpg)). Race 2: started 3 ms apart, the farmer's won, the thief got "Gone" with empty hands ([12]({D}12-race-2-take-back-wins-grab-gone.jpg)) | ✓ | one crop, one winner, either way. The claim is now one explicit step (`LootRules.takeDrop`, tested) |
+| The guard dog's new timing | a back-row pumpkin 15 studs from the kennel: BARK as the steal started; the dog ran the moment the thief had the crop (0.00 s), barking again; the thief slowed 30% 0.50 s later (its run) for 1.98 s; WOOF! and "The guard dog is at your heels: you're slowed!" on the thief's screen ([14]({D}14-dog-at-the-thiefs-heels.jpg), [15]({D}15-dog-timing.jpg)) | ✓ | |
+
+### 2026-11-02 · week 6: defences · build: week 6 (uncommitted), with the fixes below
+Testers: Claude, driving Studio · Setup: `art/props/FarmHeistProps.glb` imported again (the defences' meshes); solo Play to look at everything, then Server & Clients × 2 (Player2 the farmer on Farm 8 with `/defences all`, a Watchman, a ripe pumpkin field; Player1 the thief), then solo again to check the fixes · Lag: 0 (local) · Screenshots: [playtest/2026-11-02-week6/](playtest/2026-11-02-week6/)
+
+| Check | Result | OK? | Notes |
+|---|---|---|---|
+| The defences in Studio's light | the scarecrow ([01](playtest/2026-11-02-week6/01-scarecrow.jpg)), the kennel with REX over the door, the dog, mud and the tall fence ([02](playtest/2026-11-02-week6/02-kennel-dog-mud-tall-fence.jpg)), glass cloches you see the tile through ([04](playtest/2026-11-02-week6/04-glass-cloches.jpg)), the camera on the barn ([05](playtest/2026-11-02-week6/05-camera-on-the-barn.jpg)), the locked gate ([06](playtest/2026-11-02-week6/06-locked-gate-from-the-road.jpg)), the gatehouse ([07](playtest/2026-11-02-week6/07-watchmans-gatehouse.jpg), [08](playtest/2026-11-02-week6/08-gatehouse-from-the-road.jpg)), the tall fence from the trail ([09](playtest/2026-11-02-week6/09-tall-fence-from-the-trail.jpg)) | ✓ | fixed: the mud's puddle read as ice (darker now), the camera too small to read from the yard (1.6×), the shield dome poking out through the back fence ([03](playtest/2026-11-02-week6/03-back-of-the-field-under-the-shield-dome.jpg), [09](playtest/2026-11-02-week6/09-tall-fence-from-the-trail.jpg); smaller now) |
+| The Sprout Shield | a faint green dome over the field with its timer; the Defend window's card with the time left and Drop it now; dropping it brings the Farm Rules card ([11](playtest/2026-11-02-week6/11-farm-rules-card.jpg)) | ✓ | fixed: the card's last line sat over its pictures |
+| Buying and setting out | Buy → placing view from above, green spots, the dog's gold ring, Move, put away ([10](playtest/2026-11-02-week6/10-setting-out-the-dog.jpg)) | ✓ | fixed: the spots couldn't be pressed (a billboard needs Active), the HUD over the view (it steps aside now, every frame), the view too low for the back spots, the bar's words once a one-of is out, the ring hidden under the tiles, the camera left up in the sky after DONE |
+| A raid on a defended farm (2 players) | the scarecrow's amber card as the thief came near; on the steal the alarm with the Watchman's line and the camera's live picture, the dog at the thief's heels (WOOF!, slowed), TRESPASSING ([12](playtest/2026-11-02-week6/12-raid-alarm-camera-and-dog.jpg)) | ✓ | fixed: the edge arrow was a blank red circle (➤ isn't in the game's fonts: drawn now, and kept below the coin sign), the camera's picture too wide to see the thief (it zooms on them now, [14](playtest/2026-11-02-week6/14-climbing-the-gate-arrow-and-camera.jpg)), the scarecrow's card on top of the alarm (the alarm replaces it) |
+| The Gate Lock | walking out free; walking in stopped in the gateway; the first climb asks first ([13](playtest/2026-11-02-week6/13-climb-a-locked-gate-asks-first.jpg)); climbing in 2 s, a Suspect, the owner alarmed ([14](playtest/2026-11-02-week6/14-climbing-the-gate-arrow-and-camera.jpg)) | ✓ | the confirm's buttons only missed when the click came before Studio's mouse had settled (a test-driving quirk, not the game) |
+| The Watchman | shut the gate on the Suspect for 21 s (Level 5): walking out stopped, "climb out!" ([15](playtest/2026-11-02-week6/15-watchman-shut-the-gate-climb-out.jpg)); after the 21 s the gate opened for them to walk out | ✓ | the bell's swing and the spotlight weren't looked at closely (daylight) |
+| The Tall Back Fence, mud | climbing it took 3.5 s ([18](playtest/2026-11-02-week6/18-climbing-the-tall-fence.jpg)); on mud a stranger walked 11.2 instead of 16 | ✓ | |
+| Trusted | Trust from the Defend window; the friend is told; no Steal on their farm, the stamp says what they can do; harvesting under a cloche sent the pumpkin to the farmer's barn ([16](playtest/2026-11-02-week6/16-trusted-tab-and-friend-told.jpg), [17](playtest/2026-11-02-week6/17-friend-harvests-under-a-cloche.jpg)) | ✓ | fixed: `/shield on`, `/defences none` and `/trust Name` read the wrong word of the command |
+
+Noticed in passing (any part of the game, with a verdict):
+
+| Seen | Verdict |
+|---|---|
+| Roblox's chat box, once used, sits over the top-left of an open window (the Defend window's tabs) and takes the clicks | Week 9 (interface polish): keep windows' tabs clear of the chat's corner on computers |
+| The yellow sill under the gate read oddly beside the new leaves | Fixed now: the path's colour |
+| A Watchman's wage is a big share of a new player's coins (the test farm's 1,000 went in minutes) | Leave: he opens at Farm Level 8, when income is far higher (the progression sim's wages stay under 10%) |
+| The Sprout Shield's sign floats behind the coin sign from the farmhouse door | Leave: it's in the world, 30 studs over the field; it moves as you do |
+| Not covered here: the Camera tab's visitor list, a cloche doubling a steal's time (the rule is tested), the Floodlights (week 7, with night), a phone, 8 players | Stage D with testers |
+
 ### 2026-11-02 · tilled soil and the doormat · build: this session's fixes after the farmhouse
 Testers: Claude, driving Studio · Setup: `art/props/FarmHeistProps.glb` imported again (with the `Furrows` mesh); solo Play, a Scriptable camera; the character walked off the doormat to read it · Lag: 0 (local) · Screenshots: [playtest/2026-11-02-farmhouse/](playtest/2026-11-02-farmhouse/) 12–15
 

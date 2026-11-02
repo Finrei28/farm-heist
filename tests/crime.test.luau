@@ -72,10 +72,33 @@ return function(spec, harness)
 		end)
 	end)
 
+	describe("grabbing a dropped crop", function()
+		local function grabCtx(o)
+			local ctx = { now = NOW, inside = true, knockedOut = false, thiefProtected = false, farmProtected = false, cooldownUntil = 0, carrying = false }
+			for k, v in o or {} do
+				ctx[k] = v
+			end
+			return ctx
+		end
+		it("works like a steal: inside, awake, unprotected, empty hands, off the cooldown", function()
+			expect(reason(CrimeRules.canGrab(grabCtx()))).toBe("ok")
+			expect(reason(CrimeRules.canGrab(grabCtx({ inside = false })))).toBe("NotInside")
+			expect(reason(CrimeRules.canGrab(grabCtx({ knockedOut = true })))).toBe("KnockedOut")
+			expect(reason(CrimeRules.canGrab(grabCtx({ thiefProtected = true })))).toBe("YouAreProtected")
+			expect(reason(CrimeRules.canGrab(grabCtx({ farmProtected = true })))).toBe("FarmProtected")
+			expect(reason(CrimeRules.canGrab(grabCtx({ cooldownUntil = NOW + 5 })))).toBe("Cooldown")
+			expect(reason(CrimeRules.canGrab(grabCtx({ carrying = true })))).toBe("HandsFull")
+		end)
+		it("takes as long as taking it back, and lies there long enough to race for", function()
+			expect(Crime.GRAB_HOLD > 0 and Crime.GRAB_HOLD < Crime.KO_SECONDS).toBe(true)
+			expect(Crime.DROP_SECONDS > Crime.KO_SECONDS + Crime.GRAB_HOLD).toBe(true)
+		end)
+	end)
+
 	describe("steal holds", function()
-		it("take the rarity's time, twice under a cloche, a quarter less on a Harvest Moon", function()
+		it("take the rarity's time, 40% longer under a cloche, a quarter less on a Harvest Moon", function()
 			expect(CrimeRules.stealHold("Rare")).toBe(2.5)
-			expect(CrimeRules.stealHold("Rare", { cloche = true })).toBe(5)
+			expect(CrimeRules.stealHold("Rare", { cloche = true })).toBeNear(3.5)
 			expect(CrimeRules.stealHold("Rare", { harvestMoon = true })).toBe(1.875)
 			expect(CrimeRules.stealHold("Mythic")).toBe(7)
 		end)

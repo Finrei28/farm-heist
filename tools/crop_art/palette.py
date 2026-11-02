@@ -108,4 +108,13 @@ PROP_COLOURS.update({
     "steel": (178, 186, 194), "steelDark": (138, 146, 156), "steelLight": (212, 218, 224),
     "barrow": (200, 69, 45), "barrowDark": (160, 52, 34), "tyre": (52, 48, 46),
     "iron": (46, 44, 50), "ironGold": (226, 176, 60),
+    # the defences (tools/crop_art/defences.py)
+    "scareShirt": (196, 66, 48), "scareShirtDark": (150, 44, 36), "denim": (70, 102, 156), "denimDark": (52, 78, 124),
+    "burlap": (198, 166, 112), "burlapDark": (164, 132, 86), "patch": (226, 182, 72), "stitch": (52, 40, 32),
+    "dogTan": (196, 140, 78), "dogDark": (72, 54, 42), "dogLight": (236, 206, 158), "nose": (32, 26, 24), "collar": (200, 52, 40),
+    "camWhite": (236, 236, 228), "camGrey": (120, 124, 130), "lens": (34, 38, 46), "lensGlass": (70, 96, 124), "ledRed": (255, 40, 40),
+    "mud": (104, 74, 48), "mudDark": (82, 58, 40), "mudWet": (64, 47, 34), "mudLight": (136, 104, 70), "puddle": (78, 84, 82), "puddleLight": (120, 132, 136), "print": (52, 38, 28),
+    "brass": (214, 168, 64), "brassDark": (160, 118, 40), "brassLight": (240, 206, 112),
+    "lampBody": (60, 64, 70), "lampGlass": (255, 244, 196),
+    "glass": (214, 236, 244),
 })

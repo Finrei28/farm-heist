@@ -110,6 +110,7 @@ local function context(data)
 	return {
 		warehouseLevel = data.warehouse.level,
 		storeLevel = data.store.level,
+		farmLevel = data.level,
 		openTiles = LandRules.openTiles(data.land),
 		registers = #registers(data.store),
 		trucks = info.trucks,
@@ -155,6 +156,10 @@ local function spotOf(index: number, data, entry, nth: number): (Vector3, Vector
 		end
 	elseif t == "Greeter" then
 		return at(PlotLayout.storeLocal(Store.DOOR_X - 0.9, 1, PlotLayout.PLOT.store.floor), Vector3.new(0, 0, -1))
+	elseif t == "Watchman" then
+		-- in his gatehouse, at the window over the gate (World/DefenceArt)
+		local g = PlotLayout.PLOT.gatehouse
+		return at(Vector3.new(g.min.X + 2.4, 0.5, (g.min.Z + g.max.Z) / 2 - 1), Vector3.new(-1, 0, 0))
 	end
 	return at(PlotLayout.PLOT.door, Vector3.new(0, 0, 1))
 end
@@ -468,6 +473,12 @@ end
 -- The Greeter works while the store is open.
 function JOBS.Greeter(player, data, _st, _entry, _speed, _index)
 	return ShopRules.isOpen(data.store) and not StoreService.IsDecorating(player)
+end
+
+-- The Watchman is on watch (and learns) while your farm is here: thieves
+-- can only come while you're in the server (DefenceService does his work).
+function JOBS.Watchman(_player, _data, _st, _entry, _speed, _index)
+	return true
 end
 
 -- Wages for the minute, or a strike until they can be paid.

@@ -17,6 +17,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
 import shelves  # noqa: F401,E402  (registers the punnets)
+import defences  # noqa: F401,E402  (registers the defences)
 from crops import MESHES, built as built_crop  # noqa: E402
 from meshkit import box, lathe, Mesh  # noqa: E402
 from palette import PROP_COLOURS  # noqa: E402
@@ -102,7 +103,7 @@ def world_of(parts, extra=None):
             cols.append(pal)
             continue
         shape = p.get("shape", "Block")
-        if p["class"] == "WedgePart":
+        if p["class"] == "WedgePart" or shape == "Wedge":
             unit = UNIT_WEDGE
         elif shape == "Cylinder":
             d = min(size[1], size[2])
@@ -142,6 +143,19 @@ VIEWS = {
     "barnend": ((-48, 10, 130), (-62, 9, 108), (-100, -2, 60), (0, 40, 160)),
     "road": ((-60, 12, -40), (-50, 6, 80), (-120, -2, -10), (20, 40, 170)),
     "fieldview": ((-20, 6, 93), (-50, 2, 170), (-110, -2, 60), (40, 40, 252)),
+    # the defences (partdump ... defences)
+    "gateroad": ((-14, 7, -26), (-2, 4, 4), (-60, -2, -40), (40, 40, 30)),
+    "gateyard": ((-6, 8, 32), (8, 4, 6), (-18, -2, -20), (40, 40, 60)),
+    "gatehouse": ((-6, 7, 26), (10, 4, 8), (-16, -2, -20), (40, 40, 60)),
+    "gateopen": ((6, 9, 30), (-5, 3, 2), (-30, -2, -20), (30, 40, 60)),
+    "gatetop": ((-16, 32, -18), (4, 0, 8), (-30, -2, -30), (40, 40, 60)),
+    "hutroad": ((22, 7, -16), (10, 5, 8), (-16, -2, -30), (40, 40, 60)),
+    "backyard": ((-70, 16, 196), (2, 1, 243), (-110, -2, 130), (110, 40, 256)),
+    "kennel": ((-16, 6, 226), (-6, 2, 244), (-40, -2, 210), (30, 40, 256)),
+    "scarecrow": ((-40, 7, 166), (-57, 4, 180), (-90, -2, 140), (-20, 40, 220)),
+    "cloches": ((-22, 10, 128), (-36, 2, 152), (-80, -2, 120), (20, 40, 200)),
+    "camera": ((-44, 10, 126), (-53, 9, 113), (-80, -2, 100), (-20, 40, 140)),
+    "trail": ((-14, 7, 280), (0, 5, 250), (-60, -2, 220), (60, 40, 300)),
 }
 
 

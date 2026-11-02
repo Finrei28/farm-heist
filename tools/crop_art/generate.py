@@ -44,6 +44,7 @@ from render import render  # noqa: E402
 from scene import lawn, stage  # noqa: E402
 from shelves import SHELF, piece  # noqa: E402
 from wild import GRASS, OBSTACLES  # noqa: E402
+import defences  # noqa: E402  (registers the defences' meshes)
 import props_preview  # noqa: E402
 
 ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
@@ -281,7 +282,8 @@ def write_props(meshes):
         "-- meshes[name]: size and centre (its bounding box, in studs, from the",
         "-- point it stands on). wild.obstacles[kind]: items from an overgrown",
         "-- tile's top middle; wild.grass: items from an overgrown block's top",
-        "-- middle. Items as in CropMeshData. See server/World/Meshes.",
+        "-- middle. Items as in CropMeshData. dog: where the guard dog's legs",
+        "-- hang (x, z of each hip, `top` high). See server/World/Meshes.",
         "return {",
         "\tmeshes = {",
     ]
@@ -293,7 +295,10 @@ def write_props(meshes):
     lines += ["\t},", "\twild = {", "\t\tobstacles = {"]
     for kind, items in OBSTACLES.items():
         lines.append(f"\t\t\t{kind} = {{ " + ", ".join(item_lua(*it) for it in items) + " },")
-    lines += ["\t\t},", "\t\tgrass = { " + ", ".join(item_lua(*it) for it in GRASS) + " },", "\t},", "}", ""]
+    lines += ["\t\t},", "\t\tgrass = { " + ", ".join(item_lua(*it) for it in GRASS) + " },", "\t},"]
+    # the guard dog's hips: a DogLeg hangs from each (Meshes.dogLegs)
+    lines += ["\tdog = { top = " + num(defences.LEG_TOP) + ", legs = { "
+              + ", ".join(f"{{ {num(x)}, {num(z)} }}" for x, z in defences.DOG_LEGS) + " } },", "}", ""]
     with open(PROP_DATA, "w", encoding="utf-8", newline="\n") as f:
         f.write("\n".join(lines))
     return PROP_DATA

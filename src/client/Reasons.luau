@@ -63,6 +63,26 @@ local REASONS = {
 	FarmCooldown = "You can't steal from this farm again yet: wait 3 minutes after getting away or getting arrested here.",
 	-- the police desk (PayoutService)
 	NoDebt = "You don't owe anyone anything.",
+	-- protection and defences (DefenceService)
+	YouAreProtected = "Your Sprout Shield is on: no stealing until it ends (or drop it in 🛡️ Defend).",
+	FarmProtected = "This farm is protected for now (a Sprout Shield, or its owner just arrived).",
+	Trusted = "They trust you: help them harvest instead!",
+	GateOpen = "The gate's open: just walk in.",
+	WalkOut = "Just walk out through the gate.",
+	NoItem = nil,
+	Max = "You already have as many of those as a farm can.",
+	WrongSpot = "That can't go there.",
+	Taken = "Something's already on that spot.",
+	NoneSpare = "They're all set out: buy another, or put one away first.",
+	AlreadyOut = "It's already up.",
+	NotHere = "They've left the server.",
+	Self = nil,
+	AlreadyTrusted = "They're already on your Trusted list.",
+	TrustedFull = "Your Trusted list is full (10): remove someone first.",
+	NotTrusted = nil,
+	NoShield = "Your Sprout Shield has already ended.",
+	NoCamera = "That needs a Security Camera.",
+	Empty = nil,
 }
 
 return function(reason: string?, extra: string?): string?

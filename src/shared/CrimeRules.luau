@@ -60,6 +60,18 @@ function CrimeRules.isSuspect(visit, now: number, carrying: boolean?): boolean
 end
 
 ------------------------------------------------------------------------
+-- Protection: the Sprout Shield (your first SHIELD_SECONDS of play, unless
+-- you drop it) and arrival grace (ARRIVAL_GRACE after joining a server).
+-- Either one stops stealing both ways (§4.10).
+
+function CrimeRules.shieldLeft(playSeconds: number, dropped: boolean?): number
+	if dropped then
+		return 0
+	end
+	return math.max(0, Crime.SHIELD_SECONDS - playSeconds)
+end
+
+------------------------------------------------------------------------
 -- Stealing
 
 -- Seconds a steal hold takes. mods: { cloche, harvestMoon }.
@@ -112,6 +124,29 @@ function CrimeRules.canSteal(ctx): (boolean, string?)
 	return true, nil
 end
 
+-- Whether a grab hold may start on a crop a bonked thief dropped (§4.12):
+-- like a steal, but it's off the field already (and already counts against
+-- the raid cap). ctx: { now, inside (the farm it lies in), knockedOut,
+-- thiefProtected, farmProtected, cooldownUntil (on the crop's owner),
+-- carrying }. (Owners and Trusted friends take it back instead:
+-- LootRules.dropRole.) Returns ok, reason.
+function CrimeRules.canGrab(ctx): (boolean, string?)
+	if not ctx.inside then
+		return false, "NotInside"
+	elseif ctx.knockedOut then
+		return false, "KnockedOut"
+	elseif ctx.thiefProtected then
+		return false, "YouAreProtected"
+	elseif ctx.farmProtected then
+		return false, "FarmProtected"
+	elseif ctx.now < (ctx.cooldownUntil or NEVER) then
+		return false, "Cooldown"
+	elseif ctx.carrying then
+		return false, "HandsFull"
+	end
+	return true, nil
+end
+
 -- The server times every hold: done only once the full time has passed.
 function CrimeRules.holdDone(startedAt: number, now: number, seconds: number): boolean
 	return now - startedAt >= seconds - 0.05
@@ -135,6 +170,27 @@ function CrimeRules.raidAdd(ledger, now: number, weight: number)
 	local entry = { at = now, weight = weight }
 	table.insert(ledger, entry)
 	return entry
+end
+
+-- When the cap lets a crop of `weight` be stolen from this farm again: now
+-- if it can be, else when enough of the ledger has aged out. While even a
+-- Common can't be (weight 1), the farm shows the Neighbourhood Watch dome.
+function CrimeRules.raidFreeAt(ledger, now: number, weight: number): number
+	local used = CrimeRules.raidUsed(ledger, now)
+	if used + weight <= Crime.RAID_CAP_WEIGHT then
+		return now
+	end
+	local entries = table.clone(ledger)
+	table.sort(entries, function(a, b)
+		return a.at < b.at
+	end)
+	for _, entry in entries do
+		used -= entry.weight
+		if used + weight <= Crime.RAID_CAP_WEIGHT then
+			return entry.at + Crime.RAID_WINDOW
+		end
+	end
+	return now
 end
 
 -- The loot went back to the farm (the thief was knocked out, or left

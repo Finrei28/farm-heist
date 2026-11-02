@@ -33,6 +33,11 @@
 --                        · ("Deposited", { text }) to the thief   effects and cards (client CrimeController)
 --   PoliceAction   C→S  ("Pay" coins or "all") -> { ok, reason?, result? }   paying debts early at the police desk
 --                        (server/Services/PayoutService)
+--   DefenceAction  C→S  ("Buy" itemId | "Place" "itemId|spot" | "PutAway" spot | "Trust" userId | "Untrust" userId
+--                        | "DropShield" | "Visitors") -> { ok, reason?, result? }   defences, the Trusted list, the
+--                        Sprout Shield, the camera's visitors (server/Services/DefenceService, shared/DefenceRules)
+--   DefenceEvent   S→C  ("Near", { name, userId }) the scarecrow's warning to an owner · ("ShieldOver") your
+--                        Sprout Shield ended (the Farm Rules card) · ("Bark", { plot }) · ("Bell", { plot })
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
@@ -53,6 +58,8 @@ local DEFINITIONS = {
 	CrimeAction = "RemoteFunction",
 	CrimeEvent = "RemoteEvent",
 	PoliceAction = "RemoteFunction",
+	DefenceAction = "RemoteFunction",
+	DefenceEvent = "RemoteEvent",
 }
 
 local IS_SERVER = RunService:IsServer()

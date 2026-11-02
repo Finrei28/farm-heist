@@ -66,7 +66,7 @@ local function context(state)
 			registers += 1
 		end
 	end
-	return { warehouseLevel = state.warehouse.level, storeLevel = state.store.level, openTiles = LandRules.openTiles(state.land),
+	return { warehouseLevel = state.warehouse.level, storeLevel = state.store.level, farmLevel = state.level, openTiles = LandRules.openTiles(state.land),
 		registers = registers, trucks = WarehouseRules.level(state.warehouse.level).trucks }
 end
 

@@ -8,20 +8,24 @@ return {
 	RAID_CAP_WEIGHT = 10, -- the most raid weight (Config/Rarities raidWeight) a farm can lose ...
 	RAID_WINDOW = 600, -- ... in this many seconds, to all thieves together
 	CARRY_SPEED = 0.85, -- walk speed with a stolen crop in your hands (no sprinting); one crop at a time
-	CLOCHE_HOLD = 2, -- steal holds take this many times longer under a Glass Cloche
+	CLOCHE_HOLD = 1.4, -- steal holds take this many times longer under a Glass Cloche
 	HARVEST_MOON_HOLD = 0.75, -- ... and this much as long on a Harvest Moon (Heist Night)
 
 	DEPOSIT_RANGE = 12, -- studs from your own farmhouse door where a stolen crop goes into your barn
+	GRAB_HOLD = 1.5, -- seconds to pick up a crop a bonked thief dropped: Take back (its owner, the farm's owner, their Trusted friends) or Grab (anyone else)
+	DROP_REACH = 6, -- studs from a dropped crop you can pick it up
+	DROP_SECONDS = 30, -- a dropped crop nobody picks up goes back to its owner's barn after this long
 	ALARM_GAP = 15, -- seconds between theft alarms about the same thief
 
 	-- Climbing and the defences that slow thieves (§4.11)
 	FENCE_CLIMB = 1.5, -- seconds over the back fence
 	CLIMB_REACH = 4, -- studs from the back fence you can start climbing it, either side
-	TALL_FENCE_CLIMB = 3.5, -- ... with the Tall Back Fence (3 s left an owner coming from town only 0.6 s: tools/raidrace)
+	TALL_FENCE_CLIMB = 3, -- ... climbing out over the Tall Back Fence with a stolen crop (in, or empty-handed: FENCE_CLIMB)
 	GATE_CLIMB = 2, -- over a locked gate
-	DOG_SLOW = 0.4, -- the guard dog slows a thief by this much ...
-	DOG_SLOW_SECONDS = 3, -- ... for this long ...
+	DOG_SLOW = 0.3, -- the guard dog slows a thief who has the crop by this much ...
+	DOG_SLOW_SECONDS = 2, -- ... for this long ...
 	DOG_COOLDOWN = 20, -- ... once per this many seconds
+	WATCHMAN_SHUT = { 10, 20 }, -- seconds the Watchman shuts the gate on a thief once they have the crop, at Level 1 and 10 (they climb out)
 
 	-- Suspects
 	SUSPECT_LINGER = 60, -- seconds a Suspect mark lasts after the last suspicious act

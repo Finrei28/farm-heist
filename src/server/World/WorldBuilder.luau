@@ -20,6 +20,7 @@ local YardArt = require(script.Parent.YardArt)
 local StoreArt = require(script.Parent.StoreArt)
 local PoliceArt = require(script.Parent.PoliceArt)
 local FarmhouseArt = require(script.Parent.FarmhouseArt)
+local DefenceArt = require(script.Parent.DefenceArt)
 
 local WorldBuilder = {}
 
@@ -291,36 +292,9 @@ local function buildPlot(index: number, world: Instance)
 	-- fence you see; an invisible wall up to FENCE_BLOCK is what really stops
 	-- you: without it a character climbs rails like a ladder (play-test
 	-- 2026-10-30). The front is a white picket fence. The back is wooden
-	-- slats with gaps (thieves see the crops from the trail, owners see out)
-	-- on two rails on the farm's side, with posts: you climb it (§4.10, the
-	-- context button says Climb next to it). A fence runs across the plot
-	-- (along X); min.Z..max.Z is its thickness.
-	local function slatFence(name: string, min: Vector3, max: Vector3)
-		local fenceModel = Instance.new("Model")
-		fenceModel.Name = name
-		fenceModel.Parent = model
-		local height = PlotLayout.FENCE_HEIGHT
-		local slat, gap = 1.1, 0.7
-		local boards = { Color3.fromRGB(201, 158, 104), Color3.fromRGB(190, 146, 94), Color3.fromRGB(208, 166, 112) }
-		local x, i = min.X + 0.3, 0
-		while x + slat <= max.X - 0.3 do
-			i += 1
-			local top = height - 0.35 + (i * 7 % 5) * 0.08 -- (hand-cut: not quite level)
-			plotBox("Slat", frame, Vector3.new(x, 0, max.Z - 0.35), Vector3.new(x + slat, top, max.Z), { Color = boards[i % 3 + 1] }, fenceModel)
-			x += slat + gap
-		end
-		for _, y in { 1.4, height - 1.8 } do
-			plotBox("Rail", frame, Vector3.new(min.X, y, min.Z), Vector3.new(max.X, y + 0.7, max.Z - 0.35), { Color = Color3.fromRGB(160, 116, 72) }, fenceModel)
-		end
-		local posts = math.max(1, math.round((max.X - min.X) / 12))
-		for p = 0, posts do
-			local px = min.X + (max.X - min.X) * p / posts
-			-- (posts stand a little above the slats: level tops would flicker)
-			plotBox("Post", frame, Vector3.new(px - 0.5, 0, min.Z - 0.3), Vector3.new(px + 0.5, height + 0.5, max.Z - 0.4), { Color = COLORS.post }, fenceModel) -- (a little behind the rails' face: flush, it flickered through the gaps)
-		end
-		plotBox(`{name}Blocker`, frame, min, Vector3.new(max.X, PlotLayout.FENCE_BLOCK, max.Z),
-			{ Transparency = 1, CanQuery = false, CanTouch = false }, model)
-	end
+	-- slats with gaps (World/DefenceArt): you climb it (§4.10, the context
+	-- button says Climb next to it). A fence runs across the plot (along X);
+	-- min.Z..max.Z is its thickness.
 	local function pickets(name: string, fromX: number, toX: number)
 		Parts.picketFence(frame, Vector3.new(fromX, 0, -1), Vector3.new(toX, 0, 0), model, name, PlotLayout.FENCE_HEIGHT, PlotLayout.FENCE_BLOCK)
 	end
@@ -338,24 +312,9 @@ local function buildPlot(index: number, world: Instance)
 				{ Color = if i % 3 == 0 then COLORS.cream else COLORS.hay }, model)
 		end
 	end
-	slatFence("BackFence", Vector3.new(-W / 2, 0, D), Vector3.new(W / 2, 0, D + 1))
-	-- a painted sign on the trail side (it tells a thief more than it stops one)
-	local backSign = Parts.prop({ Name = "BackFenceSign", Size = Vector3.new(7, 2.6, 0.25),
-		CFrame = frame * CFrame.new(0, 4.6, D + 1.15) * CFrame.Angles(0, 0, math.rad(-3)), Color = COLORS.cream }, model)
-	local signGui = Instance.new("SurfaceGui")
-	signGui.Face = Enum.NormalId.Back
-	signGui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-	signGui.PixelsPerStud = 24
-	signGui.LightInfluence = 0.5
-	local signText = Instance.new("TextLabel")
-	signText.Size = UDim2.fromScale(1, 1)
-	signText.BackgroundTransparency = 1
-	signText.Font = Enum.Font.PatrickHand
-	signText.TextScaled = true
-	signText.TextColor3 = COLORS.barnRed
-	signText.Text = "PRIVATE FARM\nNo climbing!"
-	signText.Parent = signGui
-	signGui.Parent = backSign
+	-- the back fence, the gate's leaves and the alarm light (World/DefenceArt:
+	-- the Tall Back Fence, the Gate Lock and the rest of the defences)
+	DefenceArt.build(model, frame)
 	-- The front: pickets from the store to the gate, the gate, then to the
 	-- first truck gate. (The stretch from the hedge to the store is the
 	-- store's: World/StoreArt; from the first truck gate to the hedge, with
@@ -365,12 +324,11 @@ local function buildPlot(index: number, world: Instance)
 	local gateRight = P.gate.across + P.gate.width / 2
 	pickets("FrontFenceByGate", P.store.right + P.store.wall, gateLeft)
 	pickets("FrontFence", gateRight, P.driveway.min.X)
-	local gatePost = plotBox("Gate", frame, Vector3.new(gateLeft, 0, -1.5), Vector3.new(gateRight, 0.5, 0.5), { Color = COLORS.hay }, model)
+	-- (the gateway's sill, the colour of the path it leads onto)
+	local gatePost = plotBox("Gate", frame, Vector3.new(gateLeft, 0, -1.5), Vector3.new(gateRight, 0.5, 0.5), { Color = COLORS.trail }, model)
 	buildGateArch(model, frame, index, gateLeft, gateRight)
 
-	-- Buildings.
-	plotBox("Gatehouse", frame, P.gatehouse.min, P.gatehouse.max, { Color = COLORS.cream }, model)
-	-- (on the lawn, not level with it)
+	-- (the path: on the lawn, not level with it)
 	plotBox("Path", frame, P.path.min + Vector3.new(0, 0.2, 0), P.path.max + Vector3.new(0, 0.15, 0), { Color = COLORS.trail }, model)
 	-- Selling: the Packing Shed with its dock, lane and pickup (rebuilt as
 	-- the owner's Warehouse Level grows), and your store.
@@ -414,8 +372,8 @@ local function buildPlot(index: number, world: Instance)
 
 	-- The field: the start corner tilled, the rest overgrown (World/FarmArt).
 	FarmArt.buildField(model, frame)
-	part({ Name = "Scarecrow", Size = Vector3.new(1, 8, 1), CFrame = frame * CFrame.new(P.scarecrow + Vector3.new(0, 4, 0)), Color = COLORS.post }, model)
-	part({ Name = "Kennel", Size = Vector3.new(8, 6, 7), CFrame = frame * CFrame.new(P.kennel + Vector3.new(0, 3, 0)), Color = COLORS.barnRed }, model)
+	-- (the scarecrow, the kennel, the Watchman's gatehouse: set out with the
+	-- defences, World/DefenceArt)
 
 	-- The farm's zone, for checks you can see in Studio (the server uses PlotLayout.zone).
 	local zone = PlotLayout.zone(index)

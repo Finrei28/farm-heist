@@ -8,7 +8,7 @@
 --   Stock:   Fill all (in your store), the stockroom, and each display's
 --            slots: what's on them and what each is kept to (Auto or a crop)
 --   Upgrade: the next Store Level on blueprint paper, and the ladder
--- It also lets you, and only you, through your store's staff door.
+-- (The staff door lets you and your Trusted friends through: GateController.)
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -456,33 +456,6 @@ function StoreController.open(tab: string?)
 	end
 end
 
--- Lets you (only you) through your store's staff door: the blocker in it
--- stops everyone, but your own screen moves your character, so it lets go
--- of it here (StoreService swings the door open for everyone to see).
-local function watchStaffDoor()
-	local watched = nil
-	local function letThrough(part: Instance)
-		if part.Name == "StaffDoorBlocker" and part:IsA("BasePart") then
-			part.CanCollide = false
-		end
-	end
-	local function watch()
-		local plot = myPlot()
-		local model = plot and workspace:WaitForChild("World"):FindFirstChild(`Plot{plot}`)
-		local store = model and model:WaitForChild("Store", 10)
-		if not store or store == watched then
-			return
-		end
-		watched = store
-		store.DescendantAdded:Connect(letThrough)
-		for _, part in store:GetDescendants() do
-			letThrough(part)
-		end
-	end
-	player:GetAttributeChangedSignal("Plot"):Connect(watch)
-	task.spawn(watch)
-end
-
 function StoreController.Start()
 	local button = HudController.sideButton("🏪", "Store", 2)
 	button.Activated:Connect(panel.toggle)
@@ -507,7 +480,6 @@ function StoreController.Start()
 			render()
 		end
 	end)
-	watchStaffDoor()
 end
 
 return StoreController

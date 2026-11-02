@@ -3,7 +3,8 @@
 -- meshes[name]: size and centre (its bounding box, in studs, from the
 -- point it stands on). wild.obstacles[kind]: items from an overgrown
 -- tile's top middle; wild.grass: items from an overgrown block's top
--- middle. Items as in CropMeshData. See server/World/Meshes.
+-- middle. Items as in CropMeshData. dog: where the guard dog's legs
+-- hang (x, z of each hip, `top` high). See server/World/Meshes.
 return {
 	meshes = {
 		GrassTuft1 = { size = Vector3.new(2.648, 2.311, 2.74), centre = Vector3.new(0.021, 1.156, -0.124) },
@@ -20,6 +21,14 @@ return {
 		Wheelbarrow = { size = Vector3.new(2.02, 1.917, 4.419), centre = Vector3.new(0, 0.951, 0.159) },
 		Weathervane = { size = Vector3.new(3.75, 4.6, 2.58), centre = Vector3.new(0.025, 2.3, 0) },
 		Furrows = { size = Vector3.new(8.319, 0.574, 10.2), centre = Vector3.new(0.002, 0.222, 0) },
+		Scarecrow = { size = Vector3.new(5.37, 6.791, 2.215), centre = Vector3.new(-0.027, 3.396, 0.044) },
+		GuardDog = { size = Vector3.new(0.92, 2, 3.515), centre = Vector3.new(0, 1.94, -0.242) },
+		DogLeg = { size = Vector3.new(0.346, 1.111, 0.45), centre = Vector3.new(0, 0.555, -0.025) },
+		Cloche = { size = Vector3.new(11.24, 10.88, 11.069), centre = Vector3.new(0, 5.44, 0) },
+		SecurityCamera = { size = Vector3.new(0.79, 0.855, 2.04), centre = Vector3.new(0, 0.258, -0.85) },
+		MudPatch = { size = Vector3.new(10.636, 0.293, 11.731), centre = Vector3.new(-0.144, 0.12, 0.055) },
+		AlarmBell = { size = Vector3.new(1.16, 1.35, 1.16), centre = Vector3.new(0, 0.525, 0) },
+		Spotlight = { size = Vector3.new(1.2, 1.28, 0.88), centre = Vector3.new(0, 0.64, -0.02) },
 	},
 	wild = {
 		obstacles = {
@@ -30,4 +39,5 @@ return {
 		},
 		grass = { {"GrassPatch", 0, 0, 0, 0, 0.1745, 0, 1.2}, {"GrassPatch", 6.3, 0, -0.6, 0, 1.3963, 0, 1}, {"GrassPatch", -6, 0, 0.8, -3.1416, -0.3491, -3.1416, 1.05}, {"GrassPatch", 0.6, 0, 6.5, -3.1416, 0.8727, -3.1416, 1}, {"GrassPatch", -0.5, 0, -6.2, 0, -1.0472, 0, 0.95}, {"GrassTuft2", 9.4, 0, 2.6, 0, 0.7854, 0, 0.95}, {"GrassPatch", -8.9, 0, -2.6, -3.1416, -1.2217, -3.1416, 0.8}, {"Wildflowers", 2.6, 0, -9.7, 0, 0.3491, 0, 1.2}, {"GrassTuft1", -2.6, 0, 9.6, -3.1416, 0.3491, -3.1416, 1}, {"GrassPatch", 9, 0, -8.9, -3.1416, -0.8727, -3.1416, 0.75}, {"Wildflowers", -9.4, 0, 9.3, -3.1416, 1.4835, -3.1416, 1.1}, {"GrassTuft3", 2.8, 0, 2.9, 0, -1.0472, 0, 0.9}, {"GrassTuft1", -3.1, 0, -3, 0, 1.2217, 0, 0.95} },
 	},
+	dog = { top = 1.1, legs = { { -0.3, -0.62 }, { 0.3, -0.62 }, { -0.3, 0.7 }, { 0.3, 0.7 } } },
 }

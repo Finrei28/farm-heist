@@ -107,7 +107,7 @@ A skippable checklist card, the same idea as Tide Market's Angler's Guide. Each 
 
 Steps 6–7 need a second harvest, so the card says "Plant your new seeds" in between. Farm Level 2 (needed to hire) comes at 60 XP, which the Guide reaches on its own. It also gives the first Land Permit (§4.1b), and the "all done" card points at the glowing block to clear. Finishing pays **3,000 coins** once. A marker and an edge arrow point to each spot, and the HUD button you need pulses.
 
-**Sprout Shield:** your first **45 minutes of play** (`Crime.SHIELD_SECONDS`). Nobody can steal from you and you can't steal. A soft green dome sits over your field with a timer on it. When it ends you get the **Farm Rules** card: "Ripe crops can now be stolen. In your farm you hold a bat. Bonk a thief, then arrest them!" with a 15 s animated demo. You can drop the shield early (Settings) if you want to start raiding.
+**Sprout Shield:** your first **45 minutes of play** (`Crime.SHIELD_SECONDS`). Nobody can steal from you and you can't steal. A soft green dome sits over your field with a timer on it. When it ends you get the **Farm Rules** card: "Ripe crops can now be stolen. In your farm you hold a bat. Bonk a thief, then arrest them!" with a 15 s animated demo. You can drop the shield early (the 🛡️ Defend window's **Drop it now**, until Settings is built) if you want to start raiding.
 
 ### 4.1 Plots
 - One per player, given out on join: the free plot next to a friend if one is in the server, otherwise the nearest free plot to the highway. Your farm is saved *relative to the plot*, so it rebuilds the same on any plot in any server.
@@ -384,7 +384,7 @@ Hired at the **Hiring Hall** in town or from the Workers window (from Farm Level
 | **Stocker** | Store | Refill displays from the stockroom, the emptiest first | 1–3 (Store 2, 8, 14) | 80 patches' worth | 87.5 |
 | **Cashier** | Store register | Serve the queue | 1 per Register | 12 shoppers | 105 |
 | **Greeter** | Store door | Welcome shoppers in: up to +25% shoppers (× their efficiency) | 1 (Store 8) | – | 87.5 |
-| **Watchman** | Gatehouse (Farm Lv 8) | Rings the bell when a theft starts, shines a spotlight on the thief and shuts the gate **to Suspects** (15 s at Lv 1 up to 30 s at Lv 10; they have to climb out; everyone else still walks through). **Never knocks anyone out**. *Comes with the defences in week 6 (there are no thefts to watch for before week 5)* | 1 | – | 175 |
+| **Watchman** | Gatehouse (Farm Lv 20) | Rings the bell and shines a spotlight on the thief when the alarm goes off. **Once the thief has the crop** he shuts the gate on them (10 s at Lv 1 up to 20 s at Lv 10; once per theft, so it never shuts again unless they steal again; they have to climb out; everyone else, and a Suspect with empty hands, still walks through). **Never knocks anyone out**. He stands at his gatehouse's window by the gate (it goes up when you hire him) and learns while he's on watch. *Built with the defences in week 6* | 1 (Farm Lv 20) | – | 175 |
 
 **Levels and efficiency.**
 - **Efficiency** = 40% at Level 1, +6.7% a level, 100% at Level 10. Speed = the full speed × efficiency. Wages grow slower than skill: 60% of the full wage at Level 1 up to 100% at Level 10, so a levelled worker is quicker *and* cheaper per job (a new hire costs 1.5× as much per crate as a Level 10).
@@ -401,11 +401,11 @@ Hired at the **Hiring Hall** in town or from the Workers window (from Farm Level
 
 ### 4.10 Stealing
 - **What can be stolen:** only **ripe crops in someone else's field**. Never the barn inventory, crates, trucks or shelves. For regrowing plants only the fruit is taken.
-- **How:** walk up to a ripe crop and **hold [E] Steal** (1 s Common up to 7 s Mythic, ×2 under a cloche, −25% on a Harvest Moon). A progress ring shows over the crop for everyone. The crop shakes and rustles.
+- **How:** walk up to a ripe crop and **hold [E] Steal** (1 s Common up to 7 s Mythic, ×1.4 under a cloche, −25% on a Harvest Moon). A progress ring shows over the crop for everyone. The crop shakes and rustles.
 - **The moment the hold starts:** the thief becomes a **Suspect** (§4.12) and the owner gets the **theft alarm** (§5.4).
 - **Races:** if two thieves hold the same crop, the first to finish gets it and the other's hold is cancelled. If the owner (or a Trusted friend or Farmhand) harvests it mid-hold, the hold is cancelled and the thief is still a Suspect. Harvesting fast is the owner's quickest counter.
 - **You carry what you steal in your hands, held up over your head** (the user, 2026-11-02: "farmers will be able to tell instantly by looking at the crop"). A steal takes **the whole patch** (6 carrots, a basket of 6 tomatoes, 4 punnets of strawberries), but the big ones **one at a time**: you can carry one pumpkin or melon, so a bumper patch's second stays ripe for the owner (or the next thief). It's what you'd carry out of a field (`World/ProduceArt`): carrots or corn tied in a bunch, onions on a string, sheaves of wheat tied together, potatoes in a little crate, lettuces in a shallow one, punnets on a tray, tomatoes, peppers, cocoa pods, dragonfruit, grapes, starfruit or golden apples in a basket, pineapples side by side, a whole pumpkin or melon; Rare crops and up sparkle in their rarity's colour. Both hands are on it (`client/PoseController`), so **one patch at a time**: stealing another says **HANDS FULL** until you've taken it home. The STEAL stamp says how many you'd get ("🥕 ×6"); the sign over your hotbar, what you're carrying ("🥕 6 carrots · Get home!"). Everyone walks at 16 studs/s and sprints at 24 (Shift / the Run button). Carrying a stolen crop you walk **15% slower** (13.6), can't sprint, can't use any teleport (Home, Town, Visit), can't hold a bat, and your name tag turns red with the crop's icon.
-- **Getting away:** leave the plot (through the gate, or over the back fence: press **Climb** next to it and you're lifted up and over in 1.5 s, the crop still held up) and the owner's bat can't reach you. Walk home: the crop goes into your barn when you reach your farmhouse door.
+- **Getting away:** leave the plot (through the gate, or over the back fence: press **Climb** next to it and you're lifted up and over in 1.5 s, the crop still held up; 3 s out over a Tall Back Fence) and the owner's bat can't reach you. Walk home: the crop goes into your barn when you reach your farmhouse door.
 - **Limits that keep it fair** (`Config/Crime.luau`):
   - **Sprout Shield** (first 45 min of play, §4.0) and **arrival grace** (2 min after joining).
   - **Same-farm cooldown:** after leaving a farm with loot, or being arrested there, you can't steal from that farm for 3 minutes.
@@ -421,23 +421,32 @@ The owner's main tool is the **bat** (§4.12). Everything else **slows, warns or
 | Defence | Cost · level | Effect |
 |---|---|---|
 | **Bat** | free | Only while you're inside your own farm. Bonk → 5 s knockout |
-| **Gate Lock** | 15,000 · Lv 3 | Only Trusted players can walk in. Anyone else has to climb the gate (2 s), which makes them a Suspect. A **"Private farm"** sign says so, and the first time someone starts climbing in they get a confirm ("Climbing in counts as trespassing"). Walking *out* is always free |
-| **Tall Back Fence** | 30,000 · Lv 4 | Climbing takes 3.5 s instead of 1.5 s |
-| **Scarecrow** | 8,000 · Lv 2 | Early warning: "Someone is near your crops" when a non-Trusted player comes within 25 studs of the field |
-| **Floodlights** | 25,000 · Lv 5 | At night, anyone in your field gets a red outline and a name tag on your screen |
-| **Guard Dog** | 60,000 · Lv 6 | Lives in a kennel by the field. When a theft starts within 30 studs it barks and runs at the thief, who is **slowed 40% for 3 s** (once per 20 s) |
-| **Glass Cloche** | 4,000 each · Lv 7 | Covers one tile: stealing from it takes twice as long |
-| **Security Camera** | 40,000 · Lv 8 | The alarm shows a live picture-in-picture of the thief, even when you're away. Adds the Farm Log's visitor list |
-| **Mud Patch** | 12,000 · Lv 9 | A 12 × 12-stud patch (up to 4) that slows walkers 30% |
-| **Watchman** | worker · Lv 8 | See §4.9 |
+| **Gate Lock** | 80,000 · Lv 8 | Only Trusted players can walk in. Anyone else has to climb the gate (2 s), which makes them a Suspect. A **"Private farm"** sign says so, and the first time someone starts climbing in they get a confirm ("Climbing in counts as trespassing"). Walking *out* is always free |
+| **Tall Back Fence** | 300,000 · Lv 12 | Climbing **out with a stolen crop** takes 3 s instead of 1.5 s (in, or out empty-handed, is no slower) |
+| **Scarecrow** | 25,000 · Lv 5 | Early warning: "Someone is near your crops" when a non-Trusted player comes within 25 studs of the field |
+| **Floodlights** | set with night · week 7 | At night, anyone in your field gets a red outline and a name tag on your screen. *Comes with night in week 7* |
+| **Guard Dog** | 600,000 · Lv 16 | Lives in a kennel by the field. It barks when someone starts stealing within 30 studs, then **runs at the thief once they have the crop**, who is **slowed 30% for 2 s** (once per 20 s). It never stops them |
+| **Glass Cloche** | 30,000 each · Lv 14 | Covers one tile (up to 16): stealing from it takes 40% longer |
+| **Security Camera** | 800,000 · Lv 22 | The alarm shows a live picture-in-picture of the thief, even when you're away. Adds the Farm Log's visitor list |
+| **Mud Patch** | 200,000 each · Lv 24 | A 12 × 12-stud patch (up to 4) that slows anyone but you and your Trusted friends 20% |
+| **Watchman** | worker · Lv 20 | See §4.9 |
 
-- **The raid race (a worked example, from the real layout: `lune run tools/raidrace`).** A thief takes a Rare Pumpkin from the back row (24 studs from the back fence). The owner needs to get within bat reach (7 studs):
-  - **No defences:** hold 2.5 s + run 1.8 s + climb 1.5 s = safe after **5.8 s**.
-  - **With a cloche, the dog and the tall fence:** hold 5 s + run 2.9 s (slowed) + climb 3.5 s = **11.4 s**, and someone climbing out still counts as inside.
-  - **The owner at the warehouse** (1 s to notice + 180 studs of sprint from the middle of the warehouse site) is in reach at **8.2 s**.
-  - **The owner in town** (1 s + Home 3 s + 153 studs from the farmhouse door) is in reach at **10.4 s**.
-  
-  So with no defences, a quick back-row thief beats anyone who isn't already near the field. With them, the owner catches the thief even from town, with about a second to spare. Defences and the scarecrow's early warning buy the seconds; they don't block. This is what the numbers are tuned around, and `tests/layout.test.luau` fails if a change breaks it.
+- **When they open** (changed 2026-11-02, §10): one at a time from Farm Level 5 to 24, about 3 million coins for the lot, so a daily player has them all around day 13 and a farm is never sealed while it's new. Each one's level and price are in `Config/Defences`.
+
+- **Where they go** (week 6, §10): the scarecrow, the kennel and mud patches each take one of 26 **yard spots**, 12 studs square, in a ring 3 studs off the field (its sides and the strip behind it by the back fence). Cloches go over open tiles. The Gate Lock, the Tall Back Fence and the camera (on the barn's back corner) have their own place and go up as you buy them; anything can be put away and set out again. The dog runs at thefts within 30 studs of its kennel, so a kennel behind the field covers the back rows.
+
+- **The raid race (a worked example, from the real layout: `lune run tools/raidrace`).** A thief takes a Rare Pumpkin from the back row (24 studs from the back fence) and runs back over the fence with it. They come in over the back fence (the alarm goes off as they start climbing) or, with no Gate Lock, walk in through the gate (no alarm until they start stealing), whichever leaves the owner less time. The owner reacts in 1 s (watching) or 2.5 s (busy), then sprints from the farmhouse door, the warehouse, or town (Home's 3 s, then the door), and needs to be within bat reach (7 studs) before the thief is over the fence (someone climbing out still counts as inside). The thief's lead in seconds (+ escapes, − caught):
+
+  | Defences | Door | Warehouse | Town | Busy owner: door / warehouse / town |
+  |---|---|---|---|---|
+  | None (in through the gate) | +1.6 | +2.5 | +4.6 | +3.1 / +4.0 / +6.1 |
+  | Gate Lock (Lv 8) | −0.8 | +0.1 | +2.2 | +0.7 / +1.6 / +3.7 |
+  | + Tall Back Fence (Lv 12) | −2.3 | −1.4 | +0.7 | −0.8 / +0.1 / +2.2 |
+  | + a cloche on that crop (Lv 14) | −3.3 | −2.4 | −0.3 | −1.8 / −0.9 / +1.2 |
+  | + the guard dog (Lv 16) | −3.8 | −2.9 | −0.8 | −2.3 / −1.4 / +0.7 |
+  | + mud on the way out (Lv 24) | −4.2 | −3.4 | −1.2 | −2.7 / −1.9 / +0.3 |
+
+  With everything: climb in 1.5 s + run in 1.0 + steal 3.5 + run out 2.6 (slowed) + climb out 3.0 = over the fence 11.6 s after the alarm. So with no defences a quick thief beats anyone who isn't at the field. Fully defended, the farmer is favoured (the user: "favour the farmers slightly more than a thief overall but if a farmer is slow then a thief should be able to run away with the crop"): a watching farmer catches the thief even from town, by about a second; a busy one in town loses them; a busy one at home still catches them. Defences and the scarecrow's early warning buy the seconds; they don't block. This is what the numbers are tuned around, and `tests/layout.test.luau` fails if a change breaks it.
 - **Travel buttons** (all a 3 s channel, cancelled if you move; done by the server through `MovementService.Teleport`). **No cooldowns** (changed 2026-11-02, §10): the stand-still channel is the price, and what stops travel being an escape is that it's off for raiders. A cooldown only got in an owner's way, rushing home twice.
   - **Home** → your farmhouse door. Also on the theft alarm.
   - **Town** → the town square. Also on the "auction starting" toast.
@@ -451,7 +460,14 @@ The owner's main tool is the **bat** (§4.12). Everything else **slows, warns or
 - **Swing:** tap or click (the context button says **Swing** when a Suspect or someone carrying a stolen crop is within 10 studs, or anyone once the bat is in your hand). A swing turns you to face the nearest person in reach, lifts the bat back behind your head, brings it over the top and **level out in front** (the hit, 0.22 s in), on down across to your left, and back to your shoulder (0.75 s in all). Everyone sees it: yours plays the moment you press, others' when the server hears of the swing (the character's `SwingAt`). 0.8 s cooldown, on the server.
 - **A hit counts only if** (`shared/CrimeRules.validHit`): the attacker owns the plot and is inside it · the target is inside the same plot · within 7 studs (+1 for lag) using trusted positions · inside a 100° arc in front of the attacker (or within 3 studs, where a swing reaches round you) · a clear line between them · the target isn't Trusted and isn't immune.
 
-**Knockout (anyone).** A bat hit on **any** non-owner inside your farm knocks them out for **5 seconds**, but only Suspects can be arrested (below). Dizzy stars, the character flops over, "BONK!". The server anchors them and takes network ownership of their character, so exploits can't move them. If they were carrying a stolen crop, it drops from their hands and **goes straight back to the owner's barn** ("Recovered: 🎃 Pumpkin"). A stolen crop remembers which farm it came from: it goes back to that farm's owner, or, if that owner has left the server, to the owner who stopped the thief. A knockout also cancels any trade or steal hold in progress.
+**Knockout (anyone).** A bat hit on **any** non-owner inside your farm knocks them out for **5 seconds**, but only Suspects can be arrested (below). Dizzy stars, the character flops over, "BONK!". The server anchors them and takes network ownership of their character, so exploits can't move them. If they were carrying a stolen crop, it **drops on the ground** past their head, for anyone to pick up (below). A knockout also cancels any trade, steal or pick-up hold in progress.
+
+**A dropped crop** (the user, 2026-11-02: "the crop drops on the ground for anyone to pick up when you bonk the thief"; "farmers should hold take back too like anyone else"). It lies where it fell (inside the farm, this side of any wall) with a **"Dropped! 🎃 ×1"** label and a bar running down 30 s. Standing within 6 studs, the context stamp says what you can do; both are **1.5 s holds**, and if two people hold at once the first to finish gets it, like a steal race:
+- **TAKE BACK** (green) for the crop's owner, the owner of the farm it lies in, and anyone either of them trusts: it goes into the crop's owner's barn ("Taken back: 🎃 1 pumpkin"), or, if that owner has left the server, the farm owner's.
+- **GRAB** (red) for anyone else, the thief who dropped it too once they wake: like a steal (inside the farm, awake, not protected, empty hands, not on that farm's cooldown), it makes you a Suspect and sets off the alarm ("🚨 Sam is grabbing the dropped 🎃 Pumpkin!"); finished, the crop is in your hands as stolen loot, the dog runs and the Watchman shuts the gate as for a steal. It doesn't count against the raid cap again.
+- **Nobody picks it up in 30 s:** it goes back to its owner's barn by itself (or the farm owner's). If its owner or the farm's owner leaves the server, it goes back at once.
+- An arrest still fines for what they had when they were bonked, wherever the crop is now. So the farmer has the knockout's 5 s to arrest (1 s) and take it back (1.5 s); a farmer who stands and watches can lose it to a second thief, or to the first one waking up.
+- While the thief who just woke up is immune (6 s), the farmer's stamp offers TAKE BACK before SWING (a bonk would only nudge them), and a pick-up hold keeps the stamp until it's done (play-test 2026-11-02).
 - After waking: **6 s of knockout immunity** (a hit only nudges them), so nobody can be stun-locked.
 - A knocked-out visitor who isn't a Suspect sees **"You're just stunned. You did nothing wrong."** and a **Leave farm** button that puts them on the sidewalk outside when they wake. Knocking out innocent visitors pays the owner nothing.
 
@@ -485,6 +501,8 @@ It lasts while you're inside that farm and for 60 s after your last suspicious a
 | **Leaving the game while knocked out** (quit, crash, Alt+F4, joining a friend) as a Suspect | `PlayerRemoving` → **automatic arrest**: the fine ×1.5 ("Fled arrest"), the loot back to the owner, applied *before* the profile session ends. Next join within 2 min starts on the police porch with a "You fled arrest" note |
 | **Leaving while being chased** (a Suspect carrying a stolen crop, the owner within 30 studs or swung at them in the last 10 s) | Treated the same: the fine ×1.5, the loot back. Leaving *without* a chase just returns the loot, no fine (it could be a real disconnect) |
 | Leaving while carrying loot (no chase) | The crop goes back to the owner. Loot never saves to the thief until it's deposited |
+| Bonked, waking up and grabbing the crop you dropped | Allowed, as a fresh theft: a Suspect again, the alarm, the dog and the Watchman. The farmer had the 5 s knockout to arrest you or take it back |
+| Leaving the game while a crop you dropped lies there | It isn't yours any more: it waits for its 30 s (or its owner or the farm's owner leaving), then goes back |
 | Leaving while knocked out but **not** a Suspect | Nothing happens (they did nothing wrong) |
 | **Resetting the character** | The reset button is off while you're a Suspect, knocked out or carrying a stolen crop (`ResetButtonCallback = false`). If the character dies or is removed while knocked out → automatic arrest |
 | Teleporting away (Home, Town, Visit) | All game teleports are off while knocked out, a Suspect or carrying a stolen crop |
@@ -610,7 +628,7 @@ The UI looks like things you'd find on a farm: kraft paper, crate labels, seed p
 - **Top right:** the alert stack (theft alarms, auction starting, truck paid, Hot Crop).
 - **Left side bar:** Barn · Warehouse · Store · Workers · Market · More (Cropdex, Trade, Trusted, Farm Log, Robux shop, Settings). Badges show counts (crates waiting, crops ripe, a worker ready to train, an upgrade you can afford). On phones the crates are smaller (58×52) and sit in **2 columns of 3**, above the thumbstick (play-test 2026-10-31). (Built so far: Barn · Store · Market.)
 - **Bottom:** the hotbar of **seed packets** (the picked one stands up). The bat 🏏 joins it as slot 1, only inside your farm. There's no watering-can slot: the context stamp waters. The **Home** and **Town** signposts sit above it.
-- **Bottom right:** the **context stamp**, with a chalkboard above saying what's on the tile and how long it has left. It changes to whatever you can do right now: Plant · Water · Harvest · Steal (red, hold) · Swing · Arrest (red, hold) · Deposit · Pack. One press does one action. Hold it and walk to repeat that same action on every tile you cross (plant a row, harvest a row), never a different one.
+- **Bottom right:** the **context stamp**, with a chalkboard above saying what's on the tile and how long it has left. It changes to whatever you can do right now: Plant · Water · Harvest · Steal (red, hold) · Swing · Arrest (red, hold) · Take back (green, hold) or Grab (red, hold) by a dropped crop · Deposit · Pack. One press does one action. Hold it and walk to repeat that same action on every tile you cross (plant a row, harvest a row), never a different one.
 
 ### 5.3 Windows
 
@@ -626,7 +644,7 @@ The UI looks like things you'd find on a farm: kraft paper, crate labels, seed p
 | **Market** (Exchange) | a chalkboard | Each crop: price, ▲/▼, a 3 h sparkline, events (Hot Crop, Glut, festivals) with timers. Main button: **Dispatch truck now** (if one is loaded) at the prices shown |
 | **Auction** | red velvet with a gold frame | The lot's 3D picture, its estimated value, the current bid and leader, a timer ring (it flashes on anti-snipe), **+5% / +10% / +25%** bid buttons, your escrow, the next lots |
 | **Trade** | two crates side by side | Your offer and theirs (8 slots + coins), the value of each side, a red warning bar, Ready → countdown → Confirm |
-| **Defences** | a blueprint | Owned items, placing mode with glowing spots, Trusted list |
+| **Defences** (🛡️ Defend) | blueprint paper | Your Sprout Shield's time left (**Drop it now**). A card per defence: what it does, its price and Farm Level, how many are out, **Buy · Place · Put away**. Place shows your field from above with a green spot wherever it can go, the dog's reach and the scarecrow's line drawn on the ground. **Trusted:** your list (Remove) and the players here, friends first (Trust). **Camera:** who came in, in the last half hour |
 | **Police desk** | a case file | Your debts (to whom, how much, payment progress), Pay now, your rap sheet |
 
 ### 5.4 Theft alarm (owner)
@@ -636,6 +654,7 @@ The UI looks like things you'd find on a farm: kraft paper, crate labels, seed p
   - **[🏠 Home 3s]**, or **[Go get them!]** if you're already on the farm
 - The crop being stolen flashes on your screen, and its progress ring shows how long you have.
 - A softer amber card for early warnings ("Someone is near your crops", from the scarecrow).
+- When you bonk a thief carrying your crop: "Sam dropped 🎃 1 pumpkin: hold TAKE BACK before someone grabs it!", and **TAKE BACK** on the stamp beside it. Someone grabbing it sets the alarm off again ("🚨 Sam is grabbing the dropped 🎃 Pumpkin!"). The Watchman's line ("🔔 Your Watchman shut the gate on Sam for 15 s.") joins the alarm card once the thief has the crop.
 
 ### 5.5 Thief screens
 - **Steal hold:** a ring over the crop (the crop's icon in the middle) and the hold bar on the context button. Before the first steal the stamp warns "Stealing makes you a Suspect"; once you are one, "Hold 2.5 s, then carry them home over your head", and the stamp shows how many you'd get ("🥕 ×6").
@@ -643,12 +662,13 @@ The UI looks like things you'd find on a farm: kraft paper, crate labels, seed p
 - **Knocked out:** a dizzy wobble, the screen goes grey and blurry with stars, and a 5 s countdown ring. A Suspect sees **"The farmer can arrest you!"**. Anyone else sees **"You're just stunned"** and the **Leave farm** button.
 - **BUSTED!** a mugshot card (avatar headshot, height chart, the charge "Crop theft: 1 Pumpkin", the fine, "paid to Alex", any debt), then a fade to the police porch.
 - **Carrying:** the crop held up over your head, a sign over the hotbar ("🎃 Pumpkin · Get home!", then "· to your door!" in your own farm) with an arrow to your barn, and **HANDS FULL** on the context button over another ripe crop.
+- **Bonked with a crop:** it falls past your head with a "Dropped!" label; awake again, **GRAB** on the stamp beside it ("A thief dropped it. Grabbing it makes you a Suspect").
 - **Got away:** "Safe! Now carry it home to your farmhouse door." when you leave the plot. At your door: "+🎃 Pumpkin (stolen) in your barn" and the crop's icon floats up.
 
 ### 5.6 Small things that matter
 - Every number change floats up (+180 🪙, +6 🥕).
 - A ripe crop's bounce is in time with the music beat. Satisfying harvest pops.
-- **Settings:** music, SFX, Flashing effects (0–100%), Reduced motion, text size (80–125%), Trade requests on/off, Quiet mode, Drop Sprout Shield early.
+- **Settings:** music, SFX, Flashing effects (0–100%), Reduced motion, text size (80–125%), Trade requests on/off, Quiet mode, Drop Sprout Shield early (in the Defend window until Settings is built).
 - Prompts use the Tide Market small wooden chip style ("[E] Steal").
 
 ## 6. Economy
@@ -721,24 +741,26 @@ Rule: **no paid power in the PvP**. Robux buys comfort, shared moments, space an
 
 ```
 src/shared/   Config/  Crops · Rarities · Growth · Land · Warehouse · Shop · Store · Workers · Auction
-                       Market · Crime · Progression · Settings   (to come: Weather · Mutations · Defences · Monetization)
+                       Market · Crime · Defences · Progression · Settings   (to come: Weather · Mutations · Monetization)
               Rules:   GrowthRules · SeedStock · MarketPrice · DemandModel · LandRules · ProgressionRules
                        CrimeRules · FineRules · TravelRules · ZoneRules · AuctionRules · WorkerRules
                        PipelineRules · MoveRules · BarnRules · PlotRules · CrateRules · TruckRules
-                       ShopRules · StoreLayout · LootRules · PayoutRules   (to come: TradeRules)
+                       ShopRules · StoreLayout · LootRules · PayoutRules · DefenceRules   (to come: TradeRules)
 src/server/   Services/ Data · Plot · Field · SeedShop · Auction · Market · Warehouse · Truck
                         Store (shoppers too) · Worker · Crime (steal, carrying, bat, knockout, arrest)
-                        Payout (debts, the payout queue, the police desk) · Movement · Trade · Weather
+                        Payout (debts, the payout queue, the police desk) · Defence (defences, Trusted, the shield,
+                        the domes, the dog, the Watchman) · Movement · Trade · Weather
                         Quest · Leaderboard
                         Analytics · DevCommand
               World/    WorldBuilder · Parts · FarmArt (the field) · YardArt (shed, dock, pickup)
                         StoreArt (the store's buildings) · StoreItems (the catalog's models)
                         CrimeArt (the bat, the stolen crop held up) · ProduceArt (each crop as carried)
-                        PoliceArt (the Police Station's front)
+                        PoliceArt (the Police Station's front) · DefenceArt (the fences, the gate, the defences, the domes)
                         LightingSetup   (PlotLayout lives in shared/)
 src/client/   UI (Kraft & Crate theme, HUD in code) · Controllers/ Field · Warehouse · Store
               Decorate · Shopper · Workers · Market · Auction · Crime (alarm, KO, mugshot) · Police (the desk)
               Pose (arms on carried things, the bat's hold and swing: IKControls) · Truck (trucks wait for people)
+              Defence (the Defend window, setting out) · Gate (gateways on your screen, mud) · Watch (the dog, lights)
               Trade · Weather
 ```
 
@@ -788,7 +810,7 @@ Each week builds its features *and* their look ([ArtDirection.md](ArtDirection.m
 | 3 ✅ | **Your Store** (§4.8): the building and its 4 stages, Store Levels 1–20, Decorate mode with the catalog and `shared/StoreLayout`, the stockroom, Fill and Set crops, shoppers walking the aisles, checkouts and queues, the rating with Charm, the store's name, the store cut out of the farm zone. The Farm Stand's code becomes the displays. **Look:** the store's buildings and items, farm colours and name plates, the gate arch, picket fences. (Built and played in Studio 2026-10-31) | Testers decorate a store on a phone and get it selling without help |
 | 4 ✅ | **Warehouse Levels 1–20** (§4.6: stations, conveyors, Cold Room, routes, the second and third truck), **every worker type with Levels 1–10** (§4.9: XP, training, efficiency; the Watchman moves to week 6), wages and strikes, the Hiring Hall, offline settlement with the store and the Welcome back card; the progression sim updated with the real tables. **Look:** the warehouse's buildings and trucks, worker outfits. (Built 2026-10-31, played in Studio 2026-11-01) | Testers come back the next day to collect, and level a worker on purpose |
 | 5 ✅ | Stealing, the sack, deposit, bat, knockout, Suspect, arrest, Police Station, fines and debt, every bypass counter + tests. The theft alarm's card and red edge came forward from week 6 (a raided farm's owner must know). **Look:** Suspect markers, the sack, the back fence's slats and climb, the Police Station's front. (Built 2026-11-01, played in Studio with 2 players 2026-11-02) | Raids feel fun on both sides; nobody can dodge an arrest |
-| 6 | Defences, theft alarm, Home, Sprout Shield, arrival grace, raid caps, Trusted list (and the staff door for Trusted friends), MovementService. **Look:** the defences | A defended farm catches most raids; an undefended one still survives |
+| 6 ✅ | Defences, theft alarm, Home, Sprout Shield, arrival grace, raid caps, Trusted list (and the staff door for Trusted friends), MovementService, the Watchman (from week 4). Floodlights move to week 7, with night. **Look:** the defences (Built and played in Studio with 2 players 2026-11-02) | A defended farm catches most raids; an undefended one still survives |
 | 7 | Auction House, weather and mutations, Harvest Moon, Cropdex, quests. **Look:** the town (plaza, clocktower, building fronts), weather, day and night | Auction rooms fill up on the bell |
 | 8 | Trading with logs and rollback, the MemoryStore supply factor, leaderboards (Top Store), the Farm Guide. **Look:** the valley (Terrain hills, woods, back-trail cover, the tunnel mouth) | 50-player test with no duplication or lost items |
 | 9 | Kraft & Crate UI polish, mobile layout, analytics, monetization, thumbnails and the Roblox page art | Launch with a small sponsored-ad budget |
@@ -1119,6 +1141,46 @@ Not built yet (by plan): the Sprout Shield, arrival grace, the raid cap's dome (
 
 **Played in Studio on 2026-11-02** (PlaytestLog, [playtest/2026-11-02-week5/](playtest/2026-11-02-week5/)), solo for the art and with a 2-player local server for raids: steals and the alarm, the sack and its walk home, bonks on a Suspect and on an innocent visitor (Leave farm), arrests (paid, and into debt), half of a debtor's sale paid to the owner, the police desk, climbing in as a Suspect, quitting while knocked out (fled: fined ×1.5, the owner paid at once), Home refused to a Suspect, Respawn greyed out. Fixed there: the hold bar under the chalkboard, the alarm's red edge never fading, swings missing a thief beside or behind you, the knockout card's Suspect line; by eye the sack (an egg beside the character → snug on the back), the bat's length, the porch roof (a flat navy slab → a striped awning with a striped flap along its front, since from the square the roof is seen edge-on), Sheriff Clucks' comb and eyes, the poster behind the bench, the door lamps; and in plain words the refusals and notes a new player would meet (PlaytestLog). Not covered: leaving with loot (chased and not), dying while knocked out, rejoining on the porch (Studio can't rejoin), the payout queue between servers, lag, a phone, 8 players.
 
+### MVP week 6: defences (built 2026-11-02)
+Built: `Config/Defences`, `shared/DefenceRules` (buying, where each defence stands, what it does, the Trusted list, whether a gate stops someone), `CrimeRules.shieldLeft` and `raidFreeAt`; server `DefenceService` (buy, place, put away, Trust, Untrust, Drop shield, the camera's visitor list; the Sprout Shield and arrival grace as ShieldUntil/GraceUntil; the domes; the gate; the scarecrow; the dog; the Watchman's bell, spotlight and gate), wired into `CrimeService` (protection, Trusted, cloches, the Tall Back Fence's climb, climbing a locked gate, the alarm), `FieldService` (Trusted friends water and harvest), `StoreService` (the staff door opens for Trusted friends), `WorkerService` (the Watchman); `World/DefenceArt` (the back fence both ways, gate leaves on every farm, the alarm light, the kennel, the gatehouse, the domes, every defence) and the meshes in `tools/crop_art/defences.py`; client `DefenceController` (the 🛡️ Defend window, setting things out, the scarecrow's card, the Farm Rules card), `GateController` (gateways and the staff door on your own screen, mud), `WatchController` (the dog, the alarm light and flag, the spotlight and bell, the dome timers), and in `CrimeController` the alarm's edge arrow, the camera's live picture, the Watchman's line, why you can't steal (a shield, the Neighbourhood Watch) and climbing a locked gate. Dev: `/shield off|on`, `/defences all|none`, `/trust Name`.
+
+Decided while building (each a small call the doc left open):
+
+| Question | Decision |
+|---|---|
+| Floodlights only work at night, and night comes in week 7 | They come with night (week 7, ArtDirection §11 step 12): selling something that does nothing yet would be a trap |
+| Where do defences go? ("placing mode with glowing spots", §5.3) | 26 **yard spots**, 12 studs square, in a ring 3 studs off the field (its two sides and the strip behind it, by the back fence): the scarecrow, the kennel and mud patches each take one. Cloches go over open tiles. The Gate Lock, the Tall Back Fence and the camera have their own place and go up as you buy them. Setting out shows your field from above with a green spot wherever it can go; tap one to set it there, tap your own to put it away |
+| The dog's 30 studs: from what? | From its kennel, so where you put the kennel is the choice (behind the field covers the back rows, where the raid race's thief steals). Its reach is drawn as a gold ring while you place it |
+| How many cloches? | Up to 16 (a quarter of a full field): enough for your rarest crops, not a glass farm |
+| Whom does mud slow? | Anyone but you and your Trusted friends: it's your yard |
+| Does the scarecrow say who? | Yes ("👀 Sam is near your crops"), unless you're close enough to see them yourself; once a minute per person |
+| The Watchman's gatehouse | It goes up when you hire one (the cream cube on every farm is gone); he stands at its window over the gate. He learns while he's on watch (your farm only exists while you're in the server, so not while you're away) |
+| The scarecrow, kennel and gatehouse stand-ins | Gone: they only appear once bought. Every farm now has real gate leaves, standing open against the yard, swung shut with a padlock and a PRIVATE FARM sign by the Gate Lock |
+| Dropping the Sprout Shield early ("Settings", §5.6) | There's no Settings window yet: the Defend window shows the shield's time left with **Drop it now** (tap twice) |
+| Trusted friends harvesting for you | The crops go to your barn; you get a Farmhand's share of the XP (half), they get none (no farming XP off friends) |
+
+**Played in Studio the same day** (PlaytestLog, solo and with 2 players: a raid on a defended farm): everything works as written. Fixed there: the placing spots couldn't be pressed, the HUD covered the placing view, the alarm's edge arrow was a blank circle, the camera's picture too wide to see the thief, the scarecrow's card on top of the alarm, the Farm Rules card's last line over its pictures, three dev commands reading the wrong word, and by eye the mud's puddle, the dome poking out through the back fence and the camera too small. Not covered: the Camera tab's list, a phone, 8 players (Stage D).
+
+### Change after review: raids rebalanced, and a bonked thief drops the crop (2026-11-02)
+
+The user: "I noticed there are a lot of defences to stop someone stealing a crop successfully such as the gate auto locking by the watchman. Determine if it is too difficult for someone to steal and escape and any measures to this." "And determine if it is too easy to get those defences." Then the rule to tune to: "The game should favour the farmers slightly more than a thief overall but if a farmer is slow then a thief should be able to run away with the crop. Because if thieves can steal a farmers crop too easily, farmers will get too frustrated". And: "Make it so that the crop drops on the ground for anyone to pick up when you bonk the thief", "farmers should hold take back too like anyone else".
+
+| Found | Change |
+|---|---|
+| With everything set out, a Rare thief lost to a farmer reacting in 1 s by 8.2 s (door), 7.3 (warehouse), 5.2 (town): no raid could work, even on a slow farmer | Re-timed (the table in §4.11): fully defended, a watching farmer in town wins by 1.2 s, a busy one in town loses by 0.3 s, a busy one at home still wins by 1.9 s |
+| The Tall Back Fence slowed climbing **in** as well as out (+4 s a raid) | Only climbing out with a stolen crop: 3 s (was 3.5 both ways) |
+| The race never counted that climbing in alarms the farmer before any steal (with a Gate Lock, every way in does) | `tests/lib/raidrace` now times the whole raid from the first step in: climb in, run, steal, run out, climb out, for each set of defences, and the farmer from the door, the warehouse or town, sharp or slow; five tests hold the target |
+| A cloche doubled a steal | ×1.4 |
+| The dog grabbed during the steal hold, so its slow mostly ran out before the thief ran | It barks as the steal starts and runs at the thief once they have the crop: 30% slower for 2 s (was 40% for 3 s, wasted) |
+| The Watchman shut the gate on every alarm, climbing in included, 15–30 s, on any Suspect | Once per theft, as the thief takes the crop, 10–20 s, only on that farm's Suspects carrying a stolen crop; when it lifts they walk out |
+| Mud slowed 30% | 20% |
+| Every defence opened by Farm Level 9 (about 2.5 h of play) for about 265,000 coins; the Gate Lock and Tall Fence during the Sprout Shield | One at a time from Level 5 to 24, about 3M coins (§4.11's table); the Watchman at Farm Level 20 |
+| A bonked thief's crop went straight back to the barn: no scramble, nothing for a second thief | It drops on the ground for 30 s: TAKE BACK (owners and their Trusted friends) or GRAB (anyone else), 1.5 s holds, first to finish wins (§4.12) |
+
+Built: `Crime.GRAB_HOLD`, `DROP_REACH`, `DROP_SECONDS`; `LootRules.dropRole`, `CrimeRules.canGrab`; `CrimeService` drops the crop (`CrimeArt.dropped`, tagged `DroppedCrop`), the `PickUpStart` / `PickUp` / `PickUpCancel` actions, the 30 s return and what happens when an owner leaves; `DefenceService.OnTheft` (the dog's run, the Watchman's gate) apart from `OnSteal` (the bark); `DefenceRules.fenceClimb` by direction and hands, `gateBlocks` with `carrying`; the client's TAKE BACK / GRAB stamp, the dropped crop's label, the grab alarm and the Watchman's line once the gate shuts; the Farm Rules card ("they drop your crop", "Then TAKE BACK your crop!"). Tests: the dropped crop's roles and the grab's checks, the fence by direction, the gate with empty hands, the new prices and levels in order, and the raid race's target.
+
+**Played in Studio the same day** (PlaytestLog, [playtest/2026-11-02-drop/](playtest/2026-11-02-drop/), solo and with 2 players twice): the drop, its label and the 30 s return, TAKE BACK after a bonk and after an arrest, GRAB by the woken thief with the farmer's alarm and the Watchman, a 3.5 s cloched steal, and the Tall Back Fence timed at 1.5 s in and 3.0 s out with a crop all work as written. Fixed there: the label floated over the character beside it; "🎃 ×1" sat on "BACK" in the stamp (and on HANDS FULL's); Take back's bar filled red; the thief read "A thief dropped it" about their own crop; and the one that mattered: as the thief woke up beside their crop the farmer's stamp said SWING, though for 6 s a bonk only nudges them, which hid TAKE BACK just as the thief could grab it (SWING now drops below TAKE BACK while someone's immune, and says why; a pick-up hold keeps the stamp). In passing: no more ARREST over a thief already arrested (a `Busted` attribute). The next day (the user: "Can't you give yourself commands to unlock those areas and levels so you can test it?", "Make sure only one person can get it"), with a new `/land all` opening the whole field: the dog barked as a back-row steal started, ran the moment the thief had the crop and slowed them 30% for 2 s half a second later; and two clients finishing a pick-up at the same server moment (3–4 ms apart, twice) gave the crop to exactly one of them each time, the other getting "Gone" (the claim is one explicit step now, `LootRules.takeDrop`, with a test).
+
 ### Change after review: the farmhouse and barn, wild land and produce drawn (2026-11-02)
 
 The user: "Now that the art for our crops is done, Go over all the visuals in our game and determine what other arts need 3D meshes so their appearance looks good and is polished, this should include the unfinished buildings. Determine if these shoud be done now or in a later planned week." Then, to the three due now: "Yes, start now".
@@ -1256,7 +1318,7 @@ In order. Each one makes the next one cheaper. Every step ends with a review aga
 1. ✅ **Set up the project.** Rojo + Rokit, ProfileStore, `DataService` (with a hook that runs automatic arrests before a save closes), `MovementService` / `MoveRules`, Analytics, the Lune test harness and `tools/check`, all from Tide Market. Still to port: the UI helpers (`UI.compact`, `UI.touch`, panels, item cards) re-skinned to Kraft & Crate, and the dev-command service; both come with week 1.
 2. ✅ **Write the shared rules with Lune tests.** `GrowthRules`, `SeedStock`, `MarketPrice`, `DemandModel`, `LandRules`, `CrimeRules` (every bypass in the §4.12 table), `FineRules`, `TravelRules`, `ZoneRules`, `AuctionRules`, `WorkerRules`, `PipelineRules.simulate`, plus config checks: 155 tests, all passing (`lune run tools/check`).
 3. ✅ **Build a progression sim.** `lune run tools/progression`: the XP curve is tuned so every permit target is met, and wages stay at 5–8% of income. It also showed that coins pile up late (see step 6).
-4. ✅ **Greybox Cloverdale and time the raid race.** The layout, the greybox and the race from real distances are done and tested (5.8 s without defences, 11.4 s with them; the tall fence went to 3.5 s). Walked in Studio on 2026-10-30 (play-test Stage A, §10): the distances hold. Still open from Stage A: A7 (finding your way) needs a new tester.
-5. **MVP weeks 1–5 (§9)**, play-tested as they land (PlaytestPlan Stages A–D). ✅ Week 1 (the farming loop, with its dev commands and the first look pass: light, fences, the field and crops). ✅ Week 2 (selling: the Packing Shed, the pickup, the market, the Farm Stand), played in Studio on 2026-10-31. ✅ Week 3 (your store: the building and its 4 stages, Store Levels, Decorate, shoppers in the aisles), played in Studio on 2026-10-31; then the stores and the valley were made bigger (§10), so a Supermarket is 80 × 56 studs and each farm is 220 wide. ✅ Week 4 (Warehouse Levels 1–20, workers with Levels 1–10, the Hiring Hall, the Welcome back card, the sim with the real tables), played in Studio on 2026-11-01 (§10). ✅ Week 5 (raids: stealing, the bat, knockouts, arrests, fines and debt, the Police Station), played in Studio with 2 players on 2026-11-02 (§10); then reworked after review the same day: stolen crops held up in your hands, the bat's hold and swing, no travel cooldowns, no flicker anywhere, solid trucks (§10); and then a patch gives several, coins ×10 and Field Levels 1–5 (§4.1c, §10), the crops drawn as low-poly meshes (§10), and after a review of every visual the farmhouse and barn, wild land and produce on shelves (§10; what's left goes with weeks 6–8, ArtDirection §11). Next: week 6 (defences, the rest of the theft alarm, the Sprout Shield and arrival grace, the Trusted list), then Stage D with testers; Stages B and C with testers alongside (PlaytestPlan). The look pass ([ArtDirection.md](ArtDirection.md) §11) carries on alongside. The raid stage measures the arrest rate (target 35–50%) and whether raids feel fun from both sides before defences are built in week 6.
+4. ✅ **Greybox Cloverdale and time the raid race.** The layout, the greybox and the race from real distances are done and tested (5.8 s without defences; re-timed for every defence with the week 6 rebalance, §4.11). Walked in Studio on 2026-10-30 (play-test Stage A, §10): the distances hold. Still open from Stage A: A7 (finding your way) needs a new tester.
+5. **MVP weeks 1–5 (§9)**, play-tested as they land (PlaytestPlan Stages A–D). ✅ Week 1 (the farming loop, with its dev commands and the first look pass: light, fences, the field and crops). ✅ Week 2 (selling: the Packing Shed, the pickup, the market, the Farm Stand), played in Studio on 2026-10-31. ✅ Week 3 (your store: the building and its 4 stages, Store Levels, Decorate, shoppers in the aisles), played in Studio on 2026-10-31; then the stores and the valley were made bigger (§10), so a Supermarket is 80 × 56 studs and each farm is 220 wide. ✅ Week 4 (Warehouse Levels 1–20, workers with Levels 1–10, the Hiring Hall, the Welcome back card, the sim with the real tables), played in Studio on 2026-11-01 (§10). ✅ Week 5 (raids: stealing, the bat, knockouts, arrests, fines and debt, the Police Station), played in Studio with 2 players on 2026-11-02 (§10); then reworked after review the same day: stolen crops held up in your hands, the bat's hold and swing, no travel cooldowns, no flicker anywhere, solid trucks (§10); and then a patch gives several, coins ×10 and Field Levels 1–5 (§4.1c, §10), the crops drawn as low-poly meshes (§10), and after a review of every visual the farmhouse and barn, wild land and produce on shelves (§10; what's left goes with weeks 6–8, ArtDirection §11). ✅ Week 6 (defences, the rest of the theft alarm, the Sprout Shield and arrival grace, the Trusted list, the Watchman), built and played in Studio with 2 players on 2026-11-02 (§10). Next: Stage D with testers, then week 7; Stages B and C with testers alongside (PlaytestPlan). The look pass ([ArtDirection.md](ArtDirection.md) §11) carries on alongside. The raid stage measures the arrest rate (target 35–50%) and whether raids feel fun from both sides before defences are built in week 6.
 6. **Late-game coin sinks** (found by the sim). Mostly answered by Warehouse and Store Levels, store decor and worker Levels 1–10 (§6.2): coins now level off through the first month. Still open: the very long tail once both ladders are done (around day 50 for a daily player). Ideas: bigger auction lots and a weekly "Grand Auction", a coin-bought prestige ("Harvest Festival") that resets land for a permanent bonus, seasonal decor sets, costly seasonal seeds. Decide with live data after launch.
 7. **Content and policy checks before launch.** Run the maturity questionnaire with the bonk and arrest content (aim for *Mild*), name the crops and NPCs, and import the crop meshes into the published place (`tools/crop_art`, README step 4; done 2026-11-02 in the local place).

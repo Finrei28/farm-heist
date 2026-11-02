@@ -25,6 +25,7 @@ local TextService = game:GetService("TextService")
 
 local Shared = ReplicatedStorage.Shared
 local Crops = require(Shared.Config.Crops)
+local DefenceRules = require(Shared.DefenceRules)
 local Growth = require(Shared.Config.Growth)
 local Shop = require(Shared.Config.Shop)
 local Store = require(Shared.Config.Store)
@@ -1091,11 +1092,21 @@ end
 function tickStore(player: Player, st, data, t: number, second: boolean)
 	tickShoppers(player, st, t)
 	local model = PlotService.model(st.index)
-	-- the staff door opens for you
-	local position = MovementService.positionOf(player)
+	-- the staff door opens for you and your Trusted friends (§4.11)
 	local door = model.Store:FindFirstChild("Building") and model.Store.Building:FindFirstChild("StaffDoor")
-	local near = position and door and (position - door.Leaf.Position).Magnitude < STAFF_DOOR_REACH
-	StoreArt.setStaffDoor(model, near == true)
+	local near = false
+	if door then
+		for _, other in Players:GetPlayers() do
+			if other == player or DefenceRules.isTrusted(data.trusted, other.UserId) then
+				local position = MovementService.positionOf(other)
+				if position and (position - door.Leaf.Position).Magnitude < STAFF_DOOR_REACH then
+					near = true
+					break
+				end
+			end
+		end
+	end
+	StoreArt.setStaffDoor(model, near)
 	-- decorating ends if you wander off or leave it for 5 minutes
 	if st.decorating and (not atHome(player, st.index) or t - st.decorateAt > Store.BACK_SOON_IDLE) then
 		st.decorating = false

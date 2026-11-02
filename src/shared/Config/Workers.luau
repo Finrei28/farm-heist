@@ -5,10 +5,14 @@
 -- worth shelved, shoppers served. A
 -- worker at Level L works at efficiency(L) of it and is paid wagePart(L) of
 -- wage (coins a minute).
--- slots: the levels that open each slot, of the Warehouse (warehouse) or
--- the Store (store); Shed Hands only work at the Packing Shed (before
--- `until`). Farmhands, Drivers and Cashiers have their own rules
--- (WorkerRules.slots). The Watchman comes with the defences (week 6).
+-- slots: the levels that open each slot, of the Warehouse (warehouse),
+-- the Store (store) or the farm (farm: Farm Level); Shed Hands only work at
+-- the Packing Shed (before `until`). Farmhands, Drivers and Cashiers have
+-- their own rules (WorkerRules.slots). The Watchman (§4.11, with the
+-- defences, Farm Level 20) works in his gatehouse by the gate: when the
+-- alarm goes off he rings the bell and follows the thief with his
+-- spotlight; once they have the crop he shuts the gate on them
+-- (shared/DefenceRules.watchmanShut). He never knocks anyone out.
 return {
 	TYPES = {
 		Farmhand = { name = "Farmhand", station = "Field", wage = 105, speed = 30, job = "Harvests ripe crops and replants" },
@@ -21,9 +25,11 @@ return {
 		Stocker = { name = "Stocker", station = "Shelves", wage = 87.5, speed = 80, slots = { store = { 2, 8, 14 } }, job = "Fills your store's displays" },
 		Cashier = { name = "Cashier", station = "Register", wage = 105, speed = 12, job = "Serves at a Register" }, -- 1 per Register
 		Greeter = { name = "Greeter", station = "Door", wage = 87.5, slots = { store = { 8 } }, job = "Welcomes shoppers in: more shoppers" },
+		Watchman = { name = "Watchman", station = "Gatehouse", wage = 175, slots = { farm = { 20 } },
+			job = "Rings the bell on thieves, lights them up and shuts the gate on them" },
 	},
 	-- The order they're listed in (the Workers window, the Hiring Hall).
-	ORDER = { "Farmhand", "ShedHand", "Sorter", "Packer", "Loader", "Driver", "Stocker", "Cashier", "Greeter" },
+	ORDER = { "Farmhand", "ShedHand", "Sorter", "Packer", "Loader", "Driver", "Stocker", "Cashier", "Greeter", "Watchman" },
 	TILES_PER_FARMHAND = 16,
 	MAX_FARMHANDS = 4,
 	DRIVERS_FROM = 5, -- Warehouse Level: the first Driver (1 per truck)

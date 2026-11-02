@@ -149,7 +149,7 @@ end
 -- Slots
 
 -- How many of a type you can have. ctx = { warehouseLevel, storeLevel,
--- openTiles, registers, trucks } (trucks: at the warehouse's level).
+-- farmLevel, openTiles, registers, trucks } (trucks: at the warehouse's level).
 function WorkerRules.slots(typeName: string, ctx): number
 	local kind = Workers.TYPES[typeName]
 	if not kind then
@@ -164,8 +164,8 @@ function WorkerRules.slots(typeName: string, ctx): number
 	if kind.untilLevel and ctx.warehouseLevel >= kind.untilLevel then
 		return 0
 	end
-	local at = kind.slots.warehouse or kind.slots.store
-	local level = if kind.slots.warehouse then ctx.warehouseLevel else ctx.storeLevel
+	local at = kind.slots.warehouse or kind.slots.store or kind.slots.farm
+	local level = if kind.slots.warehouse then ctx.warehouseLevel elseif kind.slots.store then ctx.storeLevel else ctx.farmLevel or 1
 	local count = 0
 	for _, from in at do
 		if level >= from then
@@ -198,12 +198,12 @@ function WorkerRules.nextSlot(typeName: string, ctx): string?
 	if kind.untilLevel and ctx.warehouseLevel >= kind.untilLevel then
 		return nil
 	end
-	local at = kind.slots.warehouse or kind.slots.store
+	local at = kind.slots.warehouse or kind.slots.store or kind.slots.farm
 	local from = at[have + 1]
 	if not from or (kind.untilLevel and from >= kind.untilLevel) then
 		return nil
 	end
-	return `{if kind.slots.warehouse then "Warehouse" else "Store"} Level {from}`
+	return `{if kind.slots.warehouse then "Warehouse" elseif kind.slots.store then "Store" else "Farm"} Level {from}`
 end
 
 function WorkerRules.count(workers, typeName: string): number

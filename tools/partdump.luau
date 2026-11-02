@@ -1,9 +1,10 @@
 -- Dumps the parts the server builds for one farm (plot space) to JSON, so
 -- tools/crop_art/partview.py can render them with the meshes for a look
 -- before Studio. From the project folder:
---   lune run tools/partdump [out.json] [fieldLevel] [blocksOpen] [plot]
+--   lune run tools/partdump [out.json] [fieldLevel] [blocksOpen] [plot] [defences]
 -- (every mesh stands in for its import; the field has `blocksOpen` blocks
--- cleared, the rest overgrown).
+-- cleared, the rest overgrown; `defences`: every defence set out, the gate
+-- shut and locked, the Watchman's gatehouse; `dome`: those and a dome).
 local fs = require("@lune/fs")
 local process = require("@lune/process")
 local roblox = require("@lune/roblox")
@@ -14,6 +15,7 @@ local out = process.args[1] or "partdump.json"
 local fieldLevel = tonumber(process.args[2]) or 1
 local open = tonumber(process.args[3]) or 4
 local index = tonumber(process.args[4]) or 1
+local extras = process.args[5]
 
 Harness.reset()
 Harness.fresh()
@@ -43,7 +45,38 @@ local cleared = {}
 for block = 1, open do
 	table.insert(cleared, ({ 1, 2, 5, 6, 3, 7, 9, 10, 4, 8, 11, 12, 13, 14, 15, 16 })[block])
 end
-FarmArt.applyLand(plot, frame, { cleared = cleared, fresh = {}, fieldLevel = fieldLevel })
+local land = { cleared = cleared, fresh = {}, fieldLevel = fieldLevel }
+FarmArt.applyLand(plot, frame, land)
+
+if extras == "defences" or extras == "dome" then
+	local DefenceArt = Harness.loadServerWith("World/DefenceArt", globals)
+	local DefenceRules = Harness.load("DefenceRules")
+	local Defences = Harness.load("Config/Defences")
+	local d = { owned = {}, placed = {} }
+	for _, itemId in Defences.ORDER do
+		for _ = 1, math.min(Defences.ITEMS[itemId].max, 4) do
+			DefenceRules.buy(d, itemId)
+		end
+	end
+	DefenceRules.place(d, "Scarecrow", "yard:4")
+	DefenceRules.place(d, "GuardDog", "yard:13")
+	for _, n in { 10, 12, 15, 17 } do
+		DefenceRules.place(d, "MudPatch", `yard:{n}`)
+	end
+	local cloches = 0
+	for tile = 1, 64 do
+		if cloches < 4 and DefenceRules.canPlace(d, land, "Cloche", `tile:{tile}`) then
+			DefenceRules.place(d, "Cloche", `tile:{tile}`)
+			cloches += 1
+		end
+	end
+	DefenceArt.show(plot, frame, index, d)
+	DefenceArt.setGate(plot, false, true)
+	DefenceArt.gatehouse(plot, frame, index, true)
+	if extras == "dome" then
+		DefenceArt.dome(plot, frame, "Shield", 100)
+	end
+end
 
 local parts = {}
 for _, part in plot:GetDescendants() do

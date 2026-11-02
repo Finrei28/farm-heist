@@ -4,7 +4,7 @@
 -- full until you get it home to your farmhouse door (where it goes into your
 -- barn). It's never saved: loot only becomes the thief's once it's home.
 -- The crop remembers whose farm it came from (and its line in that farm's
--- raid ledger), so it can go back. Pure functions over plain tables
+-- raid ledger), so it can go back; knocked out, they drop it. Pure functions over plain tables
 -- (tests/loot.test.luau); CrimeService keeps one per player.
 --
 -- loot = { items = { { crop, key, ownerId, entry?, count } } } (at most one
@@ -92,6 +92,29 @@ function LootRules.returns(items, present: (number) -> boolean, stopperId: numbe
 		end
 	end
 	return out
+end
+
+-- A bonked thief drops the crop in their hands on the ground (§4.12), for
+-- anyone to pick up. What picking it up does for someone: "TakeBack" (it
+-- goes back to its owner's barn, LootRules.returns with the farm's owner
+-- as the stopper) for the crop's owner, the owner of the farm it lies in,
+-- and anyone either of them trusts; "Grab" (into their hands, stolen, like
+-- a steal) for anyone else. d = { whoId, cropOwnerId, farmOwnerId,
+-- trustedByCrop, trustedByFarm }.
+function LootRules.dropRole(d): string
+	if d.whoId == d.cropOwnerId or d.whoId == d.farmOwnerId or d.trustedByCrop or d.trustedByFarm then
+		return "TakeBack"
+	end
+	return "Grab"
+end
+
+-- Takes a dropped crop off the ground: drops = { [id] = drop }. The drop
+-- for whoever asks first, nil for anyone after, so two people finishing a
+-- pick-up together can't both have it (§4.12).
+function LootRules.takeDrop(drops, id: number)
+	local drop = drops[id]
+	drops[id] = nil
+	return drop
 end
 
 -- "🎃 1 pumpkin, 🥕 6 carrots" (in the order they were taken).

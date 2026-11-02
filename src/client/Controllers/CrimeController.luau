@@ -2,17 +2,24 @@
 -- docs/ArtDirection.md §9). The server decides everything (CrimeService);
 -- this draws it and sends intents:
 --   * the context stamp (FieldController.offer): STEAL (hold) on a ripe crop
---     in someone else's field, SWING near anyone in your farm, ARREST (hold)
---     over a knocked-out Suspect, CLIMB at a back fence;
+--     in someone else's field (or why not: a Sprout Shield, the Neighbourhood
+--     Watch; none on a farm that trusts you), SWING near anyone in your farm,
+--     ARREST (hold) over a knocked-out Suspect, TAKE BACK or GRAB (hold) by
+--     a crop a bonked thief dropped, CLIMB at a back fence or at a gate
+--     that stops you (locked, or shut on you by a Watchman);
 --   * a ring of dots over a crop being stolen (everyone; always on top for
---     its owner), and the crop shaking;
+--     its owner), and the crop shaking; a label over a dropped crop with
+--     the time left before it goes back to its owner's barn;
 --   * a red ! over Suspects of your farm (always on top), a red "🎃 name" tag
 --     over anyone carrying a stolen crop (held up over their head: the
 --     server's CrimeArt; arms and the bat's swing: PoseController), dizzy
 --     stars over anyone knocked out;
 --   * the crop in your hands: a sign over the hotbar, "Get home!" with an
 --     arrow to your barn; the knockout screen (grey, blurred, the countdown, Leave farm);
---     the BUSTED! mugshot card; the theft alarm card; BONK! and puffs;
+--     the BUSTED! mugshot card; BONK! and puffs;
+--   * the theft alarm card: who and what, an arrow at the screen's edge
+--     pointing to the thief, the Security Camera's live picture of them, the
+--     Watchman shutting the gate once they have the crop, and Go home;
 --   * Roblox's reset button is off while you're a Suspect, knocked out or
 --     carrying (§4.12).
 local CollectionService = game:GetService("CollectionService")
@@ -26,6 +33,8 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Crime = require(Shared.Config.Crime)
 local CrimeRules = require(Shared.CrimeRules)
 local Crops = require(Shared.Config.Crops)
+local DefenceRules = require(Shared.DefenceRules)
+local LootRules = require(Shared.LootRules)
 local PlotLayout = require(Shared.PlotLayout)
 local Remotes = require(Shared.Remotes)
 
@@ -96,15 +105,16 @@ end
 local holdToken = 0
 
 -- Runs a hold: start() → ok?, then the bar fills for `seconds`, then done().
--- Letting go first calls cancel(). Returns nothing.
-local function runHold(seconds: number, done: () -> (), cancel: (() -> ())?, stillValid: (() -> boolean)?)
+-- Letting go first calls cancel(). Returns nothing. color: the bar's (red
+-- by default: a crime or an arrest).
+local function runHold(seconds: number, done: () -> (), cancel: (() -> ())?, stillValid: (() -> boolean)?, color: Color3?)
 	holdToken += 1
 	local token = holdToken
 	local started = os.clock()
-	FieldController.setProgress(0)
+	FieldController.setProgress(0, color)
 	while holdToken == token do
 		local f = (os.clock() - started) / seconds
-		FieldController.setProgress(f)
+		FieldController.setProgress(f, color)
 		if stillValid and not stillValid() then
 			holdToken += 1
 			FieldController.setProgress(nil)
@@ -171,6 +181,83 @@ local function steal(plot: number, tile: number, part: BasePart)
 	end, function()
 		return part:GetAttribute("Stage") == "Ripe" and not knockedOut(player) and inFarm(player) == plot
 	end)
+end
+
+------------------------------------------------------------------------
+-- Dropped crops (a bonked thief's, §4.12): its owner, the farm's owner
+-- and their Trusted friends hold TAKE BACK, anyone else GRAB
+
+local picking = nil -- the dropped crop while a pick-up hold runs
+
+local function plotModel(index: number?): Instance?
+	return index and workspace.World:FindFirstChild(`Plot{index}`)
+end
+
+-- What picking up this dropped crop does for you: "TakeBack" or "Grab".
+local function dropRole(drop: Instance): string
+	local farm = plotModel(drop:GetAttribute("Plot"))
+	local cropOwnerId = drop:GetAttribute("OwnerId")
+	local cropFarm = nil
+	for index = 1, PlotLayout.COUNT do
+		local model = plotModel(index)
+		if model and model:GetAttribute("OwnerId") == cropOwnerId then
+			cropFarm = model
+		end
+	end
+	return LootRules.dropRole({
+		whoId = player.UserId, cropOwnerId = cropOwnerId, farmOwnerId = farm and farm:GetAttribute("OwnerId"),
+		trustedByCrop = cropFarm ~= nil and DefenceRules.inTrustedText(cropFarm:GetAttribute("Trusted"), player.UserId),
+		trustedByFarm = farm ~= nil and DefenceRules.inTrustedText(farm:GetAttribute("Trusted"), player.UserId),
+	})
+end
+
+-- The nearest dropped crop you can reach in the farm you're in.
+local function nearestDrop(here: number): Model?
+	local me = rootOf(player)
+	if not me or here == 0 then
+		return nil
+	end
+	local best, bestDistance = nil, Crime.DROP_REACH
+	for _, drop in CollectionService:GetTagged("DroppedCrop") do
+		if drop:IsA("Model") and drop:GetAttribute("Plot") == here then
+			local at = drop:GetPivot().Position
+			local distance = Vector2.new(at.X - me.Position.X, at.Z - me.Position.Z).Magnitude
+			if distance <= bestDistance then
+				best, bestDistance = drop, distance
+			end
+		end
+	end
+	return best
+end
+
+local function pickUp(drop: Model)
+	local pressed = holdToken
+	local id = tostring(drop:GetAttribute("DropId"))
+	local result = CrimeAction:InvokeServer("PickUpStart", id)
+	if not result.ok then
+		say(result.reason)
+		return
+	elseif holdToken ~= pressed then
+		task.spawn(CrimeAction.InvokeServer, CrimeAction, "PickUpCancel") -- (let go before the server answered)
+		return
+	end
+	picking = drop
+	local crop = Crops.ById[drop:GetAttribute("Crop")]
+	local takeBack = result.result.role == "TakeBack"
+	runHold(result.result.seconds + 0.05, function()
+		picking = nil
+		local done = CrimeAction:InvokeServer("PickUp", id)
+		if done.ok then
+			floatAtStamp(if takeBack then `{crop.icon} back in the barn` else `+1 {crop.icon} 🧺`, if takeBack then C.green else C.alarm)
+		else
+			say(done.reason)
+		end
+	end, function()
+		picking = nil
+		task.spawn(CrimeAction.InvokeServer, CrimeAction, "PickUpCancel")
+	end, function()
+		return drop.Parent ~= nil and not knockedOut(player)
+	end, if takeBack then C.green else nil)
 end
 
 ------------------------------------------------------------------------
@@ -256,19 +343,103 @@ end
 ------------------------------------------------------------------------
 -- The context stamp: what you can do right now
 
-local function climbHere(): (number?, string?)
+-- A farm's gate stops you going `direction` (shared/DefenceRules.gateBlocks).
+local function gateBlocksMe(index: number, direction: string): boolean
+	local model = workspace.World:FindFirstChild(`Plot{index}`)
+	if not model or model:GetAttribute("OwnerId") == nil then
+		return false
+	end
+	return DefenceRules.gateBlocks({
+		mine = myPlot() == index, trusted = DefenceRules.inTrustedText(model:GetAttribute("Trusted"), player.UserId),
+		locked = model:GetAttribute("GateLocked") == true, shut = (model:GetAttribute("GateShutUntil") or 0) > now(),
+		suspect = (player:GetAttribute("SuspectOf") or 0) == index, carrying = carried(player) ~= nil, direction = direction,
+	})
+end
+
+-- Where you could climb: a back fence (either side), or a gate that stops
+-- you. Returns the farm, "In"/"Out", and "fence"/"gate".
+local function climbHere(): (number?, string?, string?)
 	local root = rootOf(player)
 	if not root then
-		return nil, nil
+		return nil, nil, nil
 	end
 	for index = 1, PlotLayout.COUNT do
 		local p = PlotLayout.frame(index):PointToObjectSpace(root.Position)
 		local direction = PlotLayout.climbAt(p, Crime.CLIMB_REACH)
 		if direction then
-			return index, direction
+			return index, direction, "fence"
+		end
+		direction = PlotLayout.gateClimbAt(p, Crime.CLIMB_REACH)
+		if direction and gateBlocksMe(index, direction) then
+			return index, direction, "gate"
 		end
 	end
+	return nil, nil, nil
+end
+
+-- Why you can't steal on this farm right now (nil: you can try): your own
+-- Sprout Shield or arrival grace, theirs, or the raid cap's Neighbourhood
+-- Watch. Returns the stamp's words and the chalkboard line.
+local function protection(here: number): (string?, string?)
+	local t = now()
+	local mine = math.max(player:GetAttribute("ShieldUntil") or 0, player:GetAttribute("GraceUntil") or 0) - t
+	if mine > 0 then
+		local shield = (player:GetAttribute("ShieldUntil") or 0) > t
+		return "SHIELD", if shield then `🌱 Your Sprout Shield is on for {UI.formatTime(mine)}: no stealing until it ends (or drop it in 🛡️ Defend)`
+			else `🌱 You just arrived: no stealing for {UI.formatTime(mine)}`
+	end
+	local model = workspace.World:FindFirstChild(`Plot{here}`)
+	local owner = model and Players:GetPlayerByUserId(model:GetAttribute("OwnerId") or 0)
+	if owner then
+		local theirs = math.max(owner:GetAttribute("ShieldUntil") or 0, owner:GetAttribute("GraceUntil") or 0) - t
+		if theirs > 0 then
+			return "SHIELD", `🌱 {owner.DisplayName}'s farm is protected for {UI.formatTime(theirs)}`
+		end
+	end
+	local dome = model and model:FindFirstChild("Dome")
+	if dome and dome:GetAttribute("Kind") == "Watch" then
+		return "WATCHED", `👮 The neighbours are watching this farm: wait {UI.formatTime(math.max(0, (dome:GetAttribute("Ends") or t) - t))}`
+	end
 	return nil, nil
+end
+
+-- The first time you go to climb a locked gate: are you sure?
+local gateWarned = false
+local gateConfirm = nil
+local function confirmGate(owner: string)
+	if gateConfirm then
+		return
+	end
+	gateConfirm = make("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.45), Size = UDim2.fromOffset(360, 0), AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundColor3 = C.cream, ZIndex = 45, Parent = UI.screen,
+	}, { UI.corner(6), UI.stroke(C.alarm, 4), make("UIPadding", { PaddingTop = UDim.new(0, 10), PaddingBottom = UDim.new(0, 10), PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) }),
+		make("UIListLayout", { Padding = UDim.new(0, 8), HorizontalAlignment = Enum.HorizontalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder }) })
+	UI.label({ Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, TextWrapped = true, Font = UI.HEAD, TextSize = 20, TextColor3 = C.alarm,
+		TextXAlignment = Enum.TextXAlignment.Center, Text = `🔒 Climb into {owner}'s farm?`, LayoutOrder = 1, ZIndex = 46, Parent = gateConfirm })
+	UI.label({ Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, TextWrapped = true, Font = UI.HAND, TextSize = 19,
+		TextXAlignment = Enum.TextXAlignment.Center, Text = "Their gate is locked: climbing in counts as trespassing. You'll be a Suspect, so they can bonk you and arrest you.",
+		LayoutOrder = 2, ZIndex = 46, Parent = gateConfirm })
+	local row = make("Frame", { Size = UDim2.new(1, 0, 0, 44), BackgroundTransparency = 1, LayoutOrder = 3, ZIndex = 46, Parent = gateConfirm },
+		{ make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 10), HorizontalAlignment = Enum.HorizontalAlignment.Center }) })
+	local _, go = UI.button({ text = "Climb in", kind = "red", size = UDim2.fromOffset(140, 42), zIndex = 46, parent = row })
+	local _, stop = UI.button({ text = "Cancel", kind = "cream", size = UDim2.fromOffset(120, 42), zIndex = 46, parent = row })
+	local function close()
+		if gateConfirm then
+			gateConfirm:Destroy()
+			gateConfirm = nil
+		end
+	end
+	go.Activated:Connect(function()
+		gateWarned = true
+		close()
+		local result = CrimeAction:InvokeServer("Climb")
+		if not result.ok then
+			say(result.reason)
+		end
+	end)
+	stop.Activated:Connect(close)
+	task.delay(10, close)
 end
 
 local function updateOffers()
@@ -281,6 +452,7 @@ local function updateOffers()
 	if not me and mine > 0 and here == mine then
 		target = nearest(function(other)
 			return knockedOut(other) and other:GetAttribute("KOSuspect") == true and other:GetAttribute("KOPlot") == mine
+				and not other:GetAttribute("Busted") -- (arrested: on their way to the police)
 		end, Crime.ARREST_RANGE)
 	end
 	if target then
@@ -307,31 +479,48 @@ local function updateOffers()
 	end
 	if victim then
 		local suspect = (victim:GetAttribute("SuspectOf") or 0) == mine or carried(victim) ~= nil
+		-- (just woken up, a bonk only nudges them: a crop they dropped comes first)
+		local immune = (victim:GetAttribute("ImmuneUntil") or 0) > now()
 		FieldController.offer("Swing", {
-			priority = 30, text = "SWING\n ", sub = `🏏 {victim.DisplayName}`, kind = "red",
-			info = if suspect then `{victim.DisplayName} is a Suspect: bonk, then arrest!` else `{victim.DisplayName} is only visiting (bonking pays nothing)`,
+			priority = if immune then 22 else 30, text = "SWING\n ", sub = `🏏 {victim.DisplayName}`, kind = "red",
+			info = if immune then `{victim.DisplayName} just woke up: for a few seconds a bonk only nudges them`
+				elseif suspect then `{victim.DisplayName} is a Suspect: bonk, then arrest!`
+				else `{victim.DisplayName} is only visiting (bonking pays nothing)`,
 			press = swing,
 		})
 	else
 		FieldController.withdraw("Swing")
 	end
 
-	-- STEAL: a ripe crop under you, in someone else's farm
+	-- STEAL: a ripe crop under you, in someone else's farm (not a friend's
+	-- that trusts you: you harvest those for them, FieldController)
 	local offered = false
-	if not me and not stealing and here > 0 and here ~= mine then
+	local hereModel = here > 0 and workspace.World:FindFirstChild(`Plot{here}`)
+	local trustsMe = hereModel and DefenceRules.inTrustedText(hereModel:GetAttribute("Trusted"), player.UserId)
+	if not me and not stealing and here > 0 and here ~= mine and not trustsMe then
 		local part, tile = tileUnder(here)
 		local cropId = part and part:GetAttribute("Stage") == "Ripe" and part:GetAttribute("Crop")
-		if part and tile and cropId then
+		local blocked, why = protection(here)
+		if part and tile and cropId and blocked then
+			offered = true
+			FieldController.offer("Steal", {
+				priority = 20, text = `{blocked}\n `, sub = "no stealing", kind = "wood", info = why,
+				press = function()
+					UI.toast(why :: string, "Error", 3)
+				end,
+			})
+		elseif part and tile and cropId then
 			offered = true
 			local crop = Crops.ById[cropId]
 			local holding = carried(player)
 			local suspect = (player:GetAttribute("SuspectOf") or 0) == here
+			local cloche = part:GetAttribute("Cloche") == true
 			if holding then
 				local inHand = Crops.ById[holding]
 				local what = Crops.count(holding, player:GetAttribute("StolenCount") or 1)
 				FieldController.offer("Steal", {
-					priority = 20, text = "HANDS\nFULL", sub = `{inHand.icon} {inHand.name}`, kind = "wood",
-					info = `You can carry one patch at a time: take your {what} home first`,
+					priority = 20, text = "HANDS\nFULL", kind = "wood", -- (two words fill the stamp)
+					info = `You can carry one patch at a time: take your {inHand.icon} {what} home first`,
 					press = function()
 						UI.toast(`Your hands are full! Take your {what} home first.`, "Error", 2.5)
 					end,
@@ -339,9 +528,11 @@ local function updateOffers()
 			else
 				-- the whole patch, or one of the big ones (a pumpkin, a melon)
 				local count = math.min(part:GetAttribute("Yield") or crop.perPatch, crop.carry or math.huge)
+				local hold = CrimeRules.stealHold(crop.rarity, { cloche = cloche })
 				FieldController.offer("Steal", {
 					priority = 20, text = "STEAL\n ", sub = `{crop.icon} ×{count}`, kind = "red",
-					info = if suspect then `Hold {CrimeRules.stealHold(crop.rarity)} s, then carry {if count == 1 then "it" else "them"} home over your head`
+					info = if suspect then `Hold {hold} s{if cloche then " (it's under glass)" else ""}, then carry {if count == 1 then "it" else "them"} home over your head`
+						elseif cloche then `🔮 Under a glass cloche: {hold} s to steal. Stealing makes you a Suspect!`
 						else "Stealing makes you a Suspect: the farmer can bonk and arrest you!",
 					press = function()
 						steal(here, tile, part)
@@ -358,21 +549,73 @@ local function updateOffers()
 		FieldController.withdraw("Steal")
 	end
 
-	-- CLIMB: at a back fence, either side
-	local plot, direction = nil, nil
-	if not me and not stealing then
-		plot, direction = climbHere()
+	-- TAKE BACK / GRAB: a crop a bonked thief dropped, within reach
+	local drop = picking or (if not me and not stealing then nearestDrop(here) else nil)
+	if drop and drop.Parent then
+		local crop = Crops.ById[drop:GetAttribute("Crop")]
+		local what = `{crop.icon} ×{drop:GetAttribute("Count") or 1}`
+		local blocked, why = protection(here)
+		local function press()
+			pickUp(drop)
+		end
+		-- (while the hold runs it keeps the stamp: SWING coming back as a
+		-- thief's immunity ends mustn't take it over)
+		local priority = if picking then 35 else 25
+		if dropRole(drop) == "TakeBack" then
+			FieldController.offer("PickUp", {
+				priority = priority, text = "TAKE\nBACK", kind = "green", -- (two words fill the stamp: the crop's in the hint)
+				info = `Hold to put the {what} back in the barn, before someone grabs it`, press = press, release = letGo,
+			})
+		elseif blocked and not picking then
+			FieldController.offer("PickUp", {
+				priority = 25, text = `{blocked}\n `, sub = "no grabbing", kind = "wood", info = why,
+				press = function()
+					UI.toast(why :: string, "Error", 3)
+				end,
+			})
+		elseif carried(player) and not picking then
+			FieldController.offer("PickUp", {
+				priority = 25, text = "HANDS\nFULL", kind = "wood", info = `{what} dropped here, but your hands are full: take your crop home first`,
+				press = function()
+					UI.toast("Your hands are full! Take your crop home first.", "Error", 2.5)
+				end,
+			})
+		else
+			FieldController.offer("PickUp", {
+				priority = priority, text = "GRAB\n ", sub = what, kind = "red",
+				info = if drop:GetAttribute("DroppedBy") == player.UserId then "You dropped it! Grabbing it back makes you a Suspect again: the farmer can bonk and arrest you!"
+					else "A thief dropped it. Grabbing it makes you a Suspect: the farmer can bonk and arrest you!",
+				press = press, release = letGo,
+			})
+		end
+	else
+		FieldController.withdraw("PickUp")
+	end
+
+	-- CLIMB: at a back fence, either side; at a gate that stops you
+	local plot, direction, over = nil, nil, nil
+	if not me and not stealing and not picking then
+		plot, direction, over = climbHere()
 	end
 	if plot then
 		local model = workspace.World:FindFirstChild(`Plot{plot}`)
 		local owner = model and model:GetAttribute("OwnerName")
-		local trespass = direction == "In" and plot ~= mine and owner ~= nil
+		local trusted = model and DefenceRules.inTrustedText(model:GetAttribute("Trusted"), player.UserId)
+		local trespass = direction == "In" and plot ~= mine and owner ~= nil and not trusted
+		local what = if over == "gate" then "the gate" else "the back fence"
 		FieldController.offer("Climb", {
-			priority = 10, text = "CLIMB\n ", sub = if direction == "In" then "in" else "out", kind = if trespass then "red" else "blue",
-			info = if trespass then `Climbing into {owner}'s farm makes you a Suspect!`
-				elseif direction == "In" then "Climb over the back fence"
-				else "Climb out over the back fence",
+			priority = 10, text = "CLIMB\n ", sub = if over == "gate" then (if direction == "In" then "the gate" else "out!") elseif direction == "In" then "in" else "out",
+			kind = if trespass then "red" else "blue",
+			info = if trespass and over == "gate" then `🔒 {owner}'s gate is locked. Climbing in makes you a Suspect!`
+				elseif trespass then `Climbing into {owner}'s farm makes you a Suspect!`
+				elseif over == "gate" then "🔔 The Watchman shut the gate on you: climb out!"
+				elseif direction == "In" then `Climb over {what}`
+				else `Climb out over {what}`,
 			press = function()
+				if trespass and over == "gate" and not gateWarned then
+					confirmGate(owner)
+					return
+				end
 				local result = CrimeAction:InvokeServer("Climb")
 				if not result.ok then
 					say(result.reason)
@@ -424,6 +667,43 @@ local function carryTag(other: Player, head: BasePart, cropId: string)
 		Text = `{Crops.ById[cropId].icon} {other.DisplayName}`, TextColor3 = C.alarm, TextStrokeColor3 = C.cream, TextStrokeTransparency = 0.2, Parent = gui,
 	})
 	return gui
+end
+
+-- Over a dropped crop: what it is, and a bar running down to when it goes
+-- back to its owner's barn by itself.
+local dropLabels = {} -- [Model] = { gui, bar }
+
+local function labelDrop(drop: Instance)
+	local core = drop:IsA("Model") and (drop.PrimaryPart or drop:FindFirstChild("Core"))
+	local crop = Crops.ById[drop:GetAttribute("Crop") or ""]
+	if dropLabels[drop] or not core or not core:IsA("BasePart") or not crop then
+		return
+	end
+	local top = (core:GetAttribute("Height") or 2) - (core:GetAttribute("HoldY") or 1) -- (from the core up to the crop's top)
+	local gui = billboard("DropLabel", core, UDim2.fromOffset(96, 56), Vector3.new(0, top + 1.6, 0), false, 120)
+	local plate = make("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = C.cream, Parent = gui },
+		{ UI.corner(8), UI.stroke(C.soil, 2) })
+	UI.label({ Position = UDim2.fromOffset(0, 2), Size = UDim2.new(1, 0, 0, 16), Font = UI.HAND, TextSize = 16, Text = "Dropped!",
+		TextColor3 = C.soil, TextXAlignment = Enum.TextXAlignment.Center, Parent = plate })
+	UI.label({ Position = UDim2.fromOffset(0, 16), Size = UDim2.new(1, 0, 0, 24), Font = UI.HEAD, TextSize = 20,
+		Text = `{crop.icon} ×{drop:GetAttribute("Count") or 1}`, TextColor3 = C.ink, TextXAlignment = Enum.TextXAlignment.Center, Parent = plate })
+	local track = make("Frame", { Position = UDim2.new(0, 10, 1, -11), Size = UDim2.new(1, -20, 0, 6), BackgroundColor3 = C.stitch,
+		BorderSizePixel = 0, Parent = plate }, { UI.corner(3) })
+	local bar = make("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = C.gold, BorderSizePixel = 0, Parent = track }, { UI.corner(3) })
+	dropLabels[drop] = { gui = gui, bar = bar }
+end
+
+local function updateDropLabels()
+	local t = now()
+	for drop, label in dropLabels do
+		if drop.Parent == nil then
+			label.gui:Destroy()
+			dropLabels[drop] = nil
+		else
+			local left = math.clamp(((drop:GetAttribute("Expires") or t) - t) / Crime.DROP_SECONDS, 0, 1)
+			label.bar.Size = UDim2.fromScale(left, 1)
+		end
+	end
 end
 
 local STAR_COUNT = 5
@@ -811,6 +1091,157 @@ for _, spec in { { UDim2.fromScale(0, 0), UDim2.new(1, 0, 0, 18) }, { UDim2.new(
 end
 
 local alarmToken = 0
+local alarm = nil -- { userId, plot, untilAt } while the alarm card is up
+
+-- The arrow at the screen's edge pointing to the thief (when they're off
+-- your screen), with their name.
+local arrow = make("Frame", {
+	Name = "AlarmArrow", AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(58, 58), BackgroundColor3 = C.alarm, Visible = false, ZIndex = 34, Parent = UI.screen,
+}, { UI.corner(29), UI.stroke(C.cream, 3) })
+-- (drawn, not a ➤: that character doesn't show in the game's fonts) a shaft
+-- and two barbs pointing right; the whole thing turns to the thief
+local arrowHead = make("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(40, 40),
+	BackgroundTransparency = 1, ZIndex = 35, Parent = arrow })
+make("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.42, 0.5), Size = UDim2.fromOffset(24, 7), BackgroundColor3 = C.cream,
+	BorderSizePixel = 0, ZIndex = 35, Parent = arrowHead }, { UI.corner(3) })
+for _, turn in { 40, -40 } do
+	make("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(0.82, 0, 0.5, if turn > 0 then -5 else 5), Size = UDim2.fromOffset(17, 7),
+		Rotation = turn, BackgroundColor3 = C.cream, BorderSizePixel = 0, ZIndex = 36, Parent = arrowHead }, { UI.corner(3) })
+end
+local arrowName = UI.label({ AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 1, 2), Size = UDim2.fromOffset(120, 18), Font = UI.HEAD, TextSize = 15,
+	TextColor3 = C.cream, TextStrokeColor3 = C.soilDark, TextStrokeTransparency = 0, TextXAlignment = Enum.TextXAlignment.Center, Text = "", ZIndex = 35, Parent = arrow })
+
+local function updateArrow()
+	local thief = alarm and alarm.untilAt > now() and Players:GetPlayerByUserId(alarm.userId)
+	local root = thief and rootOf(thief)
+	if not root then
+		arrow.Visible = false
+		return
+	end
+	local camera = workspace.CurrentCamera
+	local point, onScreen = camera:WorldToViewportPoint(root.Position)
+	local size = camera.ViewportSize
+	if onScreen and point.X > 40 and point.X < size.X - 40 and point.Y > 40 and point.Y < size.Y - 40 then
+		arrow.Visible = false
+		return
+	end
+	-- (behind you: the projection flips, so point the other way)
+	local dx, dy = point.X - size.X / 2, point.Y - size.Y / 2
+	if point.Z < 0 then
+		dx, dy = -dx, -dy
+	end
+	if math.abs(dx) < 1e-3 and math.abs(dy) < 1e-3 then
+		dy = 1
+	end
+	-- (round the edge of the screen, clear of the coin sign at the top and the hotbar)
+	local top, bottom = 150, size.Y - 130
+	local cx, cy = size.X / 2, (top + bottom) / 2
+	local hx, hy = size.X / 2 - 50, math.max(20, (bottom - top) / 2)
+	local scale = math.min(hx / math.max(math.abs(dx), 1e-3), hy / math.max(math.abs(dy), 1e-3))
+	local inset = UI.screen.AbsolutePosition
+	arrow.Position = UDim2.fromOffset(cx + dx * scale - inset.X, cy + dy * scale - inset.Y)
+	arrowHead.Rotation = math.deg(math.atan2(dy, dx))
+	arrowName.Text = thief.DisplayName
+	arrow.Visible = true
+end
+
+-- The Security Camera's picture (§4.11): the thief, live, seen from the
+-- camera on your barn, over the tiles round them.
+local feed = make("ViewportFrame", {
+	Name = "CameraFeed", Size = UDim2.new(1, 0, 0, 150), BackgroundColor3 = Color3.fromRGB(40, 52, 44), LightColor = Color3.fromRGB(240, 240, 230),
+	Ambient = Color3.fromRGB(150, 160, 150), LightDirection = Vector3.new(-1, -2, -1), Visible = false, ZIndex = 36,
+}, { UI.corner(4), UI.stroke(C.soilDark, 2) })
+local feedWorld = make("WorldModel", { Parent = feed })
+local feedCamera = make("Camera", { FieldOfView = 34, Parent = feed })
+feed.CurrentCamera = feedCamera
+UI.label({ Position = UDim2.fromOffset(8, 4), Size = UDim2.fromOffset(160, 18), Font = UI.HEAD, TextSize = 14, TextColor3 = Color3.fromRGB(255, 90, 80),
+	Text = "● REC  CAM 1", ZIndex = 37, Parent = feed })
+local feedLost = UI.label({ Size = UDim2.fromScale(1, 1), Font = UI.HAND, TextSize = 20, TextColor3 = C.cream, TextXAlignment = Enum.TextXAlignment.Center,
+	Text = "📹 No signal: they're out of the camera's sight", Visible = false, ZIndex = 37, Parent = feed })
+local feedPairs = {} -- { { copy, source } }
+local feedFor = nil
+
+local function clearFeed()
+	feedWorld:ClearAllChildren()
+	table.clear(feedPairs)
+	feedFor = nil
+end
+
+local function startFeed(thief: Player, plot: number)
+	clearFeed()
+	local character = thief.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not character or not root then
+		feedLost.Visible = true
+		return
+	end
+	feedLost.Visible = false
+	feedFor = thief
+	local was = character.Archivable
+	character.Archivable = true
+	local copy = character:Clone()
+	character.Archivable = was
+	for _, thing in copy:GetDescendants() do
+		if thing:IsA("Script") or thing:IsA("LocalScript") or thing:IsA("Sound") or thing:IsA("BillboardGui") then
+			thing:Destroy()
+		end
+	end
+	local sources = {}
+	for _, part in character:GetDescendants() do
+		if part:IsA("BasePart") then
+			sources[part:GetFullName()] = part
+		end
+	end
+	for _, part in copy:GetDescendants() do
+		if part:IsA("BasePart") then
+			part.Anchored = true
+			local path = string.gsub(part:GetFullName(), "^" .. string.gsub(copy:GetFullName(), "%p", "%%%0"), character:GetFullName())
+			local source = sources[path]
+			if source then
+				table.insert(feedPairs, { part, source })
+			end
+		end
+	end
+	copy.Parent = feedWorld
+	-- the tiles round them (as they are now) and the lawn
+	local model = workspace.World:FindFirstChild(`Plot{plot}`)
+	local field = model and model:FindFirstChild("Field")
+	for _, tile in (field and field:GetChildren()) or {} do
+		if tile:IsA("BasePart") and (tile.Position - root.Position).Magnitude < 34 then
+			local was2 = tile.Archivable
+			tile.Archivable = true
+			local ok, clone = pcall(tile.Clone, tile)
+			tile.Archivable = was2
+			if ok and clone then
+				clone.Parent = feedWorld
+			end
+		end
+	end
+	make("Part", { Anchored = true, Size = Vector3.new(160, 0.4, 160), CFrame = CFrame.new(root.Position.X, root.Position.Y - 3.4, root.Position.Z),
+		Color = Color3.fromRGB(125, 190, 90), Material = Enum.Material.SmoothPlastic, Parent = feedWorld })
+end
+
+local function updateFeed()
+	if not feed.Visible or not feedFor then
+		return
+	end
+	local root = rootOf(feedFor)
+	if not root or not alarm then
+		feedLost.Visible = true
+		return
+	end
+	feedLost.Visible = false
+	for _, pair in feedPairs do
+		if pair[2].Parent then
+			pair[1].CFrame = pair[2].CFrame
+		end
+	end
+	local mount = PlotLayout.frame(alarm.plot):PointToWorldSpace(PlotLayout.PLOT.camera)
+	feedCamera.CFrame = CFrame.lookAt(mount, root.Position)
+	-- (zoomed in on them: about 12 studs across wherever they are)
+	feedCamera.FieldOfView = math.clamp(math.deg(2 * math.atan(6 / math.max((root.Position - mount).Magnitude, 1))), 5, 40)
+end
+
 homeButton.Activated:Connect(function()
 	local result = TravelAction:InvokeServer("Home")
 	if not result.ok then
@@ -825,13 +1256,25 @@ local function showAlarm(info)
 	alarmToken += 1
 	local token = alarmToken
 	local crop = info.crop and Crops.ById[info.crop]
-	alarmTitle.Text = if info.climbing then `🚨 {info.name} is climbing over your back fence!`
+	alarmTitle.Text = if info.climbing == "gate" then `🚨 {info.name} is climbing over your locked gate!`
+		elseif info.climbing then `🚨 {info.name} is climbing over your back fence!`
 		elseif info.carrying then `🚨 {info.name} walked into your farm with stolen crops!`
+		elseif info.grab and crop then `🚨 {info.name} is grabbing the dropped {crop.icon} {crop.name}!`
 		elseif crop then `🚨 {info.name} is stealing your {crop.icon} {crop.name}!`
 		else `🚨 {info.name} is in your farm!`
 	local home = myPlot() > 0 and inFarm(player) == myPlot()
 	alarmLine.Text = if home then "Run over and press SWING to bonk them 🏏 (look for the red !)" else "Go home to catch them!"
 	homeHolder.Visible = not home
+	local near = UI.screen:FindFirstChild("ScarecrowWarning") -- (the scarecrow's softer card gives way: DefenceController)
+	if near then
+		near.Visible = false
+	end
+	alarm = { userId = info.userId, plot = info.plot or myPlot(), untilAt = math.max(now() + 8, (info.ends or now()) + 4) }
+	local thief = Players:GetPlayerByUserId(info.userId or 0)
+	feed.Visible = info.camera == true and thief ~= nil
+	if feed.Visible and thief and feedFor ~= thief then
+		startFeed(thief, alarm.plot)
+	end
 	alarmCard.Visible = true
 	for _, edge in edges do
 		edge.BackgroundTransparency = 0.2
@@ -843,10 +1286,14 @@ local function showAlarm(info)
 		end)
 		pulse:Play()
 	end
-	local stay = math.max(8, (info.ends or now()) - now() + 4)
+	local stay = math.max(8, (info.ends or now()) - now() + 4) + (if info.camera then 6 else 0)
+	alarm.untilAt = now() + stay
 	task.delay(stay, function()
 		if alarmToken == token then
 			alarmCard.Visible = false
+			feed.Visible = false
+			alarm = nil
+			clearFeed()
 		end
 	end)
 end
@@ -854,6 +1301,9 @@ end
 local function arrestedPop(info)
 	alarmToken += 1
 	alarmCard.Visible = false
+	feed.Visible = false
+	alarm = nil
+	clearFeed()
 	local pop = make("Frame", {
 		AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.34), Size = UDim2.fromOffset(360, 0), AutomaticSize = Enum.AutomaticSize.Y,
 		BackgroundColor3 = C.cream, Rotation = -3, ZIndex = 45, Parent = UI.screen,
@@ -959,6 +1409,13 @@ function CrimeController.Start()
 			bustedCard(info)
 		elseif kind == "Arrested" then
 			arrestedPop(info)
+		elseif kind == "GateShut" then
+			local line = `🔔 Your Watchman shut the gate on {info.name} for {info.seconds} s.`
+			if alarmCard.Visible then
+				alarmLine.Text ..= `\n{line}`
+			else
+				UI.toast(line, "Announce", 4)
+			end
 		elseif kind == "Deposited" then
 			local crop = info.crop and Crops.ById[info.crop]
 			UI.toast(info.text, "Good")
@@ -987,6 +1444,18 @@ function CrimeController.Start()
 	end)
 
 	local elapsed = 0
+	feed.LayoutOrder = 3
+	feed.Parent = alarmCard
+	homeHolder.LayoutOrder = 4
+	RunService.RenderStepped:Connect(function()
+		local ok, err = pcall(function()
+			updateArrow()
+			updateFeed()
+		end)
+		if not ok then
+			warn(`[CrimeController] {err}`)
+		end
+	end)
 	RunService.Heartbeat:Connect(function(dt)
 		updateKnockout()
 		updateCarrySign()
@@ -1005,6 +1474,13 @@ function CrimeController.Start()
 			warn(`[CrimeController] {err}`)
 		end
 	end)
+	CollectionService:GetInstanceAddedSignal("DroppedCrop"):Connect(function(drop)
+		task.defer(labelDrop, drop) -- (once its parts have arrived)
+	end)
+	for _, drop in CollectionService:GetTagged("DroppedCrop") do
+		labelDrop(drop)
+	end
+	RunService.Heartbeat:Connect(updateDropLabels)
 	Players.PlayerRemoving:Connect(function(other)
 		local m = markers[other]
 		if m then

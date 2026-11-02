@@ -25,6 +25,8 @@
 --       standing on `at`, `longest` studs at its longest
 --   Meshes.obstacle(kind, at, model) -> boolean    an overgrown tile's obstacle
 --   Meshes.grass(base, model) -> boolean           an overgrown block's grass
+--   Meshes.dogLegs(at, parent) -> { MeshPart }     the guard dog's four legs
+--       under its body standing on `at` (each named DogLeg)
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CROPS = require(script.Parent.CropMeshData)
@@ -214,6 +216,20 @@ function Meshes.grass(base: CFrame, model: Instance): boolean
 	end
 	place(PROPS.wild.grass, base, model)
 	return true
+end
+
+-- The guard dog's legs, one under each hip (PropMeshData.dog), standing on
+-- `at` like its body (World/DefenceArt; the clients swing them).
+function Meshes.dogLegs(at: CFrame, parent: Instance): { MeshPart }
+	local legs = {}
+	for _, hip in (PROPS.dog and PROPS.dog.legs) or {} do
+		local leg = Meshes.make("DogLeg", at * CFrame.new(hip[1], 0, hip[2]), 1, parent)
+		if leg then
+			leg.Name = "DogLeg"
+			table.insert(legs, leg)
+		end
+	end
+	return legs
 end
 
 return Meshes

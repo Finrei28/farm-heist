@@ -60,8 +60,10 @@ local TEMPLATE = {
 	crew = { nextId = 1, replant = "same", hired = { window = -1, ids = {} }, strike = false },
 	freeHireUsed = false,
 
+	-- Defences (shared/DefenceRules): how many of each you own, and where the
+	-- ones set out stand (["spot"] = itemId: "yard:N", "tile:N", "gate" ...).
 	defences = { placed = {}, owned = {} },
-	trusted = {}, -- user ids (numbers), up to 10
+	trusted = {}, -- { { id, name } }: players who may walk in, help and not be hit (up to 10)
 
 	-- Raids and arrests (shared/CrimeRules, shared/FineRules).
 	crime = {
@@ -70,6 +72,7 @@ local TEMPLATE = {
 		debts = {}, -- { ownerId, amount, createdAt }, oldest first
 		lastArrestAt = 0,
 		fled = false, -- left while knocked out: the next join starts on the police porch
+		shieldDropped = false, -- dropped the Sprout Shield early (to start raiding)
 	},
 	payoutsClaimed = {}, -- ["payoutId"] = true: fines collected for you on other servers, already paid
 

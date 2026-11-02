@@ -14,6 +14,8 @@ WorkerLooks.TYPES = {
 	Stocker = { icon = "🧺", shirt = Color3.fromRGB(78, 159, 61), legs = Color3.fromRGB(70, 60, 50), hat = "cap", hatColor = Color3.fromRGB(78, 159, 61) },
 	Cashier = { icon = "🧾", shirt = Color3.fromRGB(255, 244, 220), legs = Color3.fromRGB(40, 44, 48), apron = Color3.fromRGB(200, 69, 45) },
 	Greeter = { icon = "👋", shirt = Color3.fromRGB(255, 244, 220), legs = Color3.fromRGB(58, 72, 110), sash = Color3.fromRGB(242, 179, 61) },
+	Watchman = { icon = "🔦", shirt = Color3.fromRGB(46, 62, 102), legs = Color3.fromRGB(40, 44, 48), sash = Color3.fromRGB(242, 179, 61),
+		hat = "cap", hatColor = Color3.fromRGB(32, 40, 66) },
 }
 
 WorkerLooks.SKIN = {

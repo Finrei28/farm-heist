@@ -23,12 +23,16 @@
 --   /tp field [3]        in a farm's field (yours by default), on its first open block
 --   /plant Pumpkin       plant that crop on every open, empty tile of your field (free; /grow ripe ripens them)
 --   /field 3             your field straight to Field Level N (crops planted after it give more)
+--   /land all · none     every block of your field cleared (all 64 tiles open) · back to the 4 start blocks
 --   /ko [suspect]        knock yourself out where you stand (as a Suspect: the arrest screen)
 --   /suspect             mark yourself a Suspect of the farm you're in
 --   /carry Carrot 8      stolen crops in your hands (default: what a thief takes from a patch; from your own farm: walk to your door to put them away); /carry none empties them
 --   /debt 3000           owe 3,000 coins (to yourself) for the police desk and paying off debts
 --   /earn 2000           as if you'd sold crops for 2,000 coins (sales XP; half goes to any debts)
 --   /crimelog            prints your visits, what you carry, cooldowns, debts, arrests and your farm's raid ledger
+--   /shield off · on     end your Sprout Shield and arrival grace now · start them again (as a new player)
+--   /defences all · none one of every defence, set out round your field (4 mud patches, 4 cloches) · none at all
+--   /trust Name          put a player in this server on your Trusted list (/trust none empties it)
 --   /wipe                start your save over (in place)
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -40,6 +44,7 @@ local Shared = ReplicatedStorage.Shared
 local BarnRules = require(Shared.BarnRules)
 local FineRules = require(Shared.FineRules)
 local GrowthRules = require(Shared.GrowthRules)
+local Land = require(Shared.Config.Land)
 local LandRules = require(Shared.LandRules)
 local Crops = require(Shared.Config.Crops)
 local PlotLayout = require(Shared.PlotLayout)
@@ -55,6 +60,7 @@ local Notice = require(Server.Util.Notice)
 local Staff = require(Server.Util.Staff)
 local CrimeService = require(script.Parent.CrimeService)
 local DataService = require(script.Parent.DataService)
+local DefenceService = require(script.Parent.DefenceService)
 local FieldService = require(script.Parent.FieldService)
 local LandService = require(script.Parent.LandService)
 local PlotService = require(script.Parent.PlotService)
@@ -371,6 +377,29 @@ function DevCommandService.Start()
 		reply(player, `Carrying stolen crops ({crop.name}). Walk to your farmhouse door to put them in your barn`)
 	end)
 
+	register("DevLand", "/land", function(player, data, args)
+		local all = string.lower(args[2] or "all") ~= "none"
+		data.land.cleared = {}
+		data.land.clearing = nil
+		if all then
+			for block = 1, Land.BLOCKS_PER_SIDE ^ 2 do
+				if not LandRules.isStart(block) then
+					table.insert(data.land.cleared, block)
+				end
+			end
+		else
+			for key in data.field do
+				if not LandRules.isTileOpen(data.land, tonumber(key) or 0) then
+					data.field[key] = nil -- (nothing grows on overgrown land)
+				end
+			end
+		end
+		FieldService.Render(player)
+		LandService.Refresh(player)
+		DataService.NotifyState(player)
+		reply(player, if all then "Every block cleared: 64 tiles open" else "Back to the 4 start blocks")
+	end)
+
 	register("DevField", "/field", function(player, data, args)
 		local to = math.clamp(math.floor(tonumber(args[2]) or (data.land.fieldLevel or 1) + 1), 1, LandRules.MAX_FIELD_LEVEL)
 		data.land.fieldLevel = to
@@ -396,6 +425,37 @@ function DevCommandService.Start()
 		local text = CrimeService.DevLog(player)
 		print(text)
 		reply(player, "Crime log printed to the Output")
+	end)
+
+	register("DevShield", "/shield", function(player, _data, args)
+		local on = args[2] == "on"
+		DefenceService.DevShield(player, on)
+		reply(player, if on then "Sprout Shield on: 45 minutes, and 2 of arrival grace" else "Sprout Shield and arrival grace off: you can steal and be stolen from")
+	end)
+
+	register("DevDefences", "/defences", function(player, _data, args)
+		local all = args[2] ~= "none"
+		DefenceService.DevAll(player, all)
+		reply(player, if all then "Every defence set out round your field" else "No defences")
+	end)
+
+	register("DevTrust", "/trust", function(player, data, args)
+		local name = string.lower(args[2] or "")
+		if name == "none" then
+			table.clear(data.trusted)
+			DefenceService.Redraw(player)
+			reply(player, "Trusted list emptied")
+			return
+		end
+		for _, other in Players:GetPlayers() do
+			if other ~= player and (string.lower(other.Name) == name or string.lower(other.DisplayName) == name) then
+				table.insert(data.trusted, { id = other.UserId, name = other.DisplayName })
+				DefenceService.Redraw(player)
+				reply(player, `{other.DisplayName} is Trusted`)
+				return
+			end
+		end
+		reply(player, "Nobody here by that name")
 	end)
 
 	register("DevWipe", "/wipe", function(player)

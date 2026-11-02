@@ -6,7 +6,8 @@
 --
 -- Hold the button (or E) and walk along a row to plant, water or harvest
 -- every tile you cross. The server checks everything (FieldService); the
--- tiles' attributes (server/World/FarmArt) say what's on them.
+-- tiles' attributes (server/World/FarmArt) say what's on them. In a friend's
+-- farm that trusts you, you can water and harvest for them (§4.1).
 --
 -- Other controllers can put their own action on the stamp, over the tile's
 -- (FieldController.offer: CrimeController's Steal, Swing, Arrest, Climb),
@@ -19,6 +20,7 @@ local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Crops = require(Shared.Config.Crops)
+local DefenceRules = require(Shared.DefenceRules)
 local LandRules = require(Shared.LandRules)
 local PlotLayout = require(Shared.PlotLayout)
 local Rarities = require(Shared.Config.Rarities)
@@ -98,22 +100,52 @@ local outline = make("SelectionBox", {
 ------------------------------------------------------------------------
 -- What's under you
 
-local function myTile(): (BasePart?, number?)
+-- The tile you're standing on, in your own farm or in a friend's that
+-- trusts you (then the third value is their name).
+local function myTile(): (BasePart?, number?, string?)
 	local plot = player:GetAttribute("Plot")
-	if not plot or player:GetAttribute("InFarm") ~= plot then
-		return nil, nil
+	local here = player:GetAttribute("InFarm") or 0
+	local friend = nil
+	if here == 0 then
+		return nil, nil, nil
+	elseif here ~= plot then
+		local model = workspace.World:FindFirstChild(`Plot{here}`)
+		if not model or not DefenceRules.inTrustedText(model:GetAttribute("Trusted"), player.UserId) then
+			return nil, nil, nil
+		end
+		plot, friend = here, model:GetAttribute("OwnerName") or "your friend"
 	end
 	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 	local tile = root and PlotLayout.tileAt(plot, root.Position)
 	if not tile then
-		return nil, nil
+		return nil, nil, nil
 	end
 	local field = workspace.World:FindFirstChild(`Plot{plot}`)
-	return field and field.Field:FindFirstChild(`Tile{tile}`), tile
+	return field and field.Field:FindFirstChild(`Tile{tile}`), tile, friend
 end
 
--- The action for a tile now, and the info line.
-local function actionFor(part: BasePart): (string?, string)
+-- The action for a tile now, and the info line. friend: whose farm you're
+-- helping on (you water and harvest; only they plant and clear).
+local function actionFor(part: BasePart, friend: string?): (string?, string)
+	if friend then
+		local cropId = part:GetAttribute("Crop")
+		if not part:GetAttribute("Open") then
+			return nil, `🌿 Overgrown: {friend} clears their own land`
+		elseif not cropId then
+			return nil, `🤝 {friend}'s field: only they plant here`
+		end
+		local crop = Crops.ById[cropId]
+		local name = `{crop.icon} {Crops.count(cropId, part:GetAttribute("Yield") or crop.perPatch)}`
+		if part:GetAttribute("Stage") == "Ripe" then
+			return "Harvest", `🤝 {name} · Ripe! (for {friend}'s barn)`
+		end
+		local left = (part:GetAttribute("RipeAt") or 0) - workspace:GetServerTimeNow()
+		local line = `🤝 {name} · ripe in {UI.formatTime(left)}`
+		if part:GetAttribute("Watered") then
+			return nil, `{line} · 💧`
+		end
+		return "Water", line
+	end
 	local cropId = part:GetAttribute("Crop")
 	if not part:GetAttribute("Open") then
 		local state = PlayerState.current
@@ -242,10 +274,10 @@ local function update()
 		outline.Visible = false
 		return
 	end
-	local part, tile = myTile()
+	local part, tile, friend = myTile()
 	local kind, line = nil, ""
 	if part then
-		kind, line = actionFor(part)
+		kind, line = actionFor(part, friend)
 	end
 	current = { part = part, tile = tile, kind = kind, offer = nil }
 	info.Visible = part ~= nil

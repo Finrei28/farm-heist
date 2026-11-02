@@ -1,6 +1,6 @@
 -- The things raids add to characters (docs/ArtDirection.md §9): the bat an
 -- owner holds inside their own farm, and the stolen crop a thief holds up
--- over their head (World/ProduceArt). Both are made by the server
+-- over their head (World/ProduceArt), or drops when they're bonked. All made by the server
 -- (CrimeService), so everyone sees the same thing; how arms hold them is
 -- each client's (client/PoseController).
 local Parts = require(script.Parent.Parts)
@@ -159,6 +159,33 @@ function CrimeArt.showCarried(character: Model, cropId: string?, count: number?)
 		end
 	end
 	model.Parent = character
+end
+
+-- A stolen crop a bonked thief dropped (CrimeService), `count` of it,
+-- standing on the ground at `base` as big as when it was held up. Nothing
+-- bumps into it or rays hit it; client CrimeController adds its label.
+function CrimeArt.dropped(cropId: string, count: number, base: CFrame): Model
+	local model = ProduceArt.build(cropId, CFrame.new(), count)
+	for _, p in model:GetDescendants() do
+		if p:IsA("BasePart") then
+			p.Size *= CARRIED_SCALE
+			p.CFrame = base * (CFrame.new(p.Position * CARRIED_SCALE) * p.CFrame.Rotation)
+			p.Anchored = true
+			p.CanCollide = false
+			p.CanQuery = false
+			p.CanTouch = false
+		elseif p:IsA("Attachment") then
+			p.Position *= CARRIED_SCALE
+		end
+	end
+	local core = model:FindFirstChild("Core")
+	if core and core:IsA("BasePart") then
+		model.PrimaryPart = core
+		for _, name in { "Width", "Height", "HoldY" } do
+			core:SetAttribute(name, (core:GetAttribute(name) or 0) * CARRIED_SCALE)
+		end
+	end
+	return model
 end
 
 return CrimeArt
