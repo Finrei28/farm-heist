@@ -1,21 +1,29 @@
-"""Generates Farm Heist's crop meshes: low-poly, flat-shaded plants, fruit
-and containers sharing one palette texture, packed into one GLB for Roblox
-Studio's 3D importer; the patch layouts and carried loads the game places
-them in; and previews to check every crop by eye.
+"""Generates Farm Heist's meshes: low-poly, flat-shaded plants, fruit and
+containers sharing one palette texture, packed into one GLB for Roblox
+Studio's 3D importer; the patch layouts, carried loads and shelf pieces the
+game places them in; the props (wild land, the yard) in a second GLB with
+the obstacles and grass an overgrown block is laid out with; and previews
+to check every one by eye.
 
     python tools/crop_art/generate.py                 everything
     python tools/crop_art/generate.py Carrot Wheat    just these crops' previews
     python tools/crop_art/generate.py --carried       the carried loads' sheet
+    python tools/crop_art/generate.py --shelf         the shelf pieces' sheet
+    python tools/crop_art/generate.py --props         the props' previews
 
 Outputs:
     art/crops/FarmHeistCrops.glb        import in Studio (Home > Import 3D),
                                         rename the model CropModels and put it
                                         in ReplicatedStorage
+    art/props/FarmHeistProps.glb        the same, as PropModels
     art/crops/previews/<Crop>.png       each crop's patch, growing and ripe
     art/crops/previews/carried.png      what a thief holds, crop by crop
-    art/crops/contact_sheet.png         every mesh at a glance
-    src/server/World/CropMeshData.luau  sizes, centres, patch layouts and
-                                        carried loads (the game reads it)
+    art/crops/previews/shelf.png        a piece of each crop on a shelf
+    art/props/previews/*.png            each prop, an overgrown block
+    art/crops/contact_sheet.png         every mesh at a glance (and props')
+    src/server/World/CropMeshData.luau  sizes, centres, patch layouts, carried
+                                        loads, shelf pieces (the game reads it)
+    src/server/World/PropMeshData.luau  the props' sizes and the wild land
 """
 import math
 import os
@@ -29,19 +37,26 @@ sys.path.insert(0, HERE)
 
 from carried import CARRIED  # noqa: E402
 from crops import MESHES, PATCHES, built  # noqa: E402
-from meshkit import Mesh, Palette, T, mul, write_glb  # noqa: E402
-from palette import COLOURS  # noqa: E402
+from meshkit import Mesh, Palette, T, box, mul, write_glb  # noqa: E402
+from palette import COLOURS, PROP_COLOURS  # noqa: E402
+from props import PROPS, built as built_prop  # noqa: E402
 from render import render  # noqa: E402
 from scene import lawn, stage  # noqa: E402
+from shelves import SHELF, piece  # noqa: E402
+from wild import GRASS, OBSTACLES  # noqa: E402
+import props_preview  # noqa: E402
 
 ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
 OUT = os.path.join(ROOT, "art", "crops")
+PROPS_OUT = os.path.join(ROOT, "art", "props")
 DATA = os.path.join(ROOT, "src", "server", "World", "CropMeshData.luau")
+PROP_DATA = os.path.join(ROOT, "src", "server", "World", "PropMeshData.luau")
 PALETTE = Palette(COLOURS)
+PROP_PALETTE = Palette(PROP_COLOURS)
 
 
-def colours_of(world):
-    return np.array([np.array(PALETTE.rgb(c)) / 255 for c in world.cols])
+def colours_of(world, palette=PALETTE):
+    return np.array([np.array(palette.rgb(c)) / 255 for c in world.cols])
 
 
 def scale_matrix(s):
@@ -120,7 +135,33 @@ def _hand():
     return box((0.3, 0.3, 0.3), "skin")
 
 
-def contact_sheet(meshes, path):
+def shelf_sheet(meshes, path):
+    """A piece of each crop as a display shows it: a row of them on a plank,
+    and one on a crate's top, beside a figure's hand for scale."""
+    crops = list(SHELF)
+    cell, cols = (300, 220), 6
+    rows = math.ceil(len(crops) / cols)
+    sheet = Image.new("RGB", (cell[0] * cols, (cell[1] + 18) * rows), (240, 240, 240))
+    draw = ImageDraw.Draw(sheet)
+    for i, crop in enumerate(crops):
+        variants, size = piece(crop)
+        world = Mesh()
+        world.add(box((4.0, 0.2, 1.6), "wood"), T(0, -0.1, 0))
+        for j in range(3):
+            x = (j - 1) * max(size[0], 0.85) * 1.05
+            for name, m, s in variants[j % len(variants)]:
+                turn = np.eye(4) if j % 2 == 0 else np.diag([-1.0, 1.0, -1.0, 1.0])
+                world.add(meshes[name], T(x, 0, 0) @ turn @ m @ np.diag([s, s, s, 1.0]))
+        d = 4.2
+        image = shot(world, (d * 0.35, d * 0.55, -d * 0.9), (0, size[1] * 0.4, 0), size=cell)
+        x, y = (i % cols) * cell[0], (i // cols) * (cell[1] + 18)
+        sheet.paste(image, (x, y))
+        draw.text((x + 6, y + cell[1] + 2), f"{crop} {size[0]:.2f} x {size[1]:.2f} x {size[2]:.2f}", fill=(30, 30, 30))
+    sheet.save(path)
+    return path
+
+
+def contact_sheet(meshes, path, palette=PALETTE):
     names = list(meshes)
     cell, cols = 200, 9
     rows = math.ceil(len(names) / cols)
@@ -132,7 +173,7 @@ def contact_sheet(meshes, path):
         c = (lo + hi) / 2
         d = max(hi - lo) * 1.5 + 0.5
         world = Mesh().add(m)
-        image = render(world.array(), colours_of(world), c + np.array([d * 0.6, d * 0.45, -d * 0.75]), c, size=(cell, cell), ss=2, shadows=False)
+        image = render(world.array(), colours_of(world, palette), c + np.array([d * 0.6, d * 0.45, -d * 0.75]), c, size=(cell, cell), ss=2, shadows=False)
         x, y = (i % cols) * cell, (i // cols) * (cell + 16)
         sheet.paste(image, (x, y))
         draw.text((x + 4, y + cell + 1), f"{name} {len(m)}", fill=(30, 30, 30))
@@ -189,7 +230,7 @@ def write_data(meshes):
         "-- patches[crop].Growing / .Ripe[count], carried[crop][count]: items",
         "-- { mesh, x, y, z, rx, ry, rz, scale } (or sx, sy, sz) from the tile's",
         "-- top middle or the load's bottom middle, CFrame.new(x, y, z) *",
-        "-- CFrame.fromEulerAnglesXYZ(rx, ry, rz). See server/World/CropMeshes.",
+        "-- CFrame.fromEulerAnglesXYZ(rx, ry, rz). See server/World/Meshes.",
         "return {",
         "\tmeshes = {",
     ]
@@ -220,10 +261,70 @@ def write_data(meshes):
             lines.append(f"\t\t\t{{ width = {num(width)}, height = {num(height)}, hold = {num(hold)}, items = {{ "
                          + ", ".join(item_lua(*it) for it in items) + " } },")
         lines.append("\t\t},")
+    lines += ["\t},", "\tshelf = {"]
+    for crop in SHELF:
+        variants, size = piece(crop)
+        lines.append(f"\t\t{crop} = {{ size = Vector3.new({', '.join(num(v) for v in size)}), pieces = {{")
+        for items in variants:
+            lines.append("\t\t\t{ " + ", ".join(item_lua(*it) for it in items) + " },")
+        lines.append("\t\t} },")
     lines += ["\t},", "}", ""]
     with open(DATA, "w", encoding="utf-8", newline="\n") as f:
         f.write("\n".join(lines))
     return DATA
+
+
+def write_props(meshes):
+    lines = [
+        "-- Generated by tools/crop_art/generate.py: don't edit it by hand.",
+        "--",
+        "-- meshes[name]: size and centre (its bounding box, in studs, from the",
+        "-- point it stands on). wild.obstacles[kind]: items from an overgrown",
+        "-- tile's top middle; wild.grass: items from an overgrown block's top",
+        "-- middle. Items as in CropMeshData. See server/World/Meshes.",
+        "return {",
+        "\tmeshes = {",
+    ]
+    for name, m in meshes.items():
+        lo, hi = m.bounds()
+        size, centre = hi - lo, (lo + hi) / 2
+        lines.append(f"\t\t{name} = {{ size = Vector3.new({', '.join(num(v) for v in size)}), "
+                     f"centre = Vector3.new({', '.join(num(v) for v in centre)}) }},")
+    lines += ["\t},", "\twild = {", "\t\tobstacles = {"]
+    for kind, items in OBSTACLES.items():
+        lines.append(f"\t\t\t{kind} = {{ " + ", ".join(item_lua(*it) for it in items) + " },")
+    lines += ["\t\t},", "\t\tgrass = { " + ", ".join(item_lua(*it) for it in GRASS) + " },", "\t},", "}", ""]
+    with open(PROP_DATA, "w", encoding="utf-8", newline="\n") as f:
+        f.write("\n".join(lines))
+    return PROP_DATA
+
+
+def check_props(meshes):
+    """Every obstacle stays on its tile and the grass on its block, from
+    any turn (the game turns them)."""
+    problems = []
+
+    def reach(items):
+        pts = []
+        for name, m, s in items:
+            sc = np.array(s if isinstance(s, tuple) else (s, s, s))
+            tris = meshes[name].array().reshape(-1, 3) * sc
+            pts.append(tris @ m[:3, :3].T + m[:3, 3])
+        return np.concatenate(pts)
+    for kind, items in OBSTACLES.items():
+        p = reach(items)
+        r = np.hypot(p[:, 0], p[:, 2]).max()
+        if r > 5.9:
+            problems.append(f"obstacle {kind}: reaches {r:.2f} from its tile's middle (the tile's edge is 5.7)")
+    p = reach(GRASS)
+    side = max(np.abs(p[:, 0]).max(), np.abs(p[:, 2]).max())
+    if side > 11.9:
+        problems.append(f"grass: reaches {side:.2f} from the block's middle (its edge is 11.7)")
+    for (dx, dz) in ((-6, -6), (6, -6), (-6, 6), (6, 6)):
+        for name, m, s in GRASS:
+            if math.hypot(m[0, 3] - dx, m[2, 3] - dz) < 3.6:
+                problems.append(f"grass {name} at ({m[0, 3]:.1f}, {m[2, 3]:.1f}) is on the obstacle at ({dx}, {dz})")
+    return problems
 
 
 def check(meshes):
@@ -270,6 +371,14 @@ def main(argv):
     if argv == ["--carried"]:
         print("carried", carried_sheet(meshes, os.path.join(OUT, "previews", "carried.png")))
         return
+    if argv == ["--shelf"]:
+        print("shelf", shelf_sheet(meshes, os.path.join(OUT, "previews", "shelf.png")))
+        return
+    os.makedirs(os.path.join(PROPS_OUT, "previews"), exist_ok=True)
+    if argv == ["--props"]:
+        print("props", props_preview.prop_sheet(os.path.join(PROPS_OUT, "previews", "props.png")))
+        print("wild", props_preview.overgrowth_preview(os.path.join(PROPS_OUT, "previews", "overgrowth.png")))
+        return
     if argv:
         for crop in argv:
             print("preview", preview(crop, meshes, os.path.join(OUT, "previews")))
@@ -280,7 +389,12 @@ def main(argv):
         total += len(m)
         print(f"  {name:<20} {len(m):5d} tris  {hi[0]-lo[0]:5.2f} x {hi[1]-lo[1]:5.2f} x {hi[2]-lo[2]:5.2f}")
     print(f"  {len(meshes)} meshes, {total} tris")
-    problems = check(meshes)
+    props = {name: built_prop(name) for name in PROPS}
+    for name, m in props.items():
+        lo, hi = m.bounds()
+        total += len(m)
+        print(f"  {name:<20} {len(m):5d} tris  {hi[0]-lo[0]:5.2f} x {hi[1]-lo[1]:5.2f} x {hi[2]-lo[2]:5.2f}  (prop)")
+    problems = check(meshes) + check_props(props)
     for problem in problems:
         print("PROBLEM", problem)
     if problems:
@@ -289,7 +403,15 @@ def main(argv):
     write_glb(glb, [(m, MESHES[name]["textured"]) for name, m in meshes.items()], PALETTE)
     print("wrote", glb, os.path.getsize(glb), "bytes")
     print("wrote", write_data(meshes), os.path.getsize(DATA), "bytes")
+    props_glb = os.path.join(PROPS_OUT, "FarmHeistProps.glb")
+    write_glb(props_glb, [(m, PROPS[name]["textured"]) for name, m in props.items()], PROP_PALETTE, scene="PropModels", material="Prop")
+    print("wrote", props_glb, os.path.getsize(props_glb), "bytes")
+    print("wrote", write_props(props), os.path.getsize(PROP_DATA), "bytes")
     print("wrote", contact_sheet(meshes, os.path.join(OUT, "contact_sheet.png")))
+    print("wrote", contact_sheet(props, os.path.join(PROPS_OUT, "contact_sheet.png"), PROP_PALETTE))
+    print("wrote", shelf_sheet(meshes, os.path.join(OUT, "previews", "shelf.png")))
+    print("wrote", props_preview.prop_sheet(os.path.join(PROPS_OUT, "previews", "props.png")))
+    print("wrote", props_preview.overgrowth_preview(os.path.join(PROPS_OUT, "previews", "overgrowth.png")))
     print("wrote", carried_sheet(meshes, os.path.join(OUT, "previews", "carried.png")))
     for crop in PATCHES:
         print("preview", preview(crop, meshes, os.path.join(OUT, "previews")))

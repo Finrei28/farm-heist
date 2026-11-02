@@ -19,6 +19,7 @@ local PlotLayout = require(ReplicatedStorage.Shared.PlotLayout)
 local StoreLayout = require(ReplicatedStorage.Shared.StoreLayout)
 local Parts = require(script.Parent.Parts)
 local FarmArt = require(script.Parent.FarmArt)
+local Meshes = require(script.Parent.Meshes)
 local YardArt = require(script.Parent.YardArt)
 
 local COLORS = Parts.COLORS
@@ -846,7 +847,9 @@ local function produceSize(cropId: string): number
 end
 
 -- Heaps a slot's produce into its regions ("Slot<n>", "Slot<n>_2", ...),
--- the lowest shelf first, fuller with more units.
+-- the lowest shelf first, fuller with more units: the crop's own pieces
+-- (World/Meshes: carrots, punnets of strawberries, pumpkins), or until the
+-- meshes are imported a ball in its colour. Never more pieces than balls.
 local function fillSlot(item: Model, n: number, slot, capacity: number)
 	local regions = {}
 	for _, child in item:GetChildren() do
@@ -862,6 +865,9 @@ local function fillSlot(item: Model, n: number, slot, capacity: number)
 		return
 	end
 	local size = produceSize(slot.crop)
+	if Meshes.heap(slot.crop, regions, slot.units / capacity, size) then
+		return
+	end
 	local color = FarmArt.cropColor(slot.crop)
 	local spots = {}
 	for _, region in regions do

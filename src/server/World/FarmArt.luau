@@ -1,7 +1,7 @@
 -- How a farm's field looks (docs/ArtDirection.md §7): the tiles, the
 -- edging round each 2×2 block, overgrown land with its 4 obstacles (a
--- stump, a rock, weeds, a bush: what you clear with a Land Permit), and
--- the crops at each growth stage. WorldBuilder lays an empty field;
+-- stump, a rock, weeds, a bramble bush: what you clear with a Land
+-- Permit) in rough grass, and the crops at each growth stage. WorldBuilder lays an empty field;
 -- FieldService and LandService call the rest as the owner's farm changes.
 --
 -- Each tile part carries what the client needs as attributes (so the field
@@ -16,7 +16,7 @@ local Rarities = require(ReplicatedStorage.Shared.Config.Rarities)
 local GrowthRules = require(ReplicatedStorage.Shared.GrowthRules)
 local LandRules = require(ReplicatedStorage.Shared.LandRules)
 local PlotLayout = require(ReplicatedStorage.Shared.PlotLayout)
-local CropMeshes = require(script.Parent.CropMeshes)
+local Meshes = require(script.Parent.Meshes)
 local Parts = require(script.Parent.Parts)
 
 local COLORS = Parts.COLORS
@@ -33,7 +33,7 @@ local TILE_TOP = 0.5 -- a tile's top above the yard
 -- Crops: a patch's plants stand in rows on the tile's three ridges, and a
 -- ripe patch shows every carrot, cob or pumpkin it gives (tile.yield): what
 -- you see is what you harvest (docs/ArtDirection.md §7). Growing and ripe
--- crops are the low-poly meshes (World/CropMeshes) once they're imported;
+-- crops are the low-poly meshes (World/Meshes) once they're imported;
 -- until then, and for seeds, the part-built crops below (about 20 parts a
 -- patch at most, for phones: a full field is 64 of them, §10).
 
@@ -240,7 +240,7 @@ end
 -- Seedlings: two seed leaves and a first true leaf each, two to a ridge.
 local function seedlings(model, base: CFrame, s: number)
 	for _, at in spots(base, 6, 3) do
-		if not CropMeshes.make("Seedling", at * CFrame.new(0, -0.08, 0), 1.2 * s, model) then
+		if not Meshes.make("Seedling", at * CFrame.new(0, -0.08, 0), 1.2 * s, model) then
 			leaf(model, at, 0, 30, Vector3.new(0.15, 1.1 * s, 0.5 * s))
 			leaf(model, at, 180, 30, Vector3.new(0.15, 1.1 * s, 0.5 * s), COLORS.leafDark)
 		end
@@ -690,7 +690,7 @@ function FarmArt.cropModel(cropId: string, stage: string, base: CFrame, count: n
 		sown(model, base)
 	elseif stage == "Sprout" then
 		seedlings(model, base, s)
-	elseif CropMeshes.patch(cropId, stage, count or crop.perPatch, base, model) then
+	elseif Meshes.patch(cropId, stage, count or crop.perPatch, base, model) then
 		for _, tip in model:GetChildren() do
 			if tip.Name == "PhoenixTip" then
 				flame(tip)
@@ -818,16 +818,20 @@ local OBSTACLE_BUILDERS = {
 	end,
 }
 
--- An overgrown block: tufts of grass and its obstacles, one on each tile.
+-- An overgrown block: its obstacles, one on each tile, in rough grass (the
+-- props' meshes, World/Meshes, once they're imported; part-built until then).
 -- `left`: how many obstacles are still there (all of them unless it's being cleared).
 local function buildOvergrowth(field: Instance, frame: CFrame, block: number, left: number)
 	local model = Instance.new("Model")
 	model.Name = `Overgrowth{block}`
 	model:SetAttribute("Block", block)
 	local centre = blockCentre(block)
-	for i = 1, 3 do
-		local at = frame * CFrame.new(centre + Vector3.new(math.cos(i * 2.1) * 7, TILE_TOP, math.sin(i * 2.1) * 7))
-		tuft(model, at, 4, 2.4, 0.8)
+	-- (the grass turned a quarter more each block, so blocks side by side differ)
+	if not Meshes.grass(frame * CFrame.new(centre + Vector3.new(0, TILE_TOP, 0)) * CFrame.Angles(0, block * math.pi / 2, 0), model) then
+		for i = 1, 3 do
+			local at = frame * CFrame.new(centre + Vector3.new(math.cos(i * 2.1) * 7, TILE_TOP, math.sin(i * 2.1) * 7))
+			tuft(model, at, 4, 2.4, 0.8)
+		end
 	end
 	local tiles = LandRules.tilesOf(block)
 	local first = #FarmArt.OBSTACLES - left + 1
@@ -837,7 +841,9 @@ local function buildOvergrowth(field: Instance, frame: CFrame, block: number, le
 		obstacle.Name = kind
 		obstacle:SetAttribute("Obstacle", k)
 		local at = frame * CFrame.new(PlotLayout.tileLocal(tiles[k]) + Vector3.new(0, TILE_TOP, 0)) * CFrame.Angles(0, block * 0.9 + k, 0)
-		OBSTACLE_BUILDERS[kind](obstacle, at)
+		if not Meshes.obstacle(kind, at, obstacle) then
+			OBSTACLE_BUILDERS[kind](obstacle, at)
+		end
 		obstacle.PrimaryPart = obstacle:FindFirstChildWhichIsA("BasePart")
 		obstacle.Parent = model
 	end

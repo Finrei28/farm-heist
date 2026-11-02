@@ -14,6 +14,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Store = require(ReplicatedStorage.Shared.Config.Store)
+local Meshes = require(script.Parent.Meshes)
 local Parts = require(script.Parent.Parts)
 
 local COLORS = Parts.COLORS
@@ -303,9 +304,12 @@ end
 
 function builders.PumpkinPile(m: Model)
 	local orange = Color3.fromRGB(236, 128, 40)
-	for _, p in { { -0.75, 0.8, -0.3, 1.6 }, { 0.85, 0.85, 0.1, 1.7 }, { -0.1, 0.75, 0.9, 1.5 }, { 0.05, 2.0, 0.2, 1.4 } } do
-		ball(m, "Pumpkin", Vector3.new(p[1], p[2], p[3]), p[4], orange)
-		deco(m, "Stem", Vector3.new(0.18, 0.35, 0.18), CFrame.new(p[1], p[2] + p[4] / 2 + 0.1, p[3]), COLORS.leafDark)
+	for i, p in { { -0.75, 0.8, -0.3, 1.6 }, { 0.85, 0.85, 0.1, 1.7 }, { -0.1, 0.75, 0.9, 1.5 }, { 0.05, 2.0, 0.2, 1.4 } } do
+		-- (the field's pumpkins, World/Meshes; balls until they're imported)
+		if not Meshes.piece("Pumpkin", CFrame.new(p[1], p[2] - p[4] * 0.45, p[3]) * CFrame.Angles(0, i * 1.3, 0), p[4] * 1.1, m) then
+			ball(m, "Pumpkin", Vector3.new(p[1], p[2], p[3]), p[4], orange)
+			deco(m, "Stem", Vector3.new(0.18, 0.35, 0.18), CFrame.new(p[1], p[2] + p[4] / 2 + 0.1, p[3]), COLORS.leafDark)
+		end
 	end
 	solid(m, "Base", Vector3.new(2.8, 1.4, 2.6), CFrame.new(0, 0.7, 0.2), orange, { Transparency = 1 })
 end
@@ -343,8 +347,12 @@ function builders.FruitCart(m: Model)
 	end
 	solid(m, "Prop", Vector3.new(0.3, 1.5, 0.3), CFrame.new(2.0, 0.75, 0), DARK_WOOD)
 	local colors = { Color3.fromRGB(220, 50, 50), Color3.fromRGB(245, 160, 40), Color3.fromRGB(120, 190, 60), COLORS.hay, Color3.fromRGB(140, 60, 170) }
+	local fruit = { "Tomato", "Pumpkin", "Lettuce", "BellPepper", "GrapeVine" } -- (the same colours, as the crops' own pieces: World/Meshes)
 	for i = 0, 9 do
-		ball(m, "Fruit", Vector3.new(-2.6 + (i % 5) * 1.1, 3.25 + (i // 5) * 0.4, -0.5 + (i // 5) * 0.9), 0.95, colors[i % #colors + 1])
+		local at = Vector3.new(-2.6 + (i % 5) * 1.1, 3.25 + (i // 5) * 0.4, -0.5 + (i // 5) * 0.9)
+		if not Meshes.piece(fruit[i % #fruit + 1], CFrame.new(at - Vector3.new(0, 0.45, 0)) * CFrame.Angles(0, i * 0.7, 0), 1.0, m) then
+			ball(m, "Fruit", at, 0.95, colors[i % #colors + 1])
+		end
 	end
 	for _, x in { -2.9, 2.2 } do
 		for _, z in { -1.2, 1.2 } do

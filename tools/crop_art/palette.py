@@ -80,3 +80,32 @@ COLOURS = {
     "white": (250, 250, 246), "dark": (40, 34, 30),
 }
 COLOURS.update(GROUND)
+
+# The props' own colours (art/props/FarmHeistProps.glb has its own palette:
+# these plus every crop colour, for produce on shelves).
+PROP_COLOURS = dict(COLOURS)
+PROP_COLOURS.update({
+    # wild grass and flowers
+    "grass": (98, 150, 58), "grassDark": (74, 124, 44), "grassLight": (130, 176, 72), "seedHead": (198, 172, 104),
+    "flowerYellow": (250, 210, 56), "flowerYellowDark": (226, 168, 36), "flowerWhite": (250, 248, 238),
+    "flowerPink": (238, 128, 172), "flowerBlue": (112, 150, 232),
+    # stump
+    "stumpTop": (218, 180, 124), "stumpRing": (186, 142, 92), "mushroomStem": (238, 228, 206),
+    "mushroomCap": (196, 86, 60), "mushroomCapLight": (222, 112, 78), "mushroomGill": (226, 206, 176),
+    # rock
+    "rockDeep": (98, 102, 110), "rockDark": (114, 118, 126), "rock": (132, 136, 142), "rockLight": (150, 154, 160),
+    "moss": (92, 126, 60),
+    # weeds
+    "weed": (96, 146, 60), "weedDark": (72, 116, 48), "weedStem": (120, 158, 80), "puff": (246, 246, 238),
+    "dandelion": (246, 196, 36), "dandelionLight": (252, 222, 80), "dock": (172, 92, 52), "dockDark": (138, 70, 42),
+    "thistle": (160, 90, 186), "thistleLight": (188, 124, 208), "thistleBulb": (98, 140, 70),
+    # bramble
+    "brambleDeep": (40, 82, 40), "brambleDark": (52, 102, 46), "bramble": (70, 124, 54), "brambleLight": (96, 146, 66),
+    "cane": (128, 70, 64), "caneDark": (102, 54, 50), "bloom": (250, 244, 240),
+    "blackberry": (52, 34, 56), "blackberryRed": (178, 44, 62),
+    # the yard
+    "hay": (234, 194, 100), "hayDark": (206, 160, 76), "hayLight": (248, 220, 140),
+    "steel": (178, 186, 194), "steelDark": (138, 146, 156), "steelLight": (212, 218, 224),
+    "barrow": (200, 69, 45), "barrowDark": (160, 52, 34), "tyre": (52, 48, 46),
+    "iron": (46, 44, 50), "ironGold": (226, 176, 60),
+})

@@ -6,7 +6,7 @@ texture and a GLB writer for Roblox Studio's 3D importer.
 Coordinates are Roblox's: +Y up, studs. A mesh is built round its "foot"
 (the point the game stands it on); Roblox centres an imported mesh on its
 bounding box, so the generator exports each mesh's box centre and size, and
-the game places it from the foot (server/World/CropMeshes.luau).
+the game places it from the foot (server/World/Meshes.luau).
 """
 import json
 import math
@@ -406,7 +406,7 @@ class Palette:
 # white one.
 
 
-def write_glb(path, meshes, palette, spacing=14.0, columns=10):
+def write_glb(path, meshes, palette, spacing=14.0, columns=10, scene="CropModels", material="Crop"):
     """meshes: list of (Mesh, textured). Positions stay in each mesh's own
     (foot) space; the nodes are laid out on a grid so they don't overlap
     in Studio."""
@@ -456,15 +456,15 @@ def write_glb(path, meshes, palette, spacing=14.0, columns=10):
     gltf = {
         "asset": {"version": "2.0", "generator": "Farm Heist crop generator"},
         "scene": 0,
-        "scenes": [{"name": "CropModels", "nodes": list(range(len(nodes)))}],
+        "scenes": [{"name": scene, "nodes": list(range(len(nodes)))}],
         "nodes": nodes,
         "meshes": gl_meshes,
         "materials": [
-            {"name": "CropPalette", "pbrMetallicRoughness": {"baseColorTexture": {"index": 0}, "metallicFactor": 0.0, "roughnessFactor": 0.85}},
-            {"name": "CropPlain", "pbrMetallicRoughness": {"baseColorFactor": [1, 1, 1, 1], "metallicFactor": 0.0, "roughnessFactor": 0.85}},
+            {"name": f"{material}Palette", "pbrMetallicRoughness": {"baseColorTexture": {"index": 0}, "metallicFactor": 0.0, "roughnessFactor": 0.85}},
+            {"name": f"{material}Plain", "pbrMetallicRoughness": {"baseColorFactor": [1, 1, 1, 1], "metallicFactor": 0.0, "roughnessFactor": 0.85}},
         ],
         "textures": [{"sampler": 0, "source": 0}],
-        "images": [{"name": "CropPalette", "bufferView": png_view, "mimeType": "image/png"}],
+        "images": [{"name": f"{material}Palette", "bufferView": png_view, "mimeType": "image/png"}],
         "samplers": [{"magFilter": 9729, "minFilter": 9987, "wrapS": 33071, "wrapT": 33071}],
         "accessors": accessors,
         "bufferViews": views,

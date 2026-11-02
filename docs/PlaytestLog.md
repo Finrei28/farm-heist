@@ -19,6 +19,18 @@ Follow-ups: <what to test next time>
 
 ## Sessions
 
+### 2026-11-02 · the farmhouse and barn, wild land, produce on shelves · build: this session's art
+Testers: Claude, driving Studio · Setup: `art/crops/FarmHeistCrops.glb` imported again as ReplicatedStorage.CropModels (for the carrot bunch and punnets) and `art/props/FarmHeistProps.glb` as PropModels; solo Play, a Scriptable camera from the client command bar, the Corner Store's displays filled and crates put on the dock rack from the server command bar (`StoreArt.showDisplay`, `YardArt.showHold`) · Lag: 0 (local) · Screenshots: [playtest/2026-11-02-farmhouse/](playtest/2026-11-02-farmhouse/)
+
+| Check | Result | OK? | Notes |
+|---|---|---|---|
+| The imports | 66 crop meshes and 13 props, each file its own model (the props first came in named CropModels: the generator now names each file's scene) | ✓ | |
+| The farmhouse and barn from the gate, porch, field and above | reads as a farmhouse with a porch and a red barn; the door and doormat are what you see when you appear; the barn quilt, weathervane, hayloft and X-braced doors show from the road and the field ([01](playtest/2026-11-02-farmhouse/01-from-the-gate.jpg)–[05](playtest/2026-11-02-farmhouse/05-farm-from-above.jpg)) | ✓ | the barn's wall by the farmhouse was bare red → battens ([04](playtest/2026-11-02-farmhouse/04-barn-side-battens.jpg)); cream walls read white in the sun, like a farmhouse should |
+| Wild land | rough grass, stumps, boulders, weeds and brambles; reads as wild from the farmhouse ([06](playtest/2026-11-02-farmhouse/06-wild-land-from-the-farmhouse.jpg), [08](playtest/2026-11-02-farmhouse/08-wild-land-close.jpg)) | ✓ | the rock's moss went lime in Studio's sun ([07](playtest/2026-11-02-farmhouse/07-rock-moss-before.jpg)) → plain mid-grey stone |
+| Produce on the shelves and crates | carrots, punnets of strawberries and blueberries, potatoes, corn, pumpkins, tomatoes ([10](playtest/2026-11-02-farmhouse/10-shelf-carrot-bunches.jpg), [11](playtest/2026-11-02-farmhouse/11-crates-at-the-dock.jpg)) | ✓ | single carrots two to a shelf looked bare ([09](playtest/2026-11-02-farmhouse/09-shelf-single-carrots-before.jpg)) → bunches of three |
+
+Not covered: the bigger displays in Studio (the tests build every one), a phone's frame rate, night, 8 players.
+
 ### 2026-11-02 · the crops as meshes · build: this session's crop meshes
 Testers: Claude, driving Studio · Setup: `art/crops/FarmHeistCrops.glb` imported (Import 3D, default settings) as ReplicatedStorage.CropModels; an edit-mode gallery built by the real FarmArt and ProduceArt (every crop sprouting, growing, ripe as it comes and on a bumper patch; every carried load), then solo Play (`/plant Tomato`, `/grow ripe`, `/tp field`, `/carry Strawberry`) · Lag: 0 (local) · Screenshots: [playtest/2026-11-02-crop-meshes/](playtest/2026-11-02-crop-meshes/)
 

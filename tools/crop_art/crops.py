@@ -1,6 +1,6 @@
 """Farm Heist's crops as low-poly meshes, and how a patch of each is laid
 out at each stage (the game places exactly these: server/World/
-CropMeshes.luau reads the generated CropMeshData).
+Meshes.luau reads the generated CropMeshData).
 
 A mesh builder returns a Mesh in its own "foot" space. A patch layout
 returns [(mesh name, 4x4 rigid transform from the tile's top centre, uniform

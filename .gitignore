@@ -6,3 +6,4 @@ sourcemap.json
 .tmp_video/
 __pycache__/
 art/crops/previews/
+art/props/previews/

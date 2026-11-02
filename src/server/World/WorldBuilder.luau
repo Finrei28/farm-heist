@@ -2,7 +2,7 @@
 -- §3): the valley and hills, the town square and its five buildings, the
 -- ring road and its sidewalk, the highway and tunnel, the back trail, and the
 -- 8 farms with their hedges, picket fences, gate arch, store, Packing Shed,
--- pickup, farmhouse and 8×8 field (the start corner tilled, the rest
+-- pickup, farmhouse and barn (World/FarmhouseArt) and 8×8 field (the start corner tilled, the rest
 -- overgrown: World/FarmArt; the selling side: World/YardArt; the store:
 -- World/StoreArt). Plain blocks and
 -- labels, in the art direction's palette (docs/ArtDirection.md): enough to
@@ -19,6 +19,7 @@ local FarmArt = require(script.Parent.FarmArt)
 local YardArt = require(script.Parent.YardArt)
 local StoreArt = require(script.Parent.StoreArt)
 local PoliceArt = require(script.Parent.PoliceArt)
+local FarmhouseArt = require(script.Parent.FarmhouseArt)
 
 local WorldBuilder = {}
 
@@ -375,7 +376,7 @@ local function buildPlot(index: number, world: Instance)
 	-- the owner's Warehouse Level grows), and your store.
 	YardArt.build(model, frame)
 	StoreArt.build(model)
-	label("Farmhouse & barn", plotBox("Farmhouse", frame, P.farmhouse.min, P.farmhouse.max, { Color = COLORS.cream }, model), 12, 3, 120)
+	FarmhouseArt.build(model, frame, index) -- (the farmhouse and barn: World/FarmhouseArt)
 	local door = part({
 		Name = "Door", Size = Vector3.new(4, 0.4, 4),
 		CFrame = frame * CFrame.new(P.door + Vector3.new(0, 0.2, 0)), Color = COLORS.hay,

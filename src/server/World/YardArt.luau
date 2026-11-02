@@ -32,6 +32,7 @@ local Warehouse = require(Shared.Config.Warehouse)
 local WarehouseRules = require(Shared.WarehouseRules)
 local Parts = require(script.Parent.Parts)
 local FarmArt = require(script.Parent.FarmArt)
+local Meshes = require(script.Parent.Meshes)
 
 local COLORS = Parts.COLORS
 local part, prop, plotBox, cylinder, ball = Parts.part, Parts.prop, Parts.plotBox, Parts.cylinder, Parts.ball
@@ -92,8 +93,9 @@ end
 ------------------------------------------------------------------------
 -- Crates
 
--- A packed crate: slatted wood, the produce heaped on top in the crop's
--- colour, and a gold "A" sticker for grade A. Built at `cframe` (its base).
+-- A packed crate: slatted wood, the produce heaped on top (the crop's own
+-- pieces, World/Meshes; until they're imported balls in its colour), and
+-- a gold "A" sticker for grade A. Built at `cframe` (its base).
 function YardArt.crate(crate, cframe: CFrame, parent: Instance): Model
 	local model = Instance.new("Model")
 	model.Name = "Crate"
@@ -101,10 +103,17 @@ function YardArt.crate(crate, cframe: CFrame, parent: Instance): Model
 	for _, y in { 0.45, 1.35 } do
 		prop({ Name = "Slat", Size = Vector3.new(CRATE.X + 0.1, 0.18, CRATE.Z + 0.1), CFrame = cframe * CFrame.new(0, y, 0), Color = COLORS.post }, model)
 	end
-	local color = FarmArt.cropColor(crate.crop)
-	for i, offset in { Vector3.new(-0.7, 0, -0.6), Vector3.new(0.7, 0, -0.5), Vector3.new(0, 0, 0.7), Vector3.new(0, 0.5, 0) } do
-		if i <= math.ceil(4 * crate.units / CrateRules.size(crate.crop) - 1e-9) then -- (as full as the crate is; an empty one has none)
-			ball("Produce", cframe * CFrame.new(offset + Vector3.new(0, CRATE.Y + 0.15, 0)), 1.2, { Color = color }, model)
+	local full = crate.units / CrateRules.size(crate.crop) -- (as full as the crate is; an empty one has none)
+	local heap = if full > 0
+		then prop({ Name = "Heap", Size = Vector3.new(CRATE.X - 0.5, 1, CRATE.Z - 0.5), CFrame = cframe * CFrame.new(0, CRATE.Y + 0.3, 0),
+			Transparency = 1, CastShadow = false }, model)
+		else nil
+	if heap and not Meshes.heap(crate.crop, { heap }, full, 1) then
+		local color = FarmArt.cropColor(crate.crop)
+		for i, offset in { Vector3.new(-0.7, 0, -0.6), Vector3.new(0.7, 0, -0.5), Vector3.new(0, 0, 0.7), Vector3.new(0, 0.5, 0) } do
+			if i <= math.ceil(4 * full - 1e-9) then
+				ball("Produce", cframe * CFrame.new(offset + Vector3.new(0, CRATE.Y + 0.15, 0)), 1.2, { Color = color }, model)
+			end
 		end
 	end
 	if crate.grade == "A" then

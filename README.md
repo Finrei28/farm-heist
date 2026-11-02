@@ -27,7 +27,7 @@ The same as Tide Market:
 1. In Studio, create a new **Baseplate** place and save it in this folder (e.g. `FarmHeist.rbxl`; it's git-ignored).
 2. In a terminal here: `rojo serve`
 3. In Studio: **Plugins → Rojo → Connect**, then **Play**. Cloverdale is built when the server starts (it replaces the Baseplate), you get a farm, and you appear at its farmhouse door.
-4. **The crop meshes** (once per place): **Home → Import 3D**, pick `art/crops/FarmHeistCrops.glb`, import with the default settings, rename the imported model **CropModels** and drag it into **ReplicatedStorage** (keep the MeshPart names), then save the place. Growing and ripe crops and what thieves carry switch to them at the next server start; until then they're part-built. If the meshes change, delete the old CropModels and import again.
+4. **The meshes** (once per place, two imports): **Home → Import 3D**, pick `art/crops/FarmHeistCrops.glb`, import with the default settings, rename the imported model **CropModels** and drag it into **ReplicatedStorage** (keep the MeshPart names); then the same with `art/props/FarmHeistProps.glb`, renamed **PropModels**. Save the place. Growing and ripe crops, what thieves carry and the produce on shelves and crates switch to the crops' meshes at the next server start, and wild land (its stump, rock, weeds, bramble and grass) and the farmhouse's yard props to the props'; until then they're part-built. If a file's meshes change, delete its old model and import that file again.
 
 **Playing:** stand on a tile and press **E** or tap the round stamp at the bottom right: it plants the seed packet picked in the hotbar (1–9), waters, or harvests, whatever the tile needs. Hold it and walk to do a whole row. Shift runs. The **Barn** crate on the left shows your crops, seeds and land. **Barley** sells seeds at his counter in town (the **TOWN** signpost takes you there in 3 s). From Farm Level 2 you get Land Permits: walk to a yellow "Clear here" sign on your field.
 
@@ -68,7 +68,7 @@ lune run tests/run
 | `fine` | the fine formula, repeat offenders, fleeing, debt and its expiry |
 | `travel` | the Home / Town / Visit buttons: channels, no cooldowns, no escaping a raid |
 | `loot`, `produce` | a stolen crop in your hands (one at a time, where it goes back to); every crop's carried model the size it says; trucks solid |
-| `cropmesh` | the crop meshes: every piece a layout names was drawn, every crop growing, ripe with any number on it and carried, built from the meshes once imported (part-built until then), nothing to bump into |
+| `meshes` | the meshes: every piece a layout names was drawn, every crop growing, ripe with any number on it, carried and on a shelf, every obstacle of wild land, built from the meshes once imported (part-built until then), never more shelf pieces than the balls they replace, nothing to bump into |
 | `flicker` | no two faces fighting over one plane anywhere the server builds, at every level (`lune run tools/flicker` lists them) |
 | `zone` | inside a farm or not: the edge, turned plots, climbing |
 | `auction` | bids, quick bids, anti-snipe, the leader leaving |
@@ -88,7 +88,7 @@ lune run tests/run
 
 **Flicker:** `lune run tools/flicker` lists every pair of faces that would flicker (z-fight) in everything the server builds; `tests/flicker.test.luau` keeps it at none.
 
-**Crop art:** `python tools/crop_art/generate.py` draws every crop as low-poly meshes (Python, numpy and Pillow): `art/crops/FarmHeistCrops.glb` to import (step 4 above), `src/server/World/CropMeshData.luau` (where each piece goes in a patch and in a thief's hands), previews of every crop's patch in `art/crops/previews/` (not in git: run it to see them) (growing, ripe, a bumper patch, close up, from the farmhouse, from above, a figure for scale), the carried loads (`previews/carried.png`) and every mesh (`art/crops/contact_sheet.png`). It stops if a patch spills off its tile or a load is bigger than it says. `python tools/crop_art/generate.py Carrot Wheat` redraws just those previews.
+**Crop and prop art:** `python tools/crop_art/generate.py` draws every crop and prop as low-poly meshes (Python, numpy and Pillow): `art/crops/FarmHeistCrops.glb` and `art/props/FarmHeistProps.glb` to import (step 4 above), `src/server/World/CropMeshData.luau` (where each piece goes in a patch, in a thief's hands and on a shelf) and `PropMeshData.luau` (an overgrown block's obstacles and grass), previews of every crop's patch in `art/crops/previews/` (not in git: run it to see them) (growing, ripe, a bumper patch, close up, from the farmhouse, from above, a figure for scale), the carried loads (`previews/carried.png`), the shelf pieces (`previews/shelf.png`), the props and an overgrown block (`art/props/previews/`) and every mesh (`contact_sheet.png` in each folder). It stops if a patch spills off its tile, a load is bigger than it says or wild land leaves its block. `python tools/crop_art/generate.py Carrot Wheat` redraws just those previews; `--carried`, `--shelf` and `--props` just those sheets. **Buildings** are parts (they change with levels and farm colours); to look at one before Studio, `lune run tools/partdump farm.json [fieldLevel] [blocksOpen] [plot]` dumps a farm and `python tools/crop_art/partview.py farm.json out.png [gate door field above porch road …]` renders it with the meshes.
 
 **Raid race:** `lune run tools/raidrace` times the design doc's worked example (§4.11) from the real layout: how long a thief needs to get a back-row Pumpkin over the fence, with and without defences, against an owner coming from the warehouse or from town.
 
@@ -101,13 +101,14 @@ src/shared/   Config/ (Crops, Rarities, Land, Barn, Crime, Market, Shop, Warehou
                      WorkerRules · PipelineRules · MoveRules · Remotes
               PlotLayout (where everything in the valley and in a farm is)
 src/server/   Services/ Data · Movement · Plot · Field · SeedShop · Land · Travel · Market · Warehouse · Truck · Shop · DevCommand
-              World/ WorldBuilder · FarmArt (the field and crops) · CropMeshes (+ CropMeshData, generated) · ProduceArt · YardArt (shed, dock, pickup, Farm Stand) · Parts (palette) · LightingSetup
+              World/ WorldBuilder · FarmArt (the field and crops) · FarmhouseArt (the farmhouse and barn) · Meshes (+ CropMeshData, PropMeshData, generated) · ProduceArt · YardArt (shed, dock, pickup, Farm Stand) · Parts (palette) · LightingSetup
               Util/ SaveData · Analytics · ActionRemote · Notice · Staff     Packages/ ProfileStore
 src/client/   UI (the Kraft & Crate kit) · PlayerState · Reasons
               Controllers/ Hud · Hotbar · Field · SeedRack · Barn · Shed · Market · Shop · Truck · Shopper · Prompt · Sprint
 tests/        *.test.luau, lib/ (harness, spec, raidrace)
-tools/        check.luau · progression.luau · raidrace.luau · designmap.luau · crop_art/ (Python: the crop meshes)
+tools/        check.luau · progression.luau · raidrace.luau · designmap.luau · partdump.luau · crop_art/ (Python: the meshes, partview)
 art/crops/    FarmHeistCrops.glb (import in Studio) · previews/ · contact_sheet.png
+art/props/    FarmHeistProps.glb (import in Studio) · previews/ · contact_sheet.png
 docs/         GameDesign.md · ArtDirection.md · PlaytestPlan.md · PlaytestLog.md (+ playtest/ screenshots)
               DesignMap.source.html → DesignMap.html
 ```

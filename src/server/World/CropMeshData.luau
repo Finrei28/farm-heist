@@ -5,7 +5,7 @@
 -- patches[crop].Growing / .Ripe[count], carried[crop][count]: items
 -- { mesh, x, y, z, rx, ry, rz, scale } (or sx, sy, sz) from the tile's
 -- top middle or the load's bottom middle, CFrame.new(x, y, z) *
--- CFrame.fromEulerAnglesXYZ(rx, ry, rz). See server/World/CropMeshes.
+-- CFrame.fromEulerAnglesXYZ(rx, ry, rz). See server/World/Meshes.
 return {
 	meshes = {
 		Seedling = { size = Vector3.new(0.463, 1.257, 1.193), centre = Vector3.new(0.043, 0.529, 0) },
@@ -71,6 +71,9 @@ return {
 		Punnet = { size = Vector3.new(1.08, 1.04, 1.08), centre = Vector3.new(0, 0.52, 0) },
 		Tray = { size = Vector3.new(1.06, 1, 1.06), centre = Vector3.new(0, 0.5, 0) },
 		Twine = { size = Vector3.new(1, 1, 1), centre = Vector3.new(0, 0.5, 0) },
+		StrawberryPunnet = { size = Vector3.new(1.031, 0.728, 0.933), centre = Vector3.new(-0.002, 0.364, 0.034) },
+		BlueberryPunnet = { size = Vector3.new(1.026, 0.589, 0.864), centre = Vector3.new(0, 0.294, 0) },
+		CarrotBunch = { size = Vector3.new(4.023, 1.511, 2.212), centre = Vector3.new(-0.488, 0.329, 0) },
 	},
 	patches = {
 		Carrot = {
@@ -481,5 +484,75 @@ return {
 			{ width = 2.05, height = 1.91, hold = 0.764, items = { {"DragonsEyePumpkin", 0, 0, 0, 0, 0, 0, 0.5}, {"DragonsEyeIris", 0, 0, 0, 0, 0, 0, 0.5} } },
 			{ width = 3.485, height = 1.528, hold = 0.611, items = { {"DragonsEyePumpkin", -0.871, 0, 0, 0, 0, 0, 0.4}, {"DragonsEyeIris", -0.871, 0, 0, 0, 0, 0, 0.4}, {"DragonsEyePumpkin", 0.871, 0, 0, 0, 0, 0, 0.4}, {"DragonsEyeIris", 0.871, 0, 0, 0, 0, 0, 0.4} } },
 		},
+	},
+	shelf = {
+		Carrot = { size = Vector3.new(1.35, 0.507, 0.742), pieces = {
+			{ {"CarrotBunch", 0.164, 0.143, 0, 0, 0, 0, 0.336} },
+		} },
+		Wheat = { size = Vector3.new(1.45, 1.062, 1.129), pieces = {
+			{ {"WheatSheaf", 0.679, 0.505, 0.038, 0, 0, 1.5708, 0.372} },
+		} },
+		Potato = { size = Vector3.new(0.78, 0.495, 0.558), pieces = {
+			{ {"Potato1", 0, 0.031, 0.007, 0, 0, 0, 0.635} },
+			{ {"Potato2", 0.019, 0.001, -0.013, 0, 0, 0, 0.635} },
+			{ {"Potato3", 0.012, 0.036, -0.001, 0, 0, 0, 0.635} },
+		} },
+		Lettuce = { size = Vector3.new(1.05, 0.38, 1.04), pieces = {
+			{ {"Lettuce", 0.008, 0.009, -0.005, 0, 0, 0, 0.338} },
+		} },
+		Corn = { size = Vector3.new(1.25, 0.608, 0.612), pieces = {
+			{ {"CornCob", 0.598, 0.287, -0.014, 0, 0, 1.5708, 0.543} },
+		} },
+		Onion = { size = Vector3.new(0.558, 0.8, 0.558), pieces = {
+			{ {"OnionBulb", 0, 0.134, 0, 0, 0, 0, 0.537} },
+		} },
+		Strawberry = { size = Vector3.new(1, 0.706, 0.905), pieces = {
+			{ {"StrawberryPunnet", 0.002, 0, -0.033, 0, 0, 0, 0.97} },
+		} },
+		Tomato = { size = Vector3.new(0.736, 0.8, 0.684), pieces = {
+			{ {"Tomato", 0, 0.672, 0, 0, 0, 0, 0.8} },
+		} },
+		BellPepper = { size = Vector3.new(0.563, 0.85, 0.563), pieces = {
+			{ {"BellPepper", 0, 0.627, 0, 0, 0, 0, 0.532} },
+		} },
+		Pumpkin = { size = Vector3.new(1.35, 1.185, 1.284), pieces = {
+			{ {"Pumpkin", 0, 0, 0, 0, 0, 0, 0.365} },
+		} },
+		Watermelon = { size = Vector3.new(1.55, 0.951, 1.033), pieces = {
+			{ {"Watermelon", 0, 0.041, 0, 0, 1.5708, 0, 0.344} },
+		} },
+		Blueberry = { size = Vector3.new(1, 0.574, 0.842), pieces = {
+			{ {"BlueberryPunnet", 0, 0, 0, 0, 0, 0, 0.975} },
+		} },
+		Pineapple = { size = Vector3.new(0.596, 1.4, 0.602), pieces = {
+			{ {"Pineapple", -0.006, 0, -0.003, 0, 0, 0, 0.452} },
+		} },
+		CocoaPod = { size = Vector3.new(1.2, 0.69, 0.656), pieces = {
+			{ {"CocoaPod", -0.6, 0.345, 0, 0, 0, 1.5708, 0.75} },
+		} },
+		Dragonfruit = { size = Vector3.new(1.013, 1.031, 1.05), pieces = {
+			{ {"Dragonfruit", 0.02, 0, 0, 0, 0, 0, 0.623} },
+		} },
+		GrapeVine = { size = Vector3.new(1.25, 0.804, 0.79), pieces = {
+			{ {"GrapeBunch", 0.589, 0.402, 0.022, 1.5708, 0, -1.5708, 0.717} },
+		} },
+		Moonmelon = { size = Vector3.new(1.45, 1.029, 1.118), pieces = {
+			{ {"Moonmelon", -0.095, 0.05, 0, 0, 1.5708, 0, 0.332}, {"MoonmelonGlow", -0.095, 0.05, 0, 0, 1.5708, 0, 0.332} },
+		} },
+		Starfruit = { size = Vector3.new(1, 0.591, 0.562), pieces = {
+			{ {"Starfruit", -0.376, 0.296, 0.03, -1.5708, 0, 1.5708, 0.565} },
+		} },
+		GoldenApple = { size = Vector3.new(0.941, 1, 0.941), pieces = {
+			{ {"GoldenApple", 0, 0.809, 0, 0, 0, 0, 0.825} },
+		} },
+		CrystalRose = { size = Vector3.new(1.25, 0.884, 0.896), pieces = {
+			{ {"CrystalRoseCut", 0.574, 0.414, -0.009, 0, 0, 1.5708, 0.213}, {"CrystalRoseBloom", -0.33, 0.425, -0.009, 0.0178, 0.0923, 1.3803, 0.213}, {"CrystalRoseCore", -0.33, 0.425, -0.009, 0.0178, 0.0923, 1.3803, 0.213} },
+		} },
+		PhoenixPepper = { size = Vector3.new(1.3, 0.733, 0.433), pieces = {
+			{ {"PhoenixPepper", -0.529, 0.539, 0, 0, 1.5708, 0, 0.387}, {"PhoenixTip", -0.529, 0.539, 0, 0, 1.5708, 0, 0.387} },
+		} },
+		DragonsEyePumpkin = { size = Vector3.new(1.124, 1.047, 1.25), pieces = {
+			{ {"DragonsEyePumpkin", 0, 0, 0, 0, 0, 0, 0.274}, {"DragonsEyeIris", 0, 0, 0, 0, 0, 0, 0.274} },
+		} },
 	},
 }
