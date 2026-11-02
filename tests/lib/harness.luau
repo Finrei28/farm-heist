@@ -18,6 +18,7 @@ local ROOT = "src/shared"
 local clock = 1_760_000_000 -- unix seconds
 local workspaceAttributes = {}
 local storageAttributes = {}
+local storageChildren = {}
 
 function Harness.setTime(seconds: number)
 	clock = seconds
@@ -35,10 +36,17 @@ function Harness.setStorageAttribute(name: string, value: any)
 	storageAttributes[name] = value
 end
 
+-- Puts an instance in the fake ReplicatedStorage (FindFirstChild finds
+-- it), e.g. stand-ins for the imported crop meshes; nil takes it out.
+function Harness.setStorageChild(name: string, value: any)
+	storageChildren[name] = value
+end
+
 function Harness.reset()
 	clock = 1_760_000_000
 	table.clear(workspaceAttributes)
 	table.clear(storageAttributes)
+	table.clear(storageChildren)
 end
 
 local workspace = {
@@ -71,6 +79,9 @@ local services = {
 		end,
 		SetAttribute = function(_, name, value)
 			storageAttributes[name] = value
+		end,
+		FindFirstChild = function(_, name)
+			return storageChildren[name]
 		end,
 	},
 	Players = { LocalPlayer = nil },

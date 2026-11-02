@@ -7,7 +7,9 @@
 -- shallow one, punnets of berries on a tray, tomatoes, peppers, cocoa pods,
 -- dragonfruit, grapes, starfruit and golden apples in wicker baskets,
 -- pineapples side by side, a pumpkin or a melon on its own. Rare crops and
--- up sparkle in their rarity's colour, like a ripe crop.
+-- up sparkle in their rarity's colour, like a ripe crop. They're the crops'
+-- low-poly meshes (World/CropMeshes, laid out by tools/crop_art) once those
+-- are imported, and part-built until then.
 --
 -- ProduceArt.build(cropId, base, count) builds `count` of it (default: the
 -- crop's perPatch) standing on `base` (its bottom middle; it faces -Z) and
@@ -17,6 +19,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Crops = require(ReplicatedStorage.Shared.Config.Crops)
 local Rarities = require(ReplicatedStorage.Shared.Config.Rarities)
+local CropMeshes = require(script.Parent.CropMeshes)
 local Parts = require(script.Parent.Parts)
 
 local COLORS = Parts.COLORS
@@ -762,7 +765,7 @@ function ProduceArt.build(cropId: string, base: CFrame, count: number?): (Model,
 	local model = Instance.new("Model")
 	model.Name = "Produce"
 	local n = math.max(1, math.floor(count or Crops.ById[cropId].perPatch))
-	local info = BUILDERS[cropId](model, base, n)
+	local info = CropMeshes.carried(cropId, n, base, model) or BUILDERS[cropId](model, base, n)
 	local core = Parts.prop({ Name = "Core", Size = Vector3.new(0.2, 0.2, 0.2), CFrame = base * CFrame.new(0, info.hold, 0), Transparency = 1, CastShadow = false }, model)
 	core:SetAttribute("Width", info.width)
 	core:SetAttribute("Height", info.height)

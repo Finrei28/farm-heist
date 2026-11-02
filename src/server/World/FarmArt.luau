@@ -16,6 +16,7 @@ local Rarities = require(ReplicatedStorage.Shared.Config.Rarities)
 local GrowthRules = require(ReplicatedStorage.Shared.GrowthRules)
 local LandRules = require(ReplicatedStorage.Shared.LandRules)
 local PlotLayout = require(ReplicatedStorage.Shared.PlotLayout)
+local CropMeshes = require(script.Parent.CropMeshes)
 local Parts = require(script.Parent.Parts)
 
 local COLORS = Parts.COLORS
@@ -31,8 +32,10 @@ local TILE_TOP = 0.5 -- a tile's top above the yard
 ------------------------------------------------------------------------
 -- Crops: a patch's plants stand in rows on the tile's three ridges, and a
 -- ripe patch shows every carrot, cob or pumpkin it gives (tile.yield): what
--- you see is what you harvest (docs/ArtDirection.md §7). About 20 parts a
--- patch at most, for phones (a full field is 64 of them, §10).
+-- you see is what you harvest (docs/ArtDirection.md §7). Growing and ripe
+-- crops are the low-poly meshes (World/CropMeshes) once they're imported;
+-- until then, and for seeds, the part-built crops below (about 20 parts a
+-- patch at most, for phones: a full field is 64 of them, §10).
 
 -- Each crop's produce colour: its fruit in the field, on crates and shelves.
 local FRUIT = {
@@ -234,12 +237,32 @@ local function sown(model, base: CFrame)
 	end
 end
 
--- Seedlings: two leaves each, two to a ridge.
+-- Seedlings: two seed leaves and a first true leaf each, two to a ridge.
 local function seedlings(model, base: CFrame, s: number)
 	for _, at in spots(base, 6, 3) do
-		leaf(model, at, 0, 30, Vector3.new(0.15, 1.1 * s, 0.5 * s))
-		leaf(model, at, 180, 30, Vector3.new(0.15, 1.1 * s, 0.5 * s), COLORS.leafDark)
+		if not CropMeshes.make("Seedling", at * CFrame.new(0, -0.08, 0), 1.2 * s, model) then
+			leaf(model, at, 0, 30, Vector3.new(0.15, 1.1 * s, 0.5 * s))
+			leaf(model, at, 180, 30, Vector3.new(0.15, 1.1 * s, 0.5 * s), COLORS.leafDark)
+		end
 	end
+end
+
+-- Flames licking off the Phoenix Pepper's glowing tip.
+local function flame(tip: BasePart)
+	local spot = Instance.new("Attachment")
+	spot.Name = "Flame"
+	local emitter = Instance.new("ParticleEmitter")
+	emitter.Texture = FIRE
+	emitter.Color = ColorSequence.new(Color3.fromRGB(255, 200, 80), Color3.fromRGB(255, 80, 20))
+	emitter.LightEmission = 0.8
+	emitter.Rate = 12
+	emitter.Lifetime = NumberRange.new(0.3, 0.55)
+	emitter.Speed = NumberRange.new(1, 2)
+	emitter.Acceleration = Vector3.new(0, 3, 0)
+	emitter.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.8), NumberSequenceKeypoint.new(1, 0.1) })
+	emitter.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(1, 1) })
+	emitter.Parent = spot
+	spot.Parent = tip
 end
 
 local BUILDERS = {}
@@ -632,20 +655,7 @@ function BUILDERS.PhoenixPepper(model, base, ripe, s, n)
 				{ Reflectance = 0.15, Material = if j == #fire then Enum.Material.Neon else Enum.Material.SmoothPlastic })
 			at = at * CFrame.new(0, -0.44 * s, 0) * CFrame.Angles(0, 0, math.rad(if j > 3 then 16 else 4))
 		end
-		local flame = Instance.new("Attachment") -- (on the glowing tip)
-		flame.Name = "Flame"
-		local emitter = Instance.new("ParticleEmitter")
-		emitter.Texture = FIRE
-		emitter.Color = ColorSequence.new(Color3.fromRGB(255, 200, 80), Color3.fromRGB(255, 80, 20))
-		emitter.LightEmission = 0.8
-		emitter.Rate = 12
-		emitter.Lifetime = NumberRange.new(0.3, 0.55)
-		emitter.Speed = NumberRange.new(1, 2)
-		emitter.Acceleration = Vector3.new(0, 3, 0)
-		emitter.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.8), NumberSequenceKeypoint.new(1, 0.1) })
-		emitter.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(1, 1) })
-		emitter.Parent = flame
-		flame.Parent = tip
+		flame(tip)
 	end
 end
 
@@ -680,6 +690,12 @@ function FarmArt.cropModel(cropId: string, stage: string, base: CFrame, count: n
 		sown(model, base)
 	elseif stage == "Sprout" then
 		seedlings(model, base, s)
+	elseif CropMeshes.patch(cropId, stage, count or crop.perPatch, base, model) then
+		for _, tip in model:GetChildren() do
+			if tip.Name == "PhoenixTip" then
+				flame(tip)
+			end
+		end
 	else
 		BUILDERS[cropId](model, base, stage == "Ripe", s, count or crop.perPatch)
 	end

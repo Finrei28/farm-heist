@@ -4,3 +4,5 @@
 *.rbxlx.lock
 sourcemap.json
 .tmp_video/
+__pycache__/
+art/crops/previews/

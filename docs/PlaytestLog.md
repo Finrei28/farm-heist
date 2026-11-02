@@ -19,6 +19,19 @@ Follow-ups: <what to test next time>
 
 ## Sessions
 
+### 2026-11-02 · the crops as meshes · build: this session's crop meshes
+Testers: Claude, driving Studio · Setup: `art/crops/FarmHeistCrops.glb` imported (Import 3D, default settings) as ReplicatedStorage.CropModels; an edit-mode gallery built by the real FarmArt and ProduceArt (every crop sprouting, growing, ripe as it comes and on a bumper patch; every carried load), then solo Play (`/plant Tomato`, `/grow ripe`, `/tp field`, `/carry Strawberry`) · Lag: 0 (local) · Screenshots: [playtest/2026-11-02-crop-meshes/](playtest/2026-11-02-crop-meshes/)
+
+| Check | Result | OK? | Notes |
+|---|---|---|---|
+| The import | 63 MeshParts, each the size the generator drew it, in studs, no turn on the part; one texture | ✓ | the importer turned every mesh round inside its part (glTF faces +Z): found by comparing two meshes' offsets, fixed in the generator, imported again |
+| Every patch in Studio's light | carrots, sheaves, potatoes in the furrows, lettuces, corn, onions, strawberries (white flowers while growing), staked tomatoes, peppers, pumpkins and melons on their vines, pineapples, the cocoa tree, the dragonfruit cactus, grapes on the trellis, the Moonmelon's glowing stripes, the fruit trees, the Crystal Rose, the Phoenix Pepper's glowing tip, the Dragon's Eye's glowing eye ([01](playtest/2026-11-02-crop-meshes/01-studio-common.jpg)–[06](playtest/2026-11-02-crop-meshes/06-studio-mythic-bumper.jpg)) | ✓ | the blueberry bush and the starfruit and apple crowns read as green boulders in Studio's sun → a darker leafy core with leaves sticking out ([03](playtest/2026-11-02-crop-meshes/03-studio-rare-epic.jpg)) |
+| Carried loads | all 22 the right way round: bunches, crates, punnets on trays, baskets, the big crops alone ([07](playtest/2026-11-02-crop-meshes/07-studio-carried.jpg)) | ✓ | |
+| In Play | a ripe tomato field from the farmhouse side and from beside the plants; "🍅 6 tomatoes · Ripe!" ([08](playtest/2026-11-02-crop-meshes/08-play-tomato-field.jpg), [09](playtest/2026-11-02-crop-meshes/09-play-tomatoes-close.jpg)) | ✓ | the locked land's stumps, rocks and weed blobs are still part-built and look plain beside the crops |
+| Held up in Play | a tray of 4 punnets of strawberries over the head, both hands on it ([10](playtest/2026-11-02-crop-meshes/10-play-carry-punnets.jpg)) | ✓ | |
+
+Not covered: every crop in Play (the gallery runs the same FarmArt), a phone's frame rate with a full field of meshes, 8 players.
+
 ### 2026-11-02 · a patch gives several, coins ×10, Field Levels · build: this session's yield change
 Testers: Claude, driving Studio · Setup: edit mode for a gallery of all 22 crops ripe on a tilled tile (as a patch comes, and a bumper patch) and what a thief carries, then solo Play on a fresh v2 save (`/level 32`, `/field 1–5`, `/plant`, `/grow ripe`, `/carry`) · Lag: 0 (local) · Screenshots: [playtest/2026-11-02-yield/](playtest/2026-11-02-yield/)
 
