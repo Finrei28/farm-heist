@@ -377,11 +377,40 @@ local function buildPlot(index: number, world: Instance)
 	YardArt.build(model, frame)
 	StoreArt.build(model)
 	FarmhouseArt.build(model, frame, index) -- (the farmhouse and barn: World/FarmhouseArt)
+	-- The doormat at the farmhouse's steps: the barn's deposit point and the
+	-- owner's spawn. Coir with WELCOME on it, edged in the farm's colour, so
+	-- it reads as a doormat and is still easy to find (it was a yellow slab
+	-- that read as a spawn pad). Long along the porch; on a top face the word
+	-- runs along -Z with its top toward -X, so it reads from the path.
+	local mat = frame * CFrame.new(P.door)
 	local door = part({
-		Name = "Door", Size = Vector3.new(4, 0.4, 4),
-		CFrame = frame * CFrame.new(P.door + Vector3.new(0, 0.2, 0)), Color = COLORS.hay,
+		Name = "Door", Size = Vector3.new(3.0, 0.4, 4.4),
+		CFrame = mat * CFrame.new(0, 0.2, 0), Color = Color3.fromRGB(196, 150, 92),
 	}, model)
-	door:SetAttribute("Deposit", true) -- the barn's deposit point and the owner's spawn
+	door:SetAttribute("Deposit", true)
+	Parts.prop({ Name = "DoormatEdge", Size = Vector3.new(3.6, 0.28, 5.0), CFrame = mat * CFrame.new(0, 0.16, 0),
+		Color = Parts.farmColor(index), CastShadow = false }, model)
+	local welcome = Instance.new("SurfaceGui")
+	welcome.Name = "Welcome"
+	welcome.Face = Enum.NormalId.Top
+	welcome.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	welcome.PixelsPerStud = 40
+	welcome.LightInfluence = 0.6
+	local word = Instance.new("TextLabel")
+	word.Size = UDim2.fromScale(1, 1)
+	word.BackgroundTransparency = 1
+	word.Font = Enum.Font.FredokaOne
+	word.TextScaled = true
+	word.TextColor3 = Color3.fromRGB(92, 60, 34)
+	word.Text = "WELCOME"
+	local padding = Instance.new("UIPadding")
+	padding.PaddingTop = UDim.new(0.28, 0)
+	padding.PaddingBottom = UDim.new(0.28, 0)
+	padding.PaddingLeft = UDim.new(0.08, 0)
+	padding.PaddingRight = UDim.new(0.08, 0)
+	padding.Parent = word
+	word.Parent = welcome
+	welcome.Parent = door
 
 	-- The field: the start corner tilled, the rest overgrown (World/FarmArt).
 	FarmArt.buildField(model, frame)

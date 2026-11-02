@@ -19,6 +19,25 @@ Follow-ups: <what to test next time>
 
 ## Sessions
 
+### 2026-11-02 · tilled soil and the doormat · build: this session's fixes after the farmhouse
+Testers: Claude, driving Studio · Setup: `art/props/FarmHeistProps.glb` imported again (with the `Furrows` mesh); solo Play, a Scriptable camera; the character walked off the doormat to read it · Lag: 0 (local) · Screenshots: [playtest/2026-11-02-farmhouse/](playtest/2026-11-02-farmhouse/) 12–15
+
+| Check | Result | OK? | Notes |
+|---|---|---|---|
+| Tilled soil | lumpy ridges of turned soil with clods, from the farmhouse and close up ([12](playtest/2026-11-02-farmhouse/12-tilled-soil-from-the-farmhouse.jpg), [13](playtest/2026-11-02-farmhouse/13-tilled-soil-close.jpg)) | ✓ | was three smooth cylinders a tile that read as logs ([06](playtest/2026-11-02-farmhouse/06-wild-land-from-the-farmhouse.jpg)) |
+| The doormat | coir in the farm colour's edge, WELCOME read from the path ([15](playtest/2026-11-02-farmhouse/15-doormat.jpg)) | ✓ | the word first ran up the mat toward the house ([14](playtest/2026-11-02-farmhouse/14-doormat-word-the-wrong-way.jpg)) |
+
+Noticed in passing (any part of the game, with a verdict):
+
+| Seen | Verdict |
+|---|---|
+| The scarecrow is a bare post, the kennel a red box and the gatehouse a cream cube on every farm, bought or not | Week 6 (the defences replace them; ArtDirection §11 step 11) |
+| The town's buildings are white boxes; the Exchange's tower shows from every farm | Week 7 (§11 step 6) |
+| The hedges are flat green walls, the valley's rim a ring of flat green walls | Week 8 (§11 step 4) |
+| "ContentId rbxassetid://203785492 failed … asset type does not match" on every Play | Leave: tagged Studio, not in the game's code (Studio or a plugin) |
+| "Roblox API services unavailable – data will not be saved" | Leave: local Studio without API access; turn it on in Game Settings only to test saving across sessions |
+| The farmhouse's cream walls look white in the sun | Leave: right for a farmhouse, no glare |
+
 ### 2026-11-02 · the farmhouse and barn, wild land, produce on shelves · build: this session's art
 Testers: Claude, driving Studio · Setup: `art/crops/FarmHeistCrops.glb` imported again as ReplicatedStorage.CropModels (for the carrot bunch and punnets) and `art/props/FarmHeistProps.glb` as PropModels; solo Play, a Scriptable camera from the client command bar, the Corner Store's displays filled and crates put on the dock rack from the server command bar (`StoreArt.showDisplay`, `YardArt.showHold`) · Lag: 0 (local) · Screenshots: [playtest/2026-11-02-farmhouse/](playtest/2026-11-02-farmhouse/)
 

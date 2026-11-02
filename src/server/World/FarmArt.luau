@@ -751,13 +751,20 @@ function FarmArt.setTileOpen(tilePart: BasePart, open: boolean, fresh: boolean?)
 	if open and not ridges then
 		ridges = Instance.new("Folder")
 		ridges.Name = "Ridges"
-		-- (cylinders lying along the row, half sunk: rounded mounds, not planks)
-		for _, x in { -3.2, 0, 3.2 } do
-			prop({
-				Name = "Ridge", Shape = Enum.PartType.Cylinder, Size = Vector3.new(FIELD.tile - 1.8, 1.6, 1.6),
-				CFrame = tilePart.CFrame * CFrame.new(x, tilePart.Size.Y / 2 - 0.35, 0) * CFrame.Angles(0, math.rad(90), 0),
-				Color = colors[2], CastShadow = false,
-			}, ridges)
+		-- (the props' furrowed soil, World/Meshes: lumpy mounds with clods,
+		-- tinted like the cylinders; smooth cylinders read as a raft of logs.
+		-- Until it's imported, cylinders lying along the rows, half sunk.)
+		local furrows = Meshes.make("Furrows", tilePart.CFrame * CFrame.new(0, tilePart.Size.Y / 2, 0), 1, ridges)
+		if furrows then
+			furrows.Color = colors[2]
+		else
+			for _, x in { -3.2, 0, 3.2 } do
+				prop({
+					Name = "Ridge", Shape = Enum.PartType.Cylinder, Size = Vector3.new(FIELD.tile - 1.8, 1.6, 1.6),
+					CFrame = tilePart.CFrame * CFrame.new(x, tilePart.Size.Y / 2 - 0.35, 0) * CFrame.Angles(0, math.rad(90), 0),
+					Color = colors[2], CastShadow = false,
+				}, ridges)
+			end
 		end
 		ridges.Parent = tilePart
 	elseif not open and ridges then

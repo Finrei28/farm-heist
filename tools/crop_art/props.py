@@ -569,3 +569,54 @@ def weathervane():
     for x in (0.12, -0.12):
         m.add(tube([np.array([x, y + 0.05, 0]), np.array([x + 0.05, y + 0.55, 0])], [0.05, 0.05], 4, "iron"))
     return m
+
+
+# ===========================================================================
+# The field (server/World/FarmArt): a tilled tile's soil
+
+
+@prop("Furrows", textured=False)
+def furrows():
+    """A tilled tile's three ridges in one mesh (on the tile's top, the rows
+    along Z at x = -3.2, 0, 3.2, their tops about 0.45 up where crops stand):
+    mounds of turned soil, lumpy along their length, rounded at the ends,
+    with clods in the furrows. Smooth cylinders read as a raft of logs. One
+    colour, untextured: the game tints it (watered, composted)."""
+    m = Mesh()
+    rng = rng_of("Furrows")
+    across = np.linspace(-1.0, 1.0, 6)
+    along = np.linspace(-5.1, 5.1, 11)
+    for cx in (-3.2, 0.0, 3.2):
+        rings = []
+        for i, z in enumerate(along):
+            end = min(i, len(along) - 1 - i)
+            taper = (0.5, 0.85, 1.0)[min(end, 2)]
+            ring = []
+            for j, u in enumerate(across):
+                edge = j in (0, len(across) - 1)
+                w = 0.9 * (1 + rng.uniform(-0.07, 0.07))
+                y = -0.04 if edge else 0.46 * (1 - u * u) ** 0.55 * taper + rng.uniform(-0.075, 0.06)
+                dz = 0.0 if end == 0 else rng.uniform(-0.12, 0.12)
+                ring.append(np.array([cx + u * w, y, z + dz]))
+            rings.append(ring)
+        for i in range(len(along) - 1):
+            for j in range(len(across) - 1):
+                m.quad(rings[i][j], rings[i][j + 1], rings[i + 1][j + 1], rings[i + 1][j], "ridge", out=(0, 1, 0))
+        for i, sign in ((0, -1.0), (len(along) - 1, 1.0)):
+            ring = rings[i]
+            for j in range(len(across) - 1):
+                a, b = ring[j], ring[j + 1]
+                m.quad(np.array([a[0], -0.04, a[2]]), np.array([b[0], -0.04, b[2]]), b, a, "ridge", out=(0, 0, sign))
+    for k in range(9):
+        x = (-1.6, 1.6)[k % 2] + rng.uniform(-0.35, 0.35)
+        z = rng.uniform(-4.8, 4.8)
+        r = rng.uniform(0.14, 0.22)
+        m.add(gem(r, "ridge", h=r * 0.6, sides=4), mul(T(x, r * 0.3, z), R("y", rng.uniform(0, 90))))
+    # clods on the ridges' flanks (the tops stay clear for the crops)
+    for k in range(12):
+        cx = (-3.2, 0.0, 3.2)[k % 3]
+        side = (-1, 1)[(k // 3) % 2]
+        z = rng.uniform(-4.4, 4.4)
+        r = rng.uniform(0.13, 0.2)
+        m.add(gem(r, "ridge", h=r * 0.7, sides=4), mul(T(cx + side * rng.uniform(0.5, 0.65), 0.2, z), R("y", rng.uniform(0, 90)), R("z", side * 30)))
+    return m

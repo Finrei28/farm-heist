@@ -2,7 +2,7 @@
 -- that tools/crop_art writes): every piece a layout names was drawn; every
 -- crop has a patch growing and ripe for any number a patch can give, a
 -- load for any number a thief can hold, and a piece for shelves; every
--- obstacle kind has its mesh. FarmArt, ProduceArt, StoreArt, YardArt and
+-- obstacle kind has its mesh; tilled tiles are the furrowed soil. FarmArt, ProduceArt, StoreArt, YardArt and
 -- StoreItems build them once they're imported (stand-ins here), nothing in
 -- them to bump into, never more shelf pieces than the balls they replace,
 -- and the part-built stand-ins until then. (The generator checks the
@@ -15,6 +15,7 @@ return function(spec, harness)
 	local Store = harness.load("Config/Store")
 	local LandRules = harness.load("LandRules")
 	local PlotLayout = harness.load("PlotLayout")
+	local Parts = harness.loadServer("World/Parts")
 	local DATA = harness.loadServer("World/CropMeshData")
 	local PROPS = harness.loadServer("World/PropMeshData")
 
@@ -332,6 +333,19 @@ return function(spec, harness)
 				end
 			end
 			expect(blocks).toBe(16 - #Land.START_BLOCKS)
+			-- tilled tiles: the furrowed soil, one mesh, in the ridges' colour
+			local open = 0
+			for _, tile in field:GetChildren() do
+				if tile:GetAttribute("Open") then
+					open += 1
+					local ridges = tile.Ridges:GetChildren()
+					expect(#ridges).toBe(1)
+					expect(ridges[1].Name).toBe("Furrows")
+					expect(ridges[1].Color).toBe(Parts.COLORS.ridge)
+					noBumps(tile.Ridges, `tile {tile.Name}`)
+				end
+			end
+			expect(open).toBe(#Land.START_BLOCKS * 4)
 		end)
 
 		harness.setStorageChild("CropModels", nil)
@@ -346,6 +360,7 @@ return function(spec, harness)
 			Plain.buildField(farm, PlotLayout.frame(1))
 			expect(#meshParts(farm)).toBe(0)
 			expect(#Plain.obstacles(farm, 3)).toBe(Land.OBSTACLES)
+			expect(#farm.Field.Tile1.Ridges:GetChildren()).toBe(3) -- (cylinders)
 			expect(named(PlainItems.build("PumpkinPile"), "Pumpkin")).toBe(4)
 			expect(#meshParts(PlainItems.build("FruitCart"))).toBe(0)
 		end)

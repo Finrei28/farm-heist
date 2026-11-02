@@ -1136,6 +1136,8 @@ Built: `World/FarmhouseArt` (the farmhouse and barn in parts, ArtDirection §7);
 
 **Played in Studio on 2026-11-02** (PlaytestLog, [playtest/2026-11-02-farmhouse/](playtest/2026-11-02-farmhouse/)): both files imported, then Play from the gate, the porch, the field, above, at wild land, inside the Corner Store with its displays filled and at the dock with crates. Not covered: the bigger displays (Tiered Rack, Chiller, Showcase, Pedestal) in Studio (the tests build every one), a phone's frame rate, night (the lantern doesn't light yet).
 
+Then two things the play-test noticed in passing (the user: "if you see anything wrong or needs improvements of any element/aspect even if it's something we are not currently building during play-testing, point it out and determine if it needs working on"), fixed at once on the user's word: tilled soil read as a raft of logs (smooth cylinders) → the props' furrowed soil, one mesh a tile instead of three cylinders; the doormat was a yellow slab that read as a spawn pad → coir with WELCOME on it, edged in the farm colour. The rest went to their weeks or stays (PlaytestLog).
+
 ### Change after review: the crops drawn as low-poly meshes (2026-11-02)
 
 The user: "currently the crops do not look impressive; Can you draw the art yourself whichever way gives the best results. Each piece of art you draw, make sure to check it for any issues and polish it as much as you can so it looks right to the eye."

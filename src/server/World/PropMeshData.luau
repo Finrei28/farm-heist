@@ -19,6 +19,7 @@ return {
 		MilkChurn = { size = Vector3.new(1.325, 2.36, 1.26), centre = Vector3.new(0, 1.18, 0) },
 		Wheelbarrow = { size = Vector3.new(2.02, 1.917, 4.419), centre = Vector3.new(0, 0.951, 0.159) },
 		Weathervane = { size = Vector3.new(3.75, 4.6, 2.58), centre = Vector3.new(0.025, 2.3, 0) },
+		Furrows = { size = Vector3.new(8.319, 0.574, 10.2), centre = Vector3.new(0.002, 0.222, 0) },
 	},
 	wild = {
 		obstacles = {
