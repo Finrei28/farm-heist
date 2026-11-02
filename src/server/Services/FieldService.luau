@@ -266,7 +266,7 @@ function FieldService.RipeCrop(player: Player, data, key: string): string?
 end
 
 -- A thief takes the ripe crop on a tile (CrimeService has checked the rest):
--- like a harvest, but into their sack, and no XP. Regrowing plants only lose
+-- like a harvest, but into their hands, and no XP. Regrowing plants only lose
 -- their fruit. Returns the crop id and its barn key, or nil.
 function FieldService.TakeRipe(player: Player, data, key: string): (string?, string?)
 	settle(player, data, true)

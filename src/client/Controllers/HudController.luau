@@ -285,16 +285,15 @@ for _, entry in { { "Home", "🏠 HOME", "Heading home... (stand still)", true }
 	end)
 end
 
--- A countdown on the sign while it's on cooldown.
-local function updateCooldowns()
+-- 🚫 on the signs while you can't travel.
+local function updateBlocked()
 	local now = workspace:GetServerTimeNow()
-	-- (no travel while you're a Suspect, knocked out or carrying a sack: CrimeService)
-	local blocked = (player:GetAttribute("SuspectOf") or 0) > 0 or (player:GetAttribute("Sack") or 0) > 0
+	-- (no travel while you're a Suspect, knocked out or carrying stolen crops: CrimeService)
+	local blocked = (player:GetAttribute("SuspectOf") or 0) > 0 or player:GetAttribute("StolenCrop") ~= nil
 		or (player:GetAttribute("KnockedOut") or 0) > now
-	for kind, sign in signs do
-		local left = (player:GetAttribute(`{kind}ReadyAt`) or 0) - now
-		sign.label.Text = if blocked then `🚫 {sign.text}` elseif left > 0 then `⏳ {UI.formatTime(left)}` else sign.text
-		sign.label.TextTransparency = if left > 0 or blocked then 0.35 else 0
+	for _, sign in signs do
+		sign.label.Text = if blocked then `🚫 {sign.text}` else sign.text
+		sign.label.TextTransparency = if blocked then 0.35 else 0
 	end
 end
 
@@ -429,7 +428,7 @@ function HudController.Start()
 	task.spawn(function()
 		while true do
 			updateChip()
-			updateCooldowns()
+			updateBlocked()
 			task.wait(0.5)
 		end
 	end)

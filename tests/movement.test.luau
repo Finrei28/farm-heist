@@ -1,6 +1,6 @@
 -- The movement check (shared/MoveRules, MovementService): normal play,
 -- sprinting, falling, jumping and lag never trip it; teleports and speed
--- hacks do. A thief can't teleport out of a farm with a sack.
+-- hacks do. A thief can't teleport out of a farm with a stolen crop.
 return function(spec, harness)
 	local describe, it, expect = spec.describe, spec.it, spec.expect
 	local Vector3 = require("@lune/roblox").Vector3
@@ -58,7 +58,7 @@ return function(spec, harness)
 		it("flying straight up is caught", function()
 			expect(run(MoveRules.new(), 0, 3, 40)).toBeGreaterThan(0)
 		end)
-		it("a thief with a sack who runs anyway is caught; walking with it is fine", function()
+		it("a thief carrying a stolen crop who runs anyway is caught; walking with it is fine", function()
 			local scale = Settings.WALK_SPEED * 0.85 / Settings.RUN_SPEED
 			local function carry(speed, seconds)
 				local budget = MoveRules.new()

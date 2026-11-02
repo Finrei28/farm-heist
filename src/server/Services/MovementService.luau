@@ -1,7 +1,7 @@
 -- Keeps players' positions honest. A character's position is decided by the
 -- player's own client (that's how Roblox physics works), so an exploit can
 -- teleport, and anything the server checks by distance (stealing a crop,
--- emptying a sack at your barn, a bat hit, an arrest, bidding in the Auction
+-- taking a stolen crop home, a bat hit, an arrest, bidding in the Auction
 -- House, trading face to face) could be cheated.
 --
 -- Every tick each player gets a movement allowance (a little faster than
@@ -57,7 +57,7 @@ function MovementService.Allow(player: Player, seconds: number?)
 end
 
 -- A share of the usual movement allowance (1 = sprinting is fine): a thief
--- with a Loot Sack can only walk, slower (CrimeService).
+-- carrying a stolen crop can only walk, slower (CrimeService).
 function MovementService.SetScale(player: Player, scale: number?)
 	local state = tracked[player]
 	if state then

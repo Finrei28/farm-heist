@@ -57,12 +57,12 @@ return function(spec, harness)
 	end)
 
 	describe("rarities", function()
-		it("fit in the Loot Sack, and a Legendary or Mythic fills it", function()
-			for _, rarity in Rarities.List do
-				expect(rarity.sackWeight <= Crime.SACK_CAPACITY).toBe(true)
+		it("count more against a farm's raid cap the rarer they are, two Legendaries filling it", function()
+			for index = 2, #Rarities.List do
+				expect(Rarities.List[index].raidWeight >= Rarities.List[index - 1].raidWeight).toBe(true)
 			end
-			expect(Rarities.ById.Legendary.sackWeight).toBe(Crime.SACK_CAPACITY)
-			expect(Rarities.ById.Mythic.sackWeight).toBe(Crime.SACK_CAPACITY)
+			expect(Rarities.ById.Common.raidWeight).toBe(1)
+			expect(Rarities.ById.Legendary.raidWeight * 2).toBe(Crime.RAID_CAP_WEIGHT)
 		end)
 		it("take longer to steal the rarer they are", function()
 			for index = 2, #Rarities.List do

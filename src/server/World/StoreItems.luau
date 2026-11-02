@@ -123,9 +123,9 @@ end
 
 function builders.WoodenShelf(m: Model)
 	local z = 0.65 -- the unit stands toward the back of its cells
-	solid(m, "Back", Vector3.new(7.4, 5.4, 0.2), CFrame.new(0, 2.7, z + 0.9), WOOD)
+	solid(m, "Back", Vector3.new(7.3, 5.4, 0.2), CFrame.new(0, 2.7, z + 0.9), WOOD) -- (its ends inside the sides)
 	for _, x in { -3.6, 3.6 } do
-		solid(m, "Side", Vector3.new(0.25, 5.4, 2.0), CFrame.new(x, 2.7, z), DARK_WOOD)
+		solid(m, "Side", Vector3.new(0.25, 5.4, 1.9), CFrame.new(x, 2.7, z - 0.05), DARK_WOOD) -- (its back inside the back board)
 	end
 	for _, y in { 0.5, 2.3, 4.1 } do
 		solid(m, "Board", Vector3.new(7.0, 0.2, 1.9), CFrame.new(0, y - 0.1, z), LIGHT_WOOD)
@@ -150,7 +150,7 @@ function builders.BulkBin(m: Model)
 	deco(m, "Band", Vector3.new(3.3, 0.2, 3.1), CFrame.new(0, 1.0, 0.2), DARK_WOOD)
 	deco(m, "Inside", Vector3.new(2.8, 0.1, 2.6), CFrame.new(0, 2.61, 0.2), Color3.fromRGB(120, 84, 52))
 	-- the lid, propped open at the back
-	deco(m, "Lid", Vector3.new(3.2, 0.15, 1.4), CFrame.new(0, 3.2, 1.55) * CFrame.Angles(math.rad(-70), 0, 0), LIGHT_WOOD)
+	deco(m, "Lid", Vector3.new(3.1, 0.15, 1.4), CFrame.new(0, 3.2, 1.55) * CFrame.Angles(math.rad(-70), 0, 0), LIGHT_WOOD)
 	slot(m, "Slot1", 0, 2.65, 0.2, Vector3.new(2.8, 1.1, 2.6))
 	tag(m, "Tag1", Vector3.new(0, 1.7, -1.35))
 end
@@ -187,7 +187,7 @@ function builders.ChillerCabinet(m: Model)
 	end
 	-- glass doors, one per slot, each with a handle
 	for i, x in { 1.75, -1.75 } do
-		solid(m, "Door", Vector3.new(3.4, 4.4, 0.1), CFrame.new(x, 3.0, z - 1.05), GLASS, { Transparency = 0.6, Reflectance = 0.15 })
+		solid(m, "Door", Vector3.new(3.4, 4.2, 0.1), CFrame.new(x, 3.1, z - 1.12), GLASS, { Transparency = 0.6, Reflectance = 0.15 })
 		deco(m, "Handle", Vector3.new(0.15, 1.6, 0.15), CFrame.new(x + (if i == 1 then -1.45 else 1.45), 3.0, z - 1.18), STEEL)
 		slot(m, `Slot{i}`, x, 0.95, z + 0.05, Vector3.new(3.0, 1.4, 1.4))
 		slot(m, `Slot{i}_2`, x, 2.85, z + 0.05, Vector3.new(3.0, 1.4, 1.4))
@@ -226,25 +226,25 @@ function builders.HonourBox(m: Model)
 	solid(m, "Foot", Vector3.new(1.8, 0.3, 1.8), CFrame.new(0, 0.15, 0.3), DARK_WOOD)
 	solid(m, "Post", Vector3.new(0.5, 2.9, 0.5), CFrame.new(0, 1.75, 0.3), WOOD)
 	solid(m, "Box", Vector3.new(2.0, 1.3, 1.4), CFrame.new(0, 3.85, 0.25), COLORS.hay)
-	deco(m, "Slot", Vector3.new(1.0, 0.08, 0.25), CFrame.new(0, 4.52, 0.25), COLORS.dark)
+	deco(m, "Slot", Vector3.new(1.0, 0.08, 0.25), CFrame.new(0, 4.57, 0.25), COLORS.dark)
 	deco(m, "Lid", Vector3.new(2.1, 0.12, 1.5), CFrame.new(0, 4.5, 0.25), Color3.fromRGB(224, 160, 48))
 	local sign = deco(m, "Sign", Vector3.new(2.4, 1.1, 0.15), CFrame.new(0, 5.35, 0.85), COLORS.cream)
 	words(sign, "PAY HERE ♥", COLORS.barnRed)
 	for _, x in { -1.1, 1.1 } do
-		deco(m, "SignPost", Vector3.new(0.15, 1.2, 0.15), CFrame.new(x, 4.95, 0.92), DARK_WOOD)
+		deco(m, "SignPost", Vector3.new(0.15, 1.2, 0.15), CFrame.new(x * 0.8, 4.95, 1.0), DARK_WOOD) -- (behind the sign)
 	end
 end
 
 function builders.Register(m: Model)
 	solid(m, "Counter", Vector3.new(7.2, 3.2, 2.2), CFrame.new(0, 1.6, 0.1), COLORS.cream)
-	deco(m, "Stripe", Vector3.new(7.25, 0.5, 2.25), CFrame.new(0, 2.4, 0.1), COLORS.barnRed)
-	deco(m, "Kick", Vector3.new(7.25, 0.4, 2.25), CFrame.new(0, 0.2, 0.1), DARK_WOOD)
+	deco(m, "Stripe", Vector3.new(7.3, 0.5, 2.3), CFrame.new(0, 2.4, 0.1), COLORS.barnRed)
+	deco(m, "Kick", Vector3.new(7.3, 0.4, 2.3), CFrame.new(0, 0.2, 0.1), DARK_WOOD)
 	solid(m, "CounterTop", Vector3.new(7.6, 0.25, 2.6), CFrame.new(0, 3.32, 0.1), DARK_WOOD)
 	deco(m, "Belt", Vector3.new(4.2, 0.12, 1.4), CFrame.new(-1.3, 3.5, 0), Color3.fromRGB(50, 50, 54))
 	-- the till at the +X end (where the paying shopper stands)
 	deco(m, "Till", Vector3.new(1.8, 0.7, 1.4), CFrame.new(2.2, 3.8, 0.35), STEEL)
 	deco(m, "Keys", Vector3.new(1.2, 0.1, 0.8), CFrame.new(2.2, 4.12, 0.55) * CFrame.Angles(math.rad(-20), 0, 0), Color3.fromRGB(60, 62, 68))
-	deco(m, "ScreenPost", Vector3.new(0.2, 0.9, 0.2), CFrame.new(2.2, 4.6, 0.05), STEEL)
+	deco(m, "ScreenPost", Vector3.new(0.2, 0.9, 0.2), CFrame.new(2.2, 4.6, 0.1), STEEL)
 	local screen = deco(m, "Screen", Vector3.new(1.3, 0.8, 0.12), CFrame.new(2.2, 5.2, 0), COLORS.dark)
 	words(screen, "THANK YOU", Color3.fromRGB(120, 230, 140), Enum.Font.Code, true)
 	-- a lane light on a pole at the back corner
@@ -255,9 +255,9 @@ end
 
 function builders.SelfCheckout(m: Model)
 	solid(m, "Cabinet", Vector3.new(2.4, 2.9, 1.8), CFrame.new(0, 1.45, 0.4), WHITE)
-	deco(m, "Band", Vector3.new(2.45, 0.35, 1.85), CFrame.new(0, 2.5, 0.4), COLORS.leaf)
+	deco(m, "Band", Vector3.new(2.5, 0.35, 1.9), CFrame.new(0, 2.5, 0.4), COLORS.leaf)
 	deco(m, "Scanner", Vector3.new(1.6, 0.1, 1.0), CFrame.new(0, 2.95, 0.2), COLORS.dark, { Reflectance = 0.3 })
-	deco(m, "Bagging", Vector3.new(0.9, 0.15, 1.4), CFrame.new(-1.5, 2.6, 0.3), STEEL)
+	deco(m, "Bagging", Vector3.new(0.9, 0.15, 1.4), CFrame.new(-1.5, 2.65, 0.3), STEEL)
 	deco(m, "ScreenPost", Vector3.new(0.2, 1.0, 0.2), CFrame.new(0.6, 3.4, 1.0), STEEL)
 	local screen = deco(m, "Screen", Vector3.new(1.4, 1.0, 0.12), CFrame.new(0.6, 4.2, 0.85) * CFrame.Angles(math.rad(-15), 0, 0), COLORS.dark)
 	words(screen, "SCAN ITEMS", Color3.fromRGB(150, 220, 255), Enum.Font.Code, true)
@@ -272,7 +272,7 @@ end
 function builders.PottedPlant(m: Model)
 	upright(m, "Pot", Vector3.new(0, 0.75, 0), 1.7, 1.5, TERRACOTTA, true)
 	upright(m, "PotRim", Vector3.new(0, 1.45, 0), 1.9, 0.25, TERRACOTTA)
-	upright(m, "Soil", Vector3.new(0, 1.5, 0), 1.5, 0.12, COLORS.soil)
+	upright(m, "Soil", Vector3.new(0, 1.55, 0), 1.5, 0.16, COLORS.soil) -- (just over the rim's top)
 	for _, leaf in { { 0, 2.6, 0, 2.0 }, { 0.6, 2.2, 0.3, 1.5 }, { -0.55, 2.3, -0.3, 1.5 }, { 0.1, 3.3, -0.1, 1.3 } } do
 		ball(m, "Leaves", Vector3.new(leaf[1], leaf[2], leaf[3]), leaf[4], if leaf[4] > 1.6 then COLORS.leaf else COLORS.leafDark)
 	end
@@ -281,7 +281,7 @@ end
 function builders.HayBaleSeat(m: Model)
 	solid(m, "Bale", Vector3.new(3.0, 1.6, 1.8), CFrame.new(0, 0.8, 0), Color3.fromRGB(226, 190, 96))
 	for _, x in { -0.8, 0.8 } do
-		deco(m, "Twine", Vector3.new(0.12, 1.65, 1.85), CFrame.new(x, 0.8, 0), Color3.fromRGB(170, 120, 60))
+		deco(m, "Twine", Vector3.new(0.12, 1.7, 1.9), CFrame.new(x, 0.85, 0), Color3.fromRGB(170, 120, 60))
 	end
 	deco(m, "Top", Vector3.new(2.9, 0.06, 1.7), CFrame.new(0, 1.62, 0), Color3.fromRGB(236, 204, 112))
 end
@@ -325,10 +325,10 @@ function builders.LampPost(m: Model)
 end
 
 function builders.Rug(m: Model)
-	deco(m, "Rug", Vector3.new(3.5, 0.06, 3.5), CFrame.new(0, 0.03, 0), COLORS.barnRed)
-	deco(m, "Border", Vector3.new(2.9, 0.08, 2.9), CFrame.new(0, 0.04, 0), COLORS.cream)
-	deco(m, "Middle", Vector3.new(2.3, 0.1, 2.3), CFrame.new(0, 0.05, 0), COLORS.barnRed)
-	deco(m, "Diamond", Vector3.new(1.0, 0.12, 1.0), CFrame.new(0, 0.06, 0) * CFrame.Angles(0, math.rad(45), 0), COLORS.hay)
+	deco(m, "Rug", Vector3.new(3.5, 0.05, 3.5), CFrame.new(0, 0.025, 0), COLORS.barnRed) -- (each layer 0.05 above the last: closer flickers)
+	deco(m, "Border", Vector3.new(2.9, 0.1, 2.9), CFrame.new(0, 0.05, 0), COLORS.cream)
+	deco(m, "Middle", Vector3.new(2.3, 0.15, 2.3), CFrame.new(0, 0.075, 0), COLORS.barnRed)
+	deco(m, "Diamond", Vector3.new(1.0, 0.2, 1.0), CFrame.new(0, 0.1, 0) * CFrame.Angles(0, math.rad(45), 0), COLORS.hay)
 end
 
 function builders.FruitCart(m: Model)
@@ -346,7 +346,7 @@ function builders.FruitCart(m: Model)
 	for i = 0, 9 do
 		ball(m, "Fruit", Vector3.new(-2.6 + (i % 5) * 1.1, 3.25 + (i // 5) * 0.4, -0.5 + (i // 5) * 0.9), 0.95, colors[i % #colors + 1])
 	end
-	for _, x in { -3.0, 2.2 } do
+	for _, x in { -2.9, 2.2 } do
 		for _, z in { -1.2, 1.2 } do
 			deco(m, "CanopyPost", Vector3.new(0.18, 3.2, 0.18), CFrame.new(x, 4.4, z), DARK_WOOD)
 		end
@@ -370,7 +370,7 @@ function builders.Bench(m: Model)
 		deco(m, "BackSlat", Vector3.new(6.6, 0.4, 0.15), CFrame.new(0, y, 0.85) * CFrame.Angles(math.rad(10), 0, 0), if i == 1 then WOOD else LIGHT_WOOD)
 	end
 	for _, x in { -2.6, 2.6 } do
-		deco(m, "BackPost", Vector3.new(0.3, 1.8, 0.2), CFrame.new(x, 2.4, 0.8) * CFrame.Angles(math.rad(10), 0, 0), DARK_WOOD)
+		deco(m, "BackPost", Vector3.new(0.3, 1.8, 0.2), CFrame.new(x, 2.4, 0.98) * CFrame.Angles(math.rad(10), 0, 0), DARK_WOOD) -- (behind the slats)
 	end
 end
 
@@ -430,7 +430,7 @@ end
 -- On the walls (z = 0 is the wall's face; they stand out toward −Z)
 
 function builders.PaintedSign(m: Model)
-	local board = deco(m, "Board", Vector3.new(3.4, 1.7, 0.2), CFrame.new(0, 0, -0.1), COLORS.cream)
+	local board = deco(m, "Board", Vector3.new(3.4, 1.7, 0.15), CFrame.new(0, 0, -0.125), COLORS.cream)
 	deco(m, "Border", Vector3.new(3.6, 1.9, 0.15), CFrame.new(0, 0, -0.06), COLORS.barnRed)
 	words(board, "FRESH PRODUCE", COLORS.barnRed)
 end
@@ -472,11 +472,11 @@ function builders.Mural(m: Model)
 	-- a little painted farm: sky, a sun, two hills, a red barn
 	deco(m, "Sky", Vector3.new(7.4, 3.6, 0.1), CFrame.new(0, 0, -0.05), Color3.fromRGB(150, 205, 240))
 	facing(m, "Sun", Vector3.new(2.6, 1.0, -0.12), 1.1, 0.04, COLORS.hay)
-	deco(m, "HillBack", Vector3.new(7.4, 1.4, 0.04), CFrame.new(0, -1.1, -0.13), Color3.fromRGB(120, 180, 90))
-	deco(m, "Hill", Vector3.new(4.4, 1.8, 0.04), CFrame.new(-1.5, -0.9, -0.16) * CFrame.Angles(0, 0, math.rad(8)), Color3.fromRGB(100, 160, 70))
-	deco(m, "Barn", Vector3.new(1.4, 1.1, 0.04), CFrame.new(0.9, -0.6, -0.19), COLORS.barnRed)
-	deco(m, "Roof", Vector3.new(1.1, 1.1, 0.04), CFrame.new(0.9, -0.05, -0.2) * CFrame.Angles(0, 0, math.rad(45)), Color3.fromRGB(150, 50, 36))
-	deco(m, "Frame", Vector3.new(7.8, 4.0, 0.08), CFrame.new(0, 0, -0.02), DARK_WOOD)
+	deco(m, "HillBack", Vector3.new(7.4, 1.4, 0.04), CFrame.new(0, -1.1, -0.13), Color3.fromRGB(120, 180, 90)) -- (each layer 0.06 in front of the last)
+	deco(m, "Hill", Vector3.new(4.4, 1.8, 0.04), CFrame.new(-1.5, -0.9, -0.19) * CFrame.Angles(0, 0, math.rad(8)), Color3.fromRGB(100, 160, 70))
+	deco(m, "Barn", Vector3.new(1.4, 1.1, 0.04), CFrame.new(0.9, -0.6, -0.25), COLORS.barnRed)
+	deco(m, "Roof", Vector3.new(1.1, 1.1, 0.04), CFrame.new(0.9, -0.05, -0.31) * CFrame.Angles(0, 0, math.rad(45)), Color3.fromRGB(150, 50, 36))
+	deco(m, "Frame", Vector3.new(7.8, 4.0, 0.08), CFrame.new(0, 0, 0), DARK_WOOD)
 end
 
 function builders.NeonSign(m: Model)

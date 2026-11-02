@@ -26,7 +26,7 @@
 --                        NPC shoppers in the stores, drawn by the clients (ShopperController)
 --   CrimeAction    C→S  ("Steal" tile | "StealDone" | "StealCancel" | "Swing" | "ArrestStart" userId | "Arrest" userId
 --                        | "Climb" | "LeaveFarm") -> { ok, reason?, result? }   raids (server/Services/CrimeService,
---                        shared/CrimeRules, shared/SackRules): the server times every hold
+--                        shared/CrimeRules, shared/LootRules): the server times every hold
 --   CrimeEvent     S→C  ("Alarm", { userId, name, crop, plot, tile, ends }) to an owner · ("Bonk", { userId, at, suspect })
 --                        · ("Nudge", { at }) · ("Puff", { at }) to everyone · ("Busted", { name, charge, fine, paid,
 --                        owed, owner, number }) to the thief · ("Arrested", { name, fine, paid, owed }) to the owner

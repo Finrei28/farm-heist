@@ -1,18 +1,20 @@
 -- The travel buttons (docs/GameDesign.md §4.11): Home, Town and Visit each
 -- take a 3 s channel (moving cancels it), then the server teleports you
--- (MovementService.Teleport). Each has its own cooldown. None work while
--- you're a Suspect, knocked out or carrying a Loot Sack, and that's checked
--- again when the channel ends. tests/travel.test.luau.
+-- (MovementService.Teleport). There's no cooldown: the channel is the
+-- price, and what keeps travel from being an escape is that none work while
+-- you're a Suspect, knocked out or carrying stolen crops, checked again when
+-- the channel ends (the user, 2026-11-02: "what's the point of having
+-- cooldowns for the home and town button?"). tests/travel.test.luau.
 --
--- travel (per player, not saved) = { channel = { kind, startedAt, from }?, readyAt = { [kind] = time } }
+-- travel (per player, not saved) = { channel = { kind, startedAt, from }? }
 local TravelRules = {
 	CHANNEL = 3,
 	MOVE_TOLERANCE = 1.5, -- studs you can drift during the channel
-	COOLDOWNS = { Home = 60, Town = 30, Visit = 30 },
+	KINDS = { Home = true, Town = true, Visit = true },
 }
 
 function TravelRules.new()
-	return { channel = nil, readyAt = {} }
+	return { channel = nil }
 end
 
 -- status = { suspect, knockedOut, carrying }
@@ -20,13 +22,9 @@ local function blocked(status): boolean
 	return status ~= nil and (status.suspect or status.knockedOut or status.carrying) == true
 end
 
-function TravelRules.cooldownLeft(travel, kind: string, now: number): number
-	return math.max(0, (travel.readyAt[kind] or 0) - now)
-end
-
 -- Starts a channel. Returns ok, reason.
 function TravelRules.start(travel, kind: string, now: number, position: Vector3, status): (boolean, string?)
-	if not TravelRules.COOLDOWNS[kind] then
+	if not TravelRules.KINDS[kind] then
 		return false, "Unknown"
 	end
 	if blocked(status) then
@@ -34,9 +32,6 @@ function TravelRules.start(travel, kind: string, now: number, position: Vector3,
 	end
 	if travel.channel then
 		return false, "Busy"
-	end
-	if TravelRules.cooldownLeft(travel, kind, now) > 0 then
-		return false, "Cooldown"
 	end
 	travel.channel = { kind = kind, startedAt = now, from = position }
 	return true, nil
@@ -59,7 +54,6 @@ function TravelRules.finish(travel, now: number, position: Vector3, status): (bo
 	if blocked(status) then
 		return false, "Blocked"
 	end
-	travel.readyAt[channel.kind] = now + TravelRules.COOLDOWNS[channel.kind]
 	return true, channel.kind
 end
 

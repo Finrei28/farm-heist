@@ -244,7 +244,8 @@ local function drawGrid()
 		flat("Chalk", at((w + 1) / 2, y + 0.5), Vector3.new(w * CELL, 0.05, 0.16), GRID, 0.25)
 	end
 	for _, door in { { Store.DOOR_X, 1, "DOOR" }, { 1, Store.STAFF_Y, "STAFF" } } do
-		local mark = flat("DoorMark", at(door[1], door[2]) * CFrame.new(0, -0.02, 0) * CFrame.Angles(0, math.rad(90), 0), Vector3.new(CELL - 0.4, 0.04, CELL - 0.4), C.gold, 0.55)
+		-- (0.05 under the chalk: closer, they flickered)
+		local mark = flat("DoorMark", at(door[1], door[2]) * CFrame.new(0, -0.05, 0) * CFrame.Angles(0, math.rad(90), 0), Vector3.new(CELL - 0.4, 0.04, CELL - 0.4), C.gold, 0.55)
 		local gui = Instance.new("SurfaceGui")
 		gui.Face = Enum.NormalId.Top
 		gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
@@ -318,7 +319,7 @@ function footprint(model: Model, entry, color: Color3): BasePart
 		local w, d = StoreLayout.span(entry.item, entry.rot or 0)
 		plate.Size = Vector3.new(w * CELL - 0.3, 0.06, d * CELL - 0.3)
 		local frame = PlotLayout.frame(plot)
-		plate.CFrame = frame * CFrame.new(PlotLayout.storeLocal(entry.x + (w - 1) / 2, entry.y + (d - 1) / 2, FLOOR + 0.12))
+		plate.CFrame = frame * CFrame.new(PlotLayout.storeLocal(entry.x + (w - 1) / 2, entry.y + (d - 1) / 2, FLOOR + 0.25)) -- (over the chalk and a rug's top)
 	end
 	return plate
 end

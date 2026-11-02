@@ -6,10 +6,12 @@
 --     over a knocked-out Suspect, CLIMB at a back fence;
 --   * a ring of dots over a crop being stolen (everyone; always on top for
 --     its owner), and the crop shaking;
---   * a red ! over Suspects of your farm (always on top), a red "🧺 name" tag
---     over anyone carrying a sack, dizzy stars over anyone knocked out;
---   * your sack: a sign over the hotbar, "Get home!" with an arrow to your
---     barn; the knockout screen (grey, blurred, the countdown, Leave farm);
+--   * a red ! over Suspects of your farm (always on top), a red "🎃 name" tag
+--     over anyone carrying a stolen crop (held up over their head: the
+--     server's CrimeArt; arms and the bat's swing: PoseController), dizzy
+--     stars over anyone knocked out;
+--   * the crop in your hands: a sign over the hotbar, "Get home!" with an
+--     arrow to your barn; the knockout screen (grey, blurred, the countdown, Leave farm);
 --     the BUSTED! mugshot card; the theft alarm card; BONK! and puffs;
 --   * Roblox's reset button is off while you're a Suspect, knocked out or
 --     carrying (§4.12).
@@ -25,7 +27,6 @@ local Crime = require(Shared.Config.Crime)
 local CrimeRules = require(Shared.CrimeRules)
 local Crops = require(Shared.Config.Crops)
 local PlotLayout = require(Shared.PlotLayout)
-local Rarities = require(Shared.Config.Rarities)
 local Remotes = require(Shared.Remotes)
 
 local Reasons = require(script.Parent.Parent.Reasons)
@@ -33,6 +34,7 @@ local UI = require(script.Parent.Parent.UI)
 local FieldController = require(script.Parent.FieldController)
 local HotbarController = require(script.Parent.HotbarController)
 local HudController = require(script.Parent.HudController)
+local PoseController = require(script.Parent.PoseController)
 
 local C = UI.C
 local make = UI.make
@@ -66,8 +68,9 @@ local function knockedOut(who: Player): boolean
 	return (who:GetAttribute("KnockedOut") or 0) > now()
 end
 
-local function sackWeight(): number
-	return player:GetAttribute("Sack") or 0
+-- The stolen crop in someone's hands (CrimeService), if any.
+local function carried(who: Player): string?
+	return who:GetAttribute("StolenCrop")
 end
 
 local function say(reason: string?)
@@ -220,17 +223,11 @@ local function swing()
 		return
 	end
 	lastSwing = os.clock()
-	local turned = faceNearest()
-	local tool = HotbarController.equipBat()
-	if tool then
-		local anim = Instance.new("StringValue") -- (Roblox's Animate script plays its slash for this)
-		anim.Name = "toolanim"
-		anim.Value = "Slash"
-		anim.Parent = tool
+	faceNearest()
+	if HotbarController.equipBat() and player.Character then
+		PoseController.swing(player.Character) -- (at once on your screen; everyone else's from SwingAt)
 	end
-	if turned then
-		task.wait(0.2) -- (the wind-up: and the server sees you've turned)
-	end
+	task.wait(PoseController.WIND_UP) -- (it lands as the bat comes round; and the server sees you've turned)
 	local result = CrimeAction:InvokeServer("Swing")
 	if not result.ok then
 		say(result.reason)
@@ -304,12 +301,12 @@ local function updateOffers()
 	if not me and not target and mine > 0 and here == mine and HotbarController.hasBat() then
 		local armed = HotbarController.batEquipped()
 		victim = nearest(function(other)
-			local suspect = (other:GetAttribute("SuspectOf") or 0) == mine or (other:GetAttribute("Sack") or 0) > 0
+			local suspect = (other:GetAttribute("SuspectOf") or 0) == mine or carried(other) ~= nil
 			return inFarm(other) == mine and not knockedOut(other) and (suspect or armed)
 		end, Crime.SWING_NEAR)
 	end
 	if victim then
-		local suspect = (victim:GetAttribute("SuspectOf") or 0) == mine or (victim:GetAttribute("Sack") or 0) > 0
+		local suspect = (victim:GetAttribute("SuspectOf") or 0) == mine or carried(victim) ~= nil
 		FieldController.offer("Swing", {
 			priority = 30, text = "SWING\n ", sub = `🏏 {victim.DisplayName}`, kind = "red",
 			info = if suspect then `{victim.DisplayName} is a Suspect: bonk, then arrest!` else `{victim.DisplayName} is only visiting (bonking pays nothing)`,
@@ -327,21 +324,21 @@ local function updateOffers()
 		if part and tile and cropId then
 			offered = true
 			local crop = Crops.ById[cropId]
-			local rarity = Rarities.ById[crop.rarity]
-			local room = Crime.SACK_CAPACITY - sackWeight()
+			local holding = carried(player)
 			local suspect = (player:GetAttribute("SuspectOf") or 0) == here
-			if rarity.sackWeight > room then
+			if holding then
+				local inHand = Crops.ById[holding]
 				FieldController.offer("Steal", {
-					priority = 20, text = "FULL\n ", sub = `🧺 {sackWeight()}/{Crime.SACK_CAPACITY}`, kind = "wood",
-					info = "Your sack is full: get home and it empties into your barn",
+					priority = 20, text = "HANDS\nFULL", sub = `{inHand.icon} {inHand.name}`, kind = "wood",
+					info = `You can carry one crop at a time: take the {inHand.name} home first`,
 					press = function()
-						UI.toast("Your sack is full! Get home to empty it.", "Error", 2.5)
+						UI.toast(`Your hands are full! Take the {inHand.name} home first.`, "Error", 2.5)
 					end,
 				})
 			else
 				FieldController.offer("Steal", {
 					priority = 20, text = "STEAL\n ", sub = `{crop.icon} {crop.name}`, kind = "red",
-					info = if suspect then `Hold {CrimeRules.stealHold(crop.rarity)} s · 🧺 {sackWeight()}/{Crime.SACK_CAPACITY}`
+					info = if suspect then `Hold {CrimeRules.stealHold(crop.rarity)} s, then carry it home over your head`
 						else "Stealing makes you a Suspect: the farmer can bonk and arrest you!",
 					press = function()
 						steal(here, tile, part)
@@ -385,9 +382,9 @@ local function updateOffers()
 end
 
 ------------------------------------------------------------------------
--- Markers over people: the Suspect !, the sack tag, dizzy stars
+-- Markers over people: the Suspect !, the carrier's tag, dizzy stars
 
-local markers = {} -- [Player] = { suspect, sack, stars }
+local markers = {} -- [Player] = { suspect, carry, carryCrop, stars }
 
 local function billboard(name: string, adornee: BasePart, size: UDim2, offset: Vector3, onTop: boolean, maxDistance: number)
 	return make("BillboardGui", {
@@ -416,11 +413,12 @@ local function suspectMarker(other: Player, head: BasePart)
 	return gui
 end
 
-local function sackTag(other: Player, head: BasePart)
-	local gui = billboard("SackTag", head, UDim2.fromScale(7, 1.1), Vector3.new(0, 2.2, 0), false, 150)
+-- A red name with the crop's icon, over the crop they're holding up.
+local function carryTag(other: Player, head: BasePart, cropId: string)
+	local gui = billboard("CarryTag", head, UDim2.fromScale(7, 1.1), Vector3.new(0, 5.4, 0), false, 150)
 	make("TextLabel", {
 		Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Font = UI.HEAD, TextScaled = true,
-		Text = `🧺 {other.DisplayName}`, TextColor3 = C.alarm, TextStrokeColor3 = C.cream, TextStrokeTransparency = 0.2, Parent = gui,
+		Text = `{Crops.ById[cropId].icon} {other.DisplayName}`, TextColor3 = C.alarm, TextStrokeColor3 = C.cream, TextStrokeTransparency = 0.2, Parent = gui,
 	})
 	return gui
 end
@@ -447,7 +445,7 @@ local function updateMarkers()
 		markers[other] = m
 		if not head or not head:IsA("BasePart") then
 			clearMarker(m.suspect)
-			clearMarker(m.sack)
+			clearMarker(m.carry)
 			clearMarker(m.stars)
 			markers[other] = {}
 			continue
@@ -461,23 +459,23 @@ local function updateMarkers()
 			clearMarker(m.suspect)
 			m.suspect = nil
 		end
-		-- a red name with a sack, for everyone
-		local carrying = (other:GetAttribute("Sack") or 0) > 0
+		-- a red name with the crop's icon over anyone carrying one, for everyone
+		local cropId = carried(other)
 		local humanoid = character:FindFirstChildOfClass("Humanoid")
 		if humanoid then
-			humanoid.DisplayDistanceType = if carrying then Enum.HumanoidDisplayDistanceType.None else Enum.HumanoidDisplayDistanceType.Viewer
+			humanoid.DisplayDistanceType = if cropId then Enum.HumanoidDisplayDistanceType.None else Enum.HumanoidDisplayDistanceType.Viewer
 		end
-		if carrying and other ~= player and not (m.sack and m.sack.Adornee == head) then
-			clearMarker(m.sack)
-			m.sack = sackTag(other, head)
-		elseif (not carrying or other == player) and m.sack then
-			clearMarker(m.sack)
-			m.sack = nil
+		if cropId and other ~= player and not (m.carry and m.carry.Adornee == head and m.carryCrop == cropId) then
+			clearMarker(m.carry)
+			m.carry, m.carryCrop = carryTag(other, head, cropId), cropId
+		elseif (not cropId or other == player) and m.carry then
+			clearMarker(m.carry)
+			m.carry, m.carryCrop = nil, nil
 		end
-		if m.sack and m.suspect then
-			m.sack.Enabled = false -- (the ! already names them)
-		elseif m.sack then
-			m.sack.Enabled = true
+		if m.carry and m.suspect then
+			m.carry.Enabled = false -- (the ! already names them)
+		elseif m.carry then
+			m.carry.Enabled = true
 		end
 		-- dizzy stars while knocked out
 		local out = knockedOut(other)
@@ -505,7 +503,7 @@ end
 local RING_DOTS = 20
 local rings = {} -- [tile part] = { gui, dots, home }
 
-local function makeRing(part: BasePart, owned: boolean)
+local function makeRing(part: BasePart, owned: boolean, cropId: string?)
 	local gui = billboard("StealRing", part, UDim2.fromOffset(96, 96), Vector3.new(0, 7, 0), owned, if owned then 600 else 140)
 	local dots = {}
 	for i = 1, RING_DOTS do
@@ -517,7 +515,7 @@ local function makeRing(part: BasePart, owned: boolean)
 	end
 	make("TextLabel", {
 		Name = "Icon", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(46, 46),
-		BackgroundTransparency = 1, Font = UI.HEAD, TextSize = 34, Text = "🧺", Parent = gui,
+		BackgroundTransparency = 1, Font = UI.HEAD, TextSize = 34, Text = if cropId and Crops.ById[cropId] then Crops.ById[cropId].icon else "🌱", Parent = gui,
 	})
 	return { gui = gui, dots = dots, owned = owned }
 end
@@ -536,7 +534,7 @@ local function updateRings()
 		if not ring then
 			local model = part:FindFirstAncestorWhichIsA("Model")
 			local plot = model and model:GetAttribute("PlotIndex")
-			ring = makeRing(part, plot ~= nil and plot == mine)
+			ring = makeRing(part, plot ~= nil and plot == mine, part:GetAttribute("Crop"))
 			local crop = part:FindFirstChild("Crop")
 			if crop and crop:IsA("Model") then
 				ring.crop, ring.base = crop, crop:GetPivot()
@@ -570,41 +568,41 @@ local function updateRings()
 end
 
 ------------------------------------------------------------------------
--- Your sack: a sign over the hotbar with an arrow to your barn
+-- The crop in your hands: a sign over the hotbar with an arrow to your barn
 
-local sackSign = make("Frame", {
-	Name = "SackSign", AnchorPoint = Vector2.new(0.5, 1), Size = UDim2.fromOffset(290, 44), Visible = false, Parent = UI.screen,
+local carrySign = make("Frame", {
+	Name = "CarrySign", AnchorPoint = Vector2.new(0.5, 1), Size = UDim2.fromOffset(290, 44), Visible = false, Parent = UI.screen,
 }, { UI.corner(6), UI.stroke(UI.SEAM, 3) })
-UI.wood(sackSign, 2, false, C.red)
-local sackLabel = UI.label({
+UI.wood(carrySign, 2, false, C.red)
+local carryLabel = UI.label({
 	Position = UDim2.fromOffset(12, 0), Size = UDim2.new(1, -64, 1, 0), Font = UI.HEAD, TextSize = 20, TextColor3 = C.cream,
-	TextStrokeColor3 = UI.SEAM, TextStrokeTransparency = 0, Text = "", ZIndex = 3, Parent = sackSign,
+	TextStrokeColor3 = UI.SEAM, TextStrokeTransparency = 0, Text = "", ZIndex = 3, Parent = carrySign,
 })
-UI.fit(sackLabel, 11)
+UI.fit(carryLabel, 11)
 local arrowDisc = make("Frame", {
-	AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -6, 0.5, 0), Size = UDim2.fromOffset(36, 36), BackgroundColor3 = C.cream, ZIndex = 3, Parent = sackSign,
+	AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -6, 0.5, 0), Size = UDim2.fromOffset(36, 36), BackgroundColor3 = C.cream, ZIndex = 3, Parent = carrySign,
 }, { UI.corner(18), UI.stroke(UI.SEAM, 2) })
 local arrow = make("TextLabel", {
 	Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Font = UI.HEAD, Text = "↑", TextSize = 28, TextColor3 = C.red, ZIndex = 4, Parent = arrowDisc,
 })
 UI.onLayout(function()
-	sackSign.Position = UDim2.new(0.5, 0, 1, -(HudController.HOTBAR_HEIGHT + 20))
+	carrySign.Position = UDim2.new(0.5, 0, 1, -(HudController.HOTBAR_HEIGHT + 20))
 end)
 
-local function updateSack()
-	local weight = sackWeight()
-	local carrying = weight > 0
-	sackSign.Visible = carrying and not knockedOut(player)
+local function updateCarrySign()
+	local cropId = carried(player)
+	carrySign.Visible = cropId ~= nil and not knockedOut(player)
 	local travel = UI.screen:FindFirstChild("Travel")
 	if travel then
-		travel.Visible = not carrying -- (no travel with a sack: walk home)
+		travel.Visible = cropId == nil -- (no travel with stolen crops: walk home)
 	end
-	if not carrying then
+	if not cropId then
 		return
 	end
+	local crop = Crops.ById[cropId]
 	local mine = myPlot()
 	local home = mine > 0 and inFarm(player) == mine
-	sackLabel.Text = if home then `🧺 {weight}/{Crime.SACK_CAPACITY} · to your door!` else `🧺 {weight}/{Crime.SACK_CAPACITY} · Get home!`
+	carryLabel.Text = if home then `{crop.icon} {crop.name} · to your door!` else `{crop.icon} {crop.name} · Get home!`
 	local root = rootOf(player)
 	local camera = workspace.CurrentCamera
 	arrowDisc.Visible = mine > 0 and root ~= nil
@@ -724,7 +722,7 @@ local function bustedCard(info)
 			character.Archivable = true
 			local clone = character:Clone()
 			for _, child in clone:GetDescendants() do
-				if child:IsA("Script") or child:IsA("LocalScript") or child:IsA("Tool") or child.Name == "LootSack" or child:IsA("BillboardGui") then
+				if child:IsA("Script") or child:IsA("LocalScript") or child:IsA("Tool") or child.Name == "CarriedCrop" or child:IsA("BillboardGui") then
 					child:Destroy()
 				end
 			end
@@ -929,7 +927,7 @@ end
 
 local resetAllowed: boolean? = nil
 local function updateReset()
-	local allowed = sackWeight() <= 0 and not knockedOut(player) and (player:GetAttribute("SuspectOf") or 0) == 0
+	local allowed = carried(player) == nil and not knockedOut(player) and (player:GetAttribute("SuspectOf") or 0) == 0
 	if allowed ~= resetAllowed then
 		if pcall(StarterGui.SetCore, StarterGui, "ResetButtonCallback", allowed) then
 			resetAllowed = allowed
@@ -958,8 +956,9 @@ function CrimeController.Start()
 		elseif kind == "Arrested" then
 			arrestedPop(info)
 		elseif kind == "Deposited" then
-			UI.toast(`🧺 {info.text}`, "Good")
-			UI.float("🧺", UDim2.fromScale(0.5, 0.6), C.gold)
+			local crop = info.crop and Crops.ById[info.crop]
+			UI.toast(info.text, "Good")
+			UI.float(if crop then crop.icon else "⭐", UDim2.fromScale(0.5, 0.6), C.gold)
 		end
 	end)
 
@@ -976,18 +975,17 @@ function CrimeController.Start()
 	if player.Character then
 		onCharacter(player.Character)
 	end
-	player:GetAttributeChangedSignal("Sack"):Connect(function()
-		local weight = sackWeight()
-		if weight > 0 then
-			sackSign.Rotation = -2
-			TweenService:Create(sackSign, TweenInfo.new(0.3, Enum.EasingStyle.Back), { Rotation = 0 }):Play()
+	player:GetAttributeChangedSignal("StolenCrop"):Connect(function()
+		if carried(player) then
+			carrySign.Rotation = -2
+			TweenService:Create(carrySign, TweenInfo.new(0.3, Enum.EasingStyle.Back), { Rotation = 0 }):Play()
 		end
 	end)
 
 	local elapsed = 0
 	RunService.Heartbeat:Connect(function(dt)
 		updateKnockout()
-		updateSack()
+		updateCarrySign()
 		elapsed += dt
 		if elapsed < TICK then
 			return
@@ -1007,7 +1005,7 @@ function CrimeController.Start()
 		local m = markers[other]
 		if m then
 			clearMarker(m.suspect)
-			clearMarker(m.sack)
+			clearMarker(m.carry)
 			clearMarker(m.stars)
 			markers[other] = nil
 		end

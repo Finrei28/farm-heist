@@ -1,5 +1,5 @@
--- The travel buttons (shared/TravelRules): 3 s channels, cooldowns, and no
--- escaping a raid by teleport.
+-- The travel buttons (shared/TravelRules): 3 s channels, no cooldowns, and
+-- no escaping a raid by teleport.
 return function(spec, harness)
 	local describe, it, expect = spec.describe, spec.it, spec.expect
 	local Vector3 = require("@lune/roblox").Vector3
@@ -36,16 +36,14 @@ return function(spec, harness)
 		end)
 	end)
 
-	describe("cooldowns", function()
-		it("Home waits 60 s, and Town has its own 30 s", function()
+	describe("no cooldowns", function()
+		it("you can go Home again straight after a trip (the channel is the only wait)", function()
 			local travel = TravelRules.new()
 			TravelRules.start(travel, "Home", NOW, HERE, CLEAN)
 			TravelRules.finish(travel, NOW + 3, HERE, CLEAN)
-			expect(select(2, TravelRules.start(travel, "Home", NOW + 30, HERE, CLEAN))).toBe("Cooldown")
-			expect(TravelRules.cooldownLeft(travel, "Home", NOW + 30)).toBe(33)
-			expect(TravelRules.start(travel, "Town", NOW + 30, HERE, CLEAN)).toBe(true)
-			TravelRules.cancel(travel)
-			expect(TravelRules.start(travel, "Home", NOW + 63, HERE, CLEAN)).toBe(true)
+			expect(TravelRules.start(travel, "Town", NOW + 3.5, HERE, CLEAN)).toBe(true)
+			TravelRules.finish(travel, NOW + 6.5, HERE, CLEAN)
+			expect(TravelRules.start(travel, "Home", NOW + 7, HERE, CLEAN)).toBe(true)
 		end)
 	end)
 
@@ -61,7 +59,7 @@ return function(spec, harness)
 			local ok, why = TravelRules.finish(travel, NOW + 3, HERE, { suspect = true })
 			expect(ok).toBe(false)
 			expect(why).toBe("Blocked")
-			expect(TravelRules.cooldownLeft(travel, "Town", NOW + 3)).toBe(0)
+			expect(travel.channel).toBe(nil)
 		end)
 	end)
 end

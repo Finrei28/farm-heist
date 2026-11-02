@@ -65,7 +65,9 @@ lune run tests/run
 | `land` | Land Permits: earned by level, touching blocks only, fees in order |
 | `crime` | who may steal, Suspects, bat hits, knockouts, arrests, every way of dodging an arrest |
 | `fine` | the fine formula, repeat offenders, fleeing, debt and its expiry |
-| `travel` | the Home / Town / Visit buttons: channels, cooldowns, no escaping a raid |
+| `travel` | the Home / Town / Visit buttons: channels, no cooldowns, no escaping a raid |
+| `loot`, `produce` | a stolen crop in your hands (one at a time, where it goes back to); every crop's carried model the size it says; trucks solid |
+| `flicker` | no two faces fighting over one plane anywhere the server builds, at every level (`lune run tools/flicker` lists them) |
 | `zone` | inside a farm or not: the edge, turned plots, climbing |
 | `auction` | bids, quick bids, anti-snipe, the leader leaving |
 | `workers` | wages, speeds, fees, station caps |
@@ -81,6 +83,8 @@ lune run tests/run
 **Before publishing**, run `lune run tools/check`: it compiles every script in `src/` and runs all the tests, then says "Ready to publish" or what to fix.
 
 **Progression sim:** `lune run tools/progression` plays 35 days of the game for a casual (45 min a day), daily (1.5 h) and keen (3 h) player with the real rules, prints when each level, Land Permit and building comes, and checks the design doc's pacing targets. Run it after changing XP, crop values, prices or fees. `lune run tools/progression daily power=2.7` tries another XP curve.
+
+**Flicker:** `lune run tools/flicker` lists every pair of faces that would flicker (z-fight) in everything the server builds; `tests/flicker.test.luau` keeps it at none.
 
 **Raid race:** `lune run tools/raidrace` times the design doc's worked example (§4.11) from the real layout: how long a thief needs to get a back-row Pumpkin over the fence, with and without defences, against an owner coming from the warehouse or from town.
 

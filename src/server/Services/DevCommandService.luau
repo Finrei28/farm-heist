@@ -24,10 +24,10 @@
 --   /plant Pumpkin       plant that crop on every open, empty tile of your field (free; /grow ripe ripens them)
 --   /ko [suspect]        knock yourself out where you stand (as a Suspect: the arrest screen)
 --   /suspect             mark yourself a Suspect of the farm you're in
---   /sack Pumpkin 2      put stolen crops in your sack (from your own farm: walk to your door to empty it)
+--   /carry Pumpkin       a stolen crop in your hands (from your own farm: walk to your door to put it away); /carry none empties them
 --   /debt 300            owe 300 coins (to yourself) for the police desk and paying off debts
 --   /earn 200            as if you'd sold crops for 200 coins (sales XP; half goes to any debts)
---   /crimelog            prints your visits, sack, cooldowns, debts, arrests and your farm's raid ledger
+--   /crimelog            prints your visits, what you carry, cooldowns, debts, arrests and your farm's raid ledger
 --   /wipe                start your save over (in place)
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -354,14 +354,19 @@ function DevCommandService.Start()
 		reply(player, if plot > 0 then `You're a Suspect of farm {plot}` else "Stand in someone's farm first")
 	end)
 
-	register("DevSack", "/sack", function(player, _data, args)
-		local crop = findCrop(args[2] or "Carrot")
-		if not crop then
-			reply(player, "Which crop? e.g. /sack Pumpkin 2")
+	register("DevCarry", "/carry", function(player, _data, args)
+		if string.lower(args[2] or "") == "none" then
+			CrimeService.DevCarry(player, nil, player.UserId)
+			reply(player, "Your hands are empty")
 			return
 		end
-		CrimeService.DevFillSack(player, crop.id, math.floor(tonumber(args[3]) or 1), player.UserId)
-		reply(player, `Sack: {player:GetAttribute("Sack") or 0}/5. Walk to your farmhouse door to empty it`)
+		local crop = findCrop(args[2] or "Carrot")
+		if not crop then
+			reply(player, "Which crop? e.g. /carry Pumpkin")
+			return
+		end
+		CrimeService.DevCarry(player, crop.id, player.UserId)
+		reply(player, `Carrying a stolen {crop.name}. Walk to your farmhouse door to put it in your barn`)
 	end)
 
 	register("DevDebt", "/debt", function(player, data, args)

@@ -333,7 +333,7 @@ end
 
 -- A hanging sign with the store's name (StoreArt.setName changes it).
 local function nameSign(cf: CFrame, size: Vector3, board: Color3, ink: Color3, frameColor: Color3, parent: Instance)
-	Parts.prop({ Name = "SignFrame", Size = size + Vector3.new(0.6, 0.6, -0.1), CFrame = cf * CFrame.new(0, 0, 0.1), Color = frameColor }, parent)
+	Parts.prop({ Name = "SignFrame", Size = size + Vector3.new(0.6, 0.6, 0), CFrame = cf * CFrame.new(0, 0, 0.1), Color = frameColor }, parent) -- (0.1 behind the board both sides)
 	local p = Parts.prop({ Name = "SignBoard", Size = size, CFrame = cf, Color = board }, parent)
 	words(p, "", ink, Enum.Font.FredokaOne, "StoreName")
 	return p
@@ -451,7 +451,7 @@ local function farmShop(sf, building, look, color, roof, parent)
 	-- the barn door slid open beside the doorway, X-braced in white
 	local dw = d1 - d0
 	local doorHeight = DOOR_TOP - FLOOR
-	box("BarnDoor", front, d1 + 0.2, FLOOR, -0.4, d1 + 0.2 + dw, DOOR_TOP, -0.1, look.wall, parent).CanCollide = false
+	box("BarnDoor", front, d1 + 0.2, FLOOR + 0.08, -0.4, d1 + 0.2 + dw, DOOR_TOP, -0.1, look.wall, parent).CanCollide = false -- (hung just off the ground)
 	for _, slant in { 1, -1 } do
 		Parts.prop({
 			Name = "Brace", Size = Vector3.new(math.sqrt(dw * dw + doorHeight * doorHeight) - 0.6, 0.35, 0.1),
@@ -463,7 +463,7 @@ local function farmShop(sf, building, look, color, roof, parent)
 	-- corner boards and the eave band
 	for _, x in { -w - S.wall - 0.15, S.wall + 0.15 } do
 		for _, z in { -S.wall - 0.15, d + S.wall + 0.15 } do
-			box("CornerBoard", sf, x - 0.55, FLOOR - 0.1, z - 0.55, x + 0.55, h, z + 0.55, look.trim, parent)
+			box("CornerBoard", sf, x - 0.55, FLOOR - 0.1, z - 0.55, x + 0.55, h - 0.1, z + 0.55, look.trim, parent) -- (level with the wall's top would flicker)
 		end
 	end
 	decoBox("EaveBand", sf, -w - S.wall - 0.2, h - 0.5, -S.wall - 0.15, S.wall + 0.2, h, -S.wall, look.trim, parent)
@@ -560,13 +560,13 @@ local function marketHall(sf, building, look, color, roof, parent)
 	-- double doors swung open
 	for _, side in { -1, 1 } do
 		local hinge = if side < 0 then d0 else d1
-		box("Door", front, hinge, FLOOR, 0, hinge - side * 0.3, DOOR_TOP - 0.2, 2, COLORS.post, parent).CanCollide = false
+		box("Door", front, hinge, FLOOR, 0.06, hinge - side * 0.3, DOOR_TOP - 0.2, 2, COLORS.post, parent).CanCollide = false
 	end
 	box("Roof", sf, -w - S.wall - 0.5, h, -S.wall, S.wall + 0.5, h + 0.6, d + S.wall + 0.5, SLATE_ROOF, roof)
 	box("Cornice", sf, -w - S.wall - 0.6, h - 0.5, -S.wall - 0.6, S.wall + 0.6, h + 0.2, -S.wall + 0.2, COLORS.post, roof)
 	-- the raised middle of the front with the clock
 	local raised = signWidth / 2 - 4
-	box("Parapet", sf, -w / 2 - raised, h, -S.wall, -w / 2 + raised, h + 4.5, -S.wall + 0.8, look.wall, roof)
+	box("Parapet", sf, -w / 2 - raised, h, -S.wall - 0.06, -w / 2 + raised, h + 4.5, -S.wall + 0.8, look.wall, roof)
 	box("ParapetCap", sf, -w / 2 - raised - 0.4, h + 4.5, -S.wall - 0.3, -w / 2 + raised + 0.4, h + 5, -S.wall + 1.1, COLORS.cream, roof)
 	local clock = Parts.prop({ Name = "ClockFace", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.3, 3.4, 3.4),
 		CFrame = sf * CFrame.new(-w / 2, h + 2.3, -S.wall - 0.1) * CFrame.Angles(0, math.rad(90), 0), Color = COLORS.cream }, roof)
@@ -663,7 +663,7 @@ local function supermarket(sf, building, look, color, roof, parent, level)
 	-- the billboard
 	local bz = d * 0.45
 	for _, x in { -w / 2 - 10, -w / 2 + 10 } do
-		box("BillboardPost", sf, x - 0.5, h + 0.5, bz - 0.5, x + 0.5, h + 9, bz + 0.5, STEEL, roof)
+		box("BillboardPost", sf, x - 0.5, h + 0.5, bz - 0.4, x + 0.5, h + 9, bz + 0.6, STEEL, roof)
 	end
 	box("BillboardFrame", sf, -w / 2 - 16, h + 8.5, bz - 0.5, -w / 2 + 16, h + 17, bz, COLORS.post, roof)
 	local board = Parts.prop({ Name = "Billboard", Size = Vector3.new(31, 7.5, 0.1), CFrame = sf * CFrame.new(-w / 2, h + 12.75, bz - 0.55), Color = COLORS.cream }, roof)

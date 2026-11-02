@@ -117,7 +117,7 @@ function BUILDERS.Corn(model, base, stage, _s)
 		if stage == "Ripe" and i <= 2 then
 			local cob = foot * CFrame.new(0, height * 0.55, 0) * CFrame.Angles(0, math.rad(i * 150), math.rad(25)) * CFrame.new(0.7, 0, 0)
 			prop({ Name = "Cob", Size = Vector3.new(0.9, 2.2, 0.9), CFrame = cob, Color = CORN }, model)
-			prop({ Name = "Husk", Size = Vector3.new(0.3, 1.6, 0.9), CFrame = cob * CFrame.new(0.5, -0.4, 0), Color = COLORS.leaf, CastShadow = false }, model)
+			prop({ Name = "Husk", Size = Vector3.new(0.3, 1.6, 1.0), CFrame = cob * CFrame.new(0.5, -0.4, 0), Color = COLORS.leaf, CastShadow = false }, model)
 		end
 	end
 end

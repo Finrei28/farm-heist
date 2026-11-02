@@ -6,7 +6,7 @@
 --   local budget = MoveRules.new()
 --   MoveRules.step(budget, offset, dt, scale?) -> ok: boolean, overBy: number
 --     (scale: a share of the usual allowance, for someone who can't run:
---     a thief with a Loot Sack walks at 85% and can't sprint)
+--     a thief carrying a stolen crop walks at 85% and can't sprint)
 --   MoveRules.refill(budget)    (after a respawn or a server teleport)
 local Settings = require(script.Parent.Config.Settings)
 

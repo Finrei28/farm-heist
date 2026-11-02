@@ -167,7 +167,7 @@ local function buildTown(world: Instance)
 	local boardAt = PlotLayout.frontOf("HiringHall", 4)
 	local boardFrame = CFrame.lookAt(boardAt, Vector3.new(0, 0, 0))
 	for _, x in { -5, 5 } do
-		part({ Name = "BoardPost", Size = Vector3.new(0.6, 8, 0.6), CFrame = boardFrame * CFrame.new(x, 4, 0), Color = COLORS.post }, town)
+		part({ Name = "BoardPost", Size = Vector3.new(0.6, 8, 0.6), CFrame = boardFrame * CFrame.new(x, 4, 0.15), Color = COLORS.post }, town) -- (just behind the board's face)
 	end
 	local jobBoard = part({ Name = "JobBoard", Size = Vector3.new(10, 5, 0.6), CFrame = boardFrame * CFrame.new(0, 5, 0), Color = COLORS.kraft }, town)
 	for i, color in { COLORS.cream, COLORS.hay, COLORS.cream, COLORS.water, COLORS.cream, COLORS.leaf } do
@@ -315,7 +315,7 @@ local function buildPlot(index: number, world: Instance)
 		for p = 0, posts do
 			local px = min.X + (max.X - min.X) * p / posts
 			-- (posts stand a little above the slats: level tops would flicker)
-			plotBox("Post", frame, Vector3.new(px - 0.5, 0, min.Z - 0.3), Vector3.new(px + 0.5, height + 0.5, max.Z - 0.35), { Color = COLORS.post }, fenceModel)
+			plotBox("Post", frame, Vector3.new(px - 0.5, 0, min.Z - 0.3), Vector3.new(px + 0.5, height + 0.5, max.Z - 0.4), { Color = COLORS.post }, fenceModel) -- (a little behind the rails' face: flush, it flickered through the gaps)
 		end
 		plotBox(`{name}Blocker`, frame, min, Vector3.new(max.X, PlotLayout.FENCE_BLOCK, max.Z),
 			{ Transparency = 1, CanQuery = false, CanTouch = false }, model)

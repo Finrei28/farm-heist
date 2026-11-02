@@ -104,7 +104,7 @@ local function sheriff(feet: CFrame, parent: Instance)
 		Parts.prop({ Name = "Wing", Size = Vector3.new(0.5, 1.6, 2), CFrame = body * CFrame.new(x, 0, -0.1) * CFrame.Angles(math.rad(-15), 0, 0), Color = Color3.fromRGB(232, 226, 214) }, model)
 	end
 	for i, angle in { -30, 0, 30 } do
-		Parts.prop({ Name = "TailFeather", Size = Vector3.new(0.35, 2.6, 0.9),
+		Parts.prop({ Name = "TailFeather", Size = Vector3.new(0.35, 2.6, 0.78 + i * 0.12), -- (each a little thicker: all one plane, they flickered)
 			CFrame = body * CFrame.new(0, 1, -1.3) * CFrame.Angles(math.rad(-30), 0, math.rad(angle)) * CFrame.new(0, 1.1, 0),
 			Color = if i == 2 then Color3.fromRGB(52, 90, 60) else Color3.fromRGB(70, 112, 70) }, model)
 	end
@@ -163,7 +163,7 @@ function PoliceArt.build(town: Instance)
 	-- behind a parapet.
 	box("Police", f, -W / 2, 0, -D, W / 2, H, 0, BLUE, model)
 	deco("BaseBand", f, -W / 2 - 0.1, 0, -D - 0.1, W / 2 + 0.1, 1.6, 0.12, BLUE_DARK, model)
-	deco("Cornice", f, -W / 2 - 0.5, H - 0.6, -D - 0.5, W / 2 + 0.5, H, 0.5, CREAM, model)
+	deco("Cornice", f, -W / 2 - 0.5, H - 0.6, -D - 0.5, W / 2 + 0.5, H + 0.1, 0.5, CREAM, model) -- (proud of the roof: level, it flickered)
 	deco("StoreyBand", f, -W / 2 - 0.1, 11, -0.1, W / 2 + 0.1, 11.6, 0.25, CREAM, model)
 	for _, x in { -W / 2, W / 2 } do
 		deco("Corner", f, x - 0.5, 0, -0.5, x + 0.5, H - 0.6, 0.5, CREAM, model)

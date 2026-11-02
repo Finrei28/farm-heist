@@ -11,7 +11,7 @@ return function(spec, harness)
 	local function stealCtx(overrides)
 		local ctx = {
 			now = NOW, inside = true, knockedOut = false, thiefProtected = false, farmProtected = false,
-			trusted = false, cooldownUntil = 0, ripe = true, rarity = "Rare", sackUsed = 0, raidUsed = 0,
+			trusted = false, cooldownUntil = 0, ripe = true, rarity = "Rare", carrying = false, raidUsed = 0,
 		}
 		for k, v in overrides or {} do
 			ctx[k] = v
@@ -35,7 +35,7 @@ return function(spec, harness)
 	end
 
 	describe("who may steal", function()
-		it("a ripe crop in someone else's farm, with room in the sack", function()
+		it("a ripe crop in someone else's farm, with empty hands", function()
 			expect(reason(CrimeRules.canSteal(stealCtx()))).toBe("ok")
 		end)
 		it("nobody under a Sprout Shield or arrival grace, either way round", function()
@@ -49,10 +49,9 @@ return function(spec, harness)
 			expect(reason(CrimeRules.canSteal(stealCtx({ knockedOut = true })))).toBe("KnockedOut")
 			expect(reason(CrimeRules.canSteal(stealCtx({ inside = false })))).toBe("NotInside")
 		end)
-		it("a sack holds 5 weight: two Rares, then no third", function()
-			expect(reason(CrimeRules.canSteal(stealCtx({ sackUsed = 2 })))).toBe("ok")
-			expect(reason(CrimeRules.canSteal(stealCtx({ sackUsed = 4 })))).toBe("SackFull")
-			expect(reason(CrimeRules.canSteal(stealCtx({ rarity = "Mythic", sackUsed = 1 })))).toBe("SackFull")
+		it("one crop at a time: not with a stolen crop already in your hands", function()
+			expect(reason(CrimeRules.canSteal(stealCtx({ carrying = true })))).toBe("HandsFull")
+			expect(reason(CrimeRules.canSteal(stealCtx({ rarity = "Common", carrying = true })))).toBe("HandsFull")
 		end)
 		it("a farm loses at most 10 weight per 10 minutes", function()
 			local ledger = {}
@@ -106,7 +105,7 @@ return function(spec, harness)
 			CrimeRules.enter(visit, NOW + 500)
 			expect(CrimeRules.isSuspect(visit, NOW + 500)).toBe(false)
 		end)
-		it("carrying a sack inside a farm makes you one there, even with loot from another farm", function()
+		it("carrying a stolen crop inside a farm makes you one there, even one from another farm", function()
 			local visit = CrimeRules.newVisit()
 			CrimeRules.enter(visit, NOW)
 			expect(CrimeRules.isSuspect(visit, NOW, true)).toBe(true)
@@ -172,7 +171,7 @@ return function(spec, harness)
 			expect(reason(CrimeRules.canArrest(visit, NOW + 7, { distance = 3, ownerInside = true }))).toBe("NotKnockedOut")
 			expect(CrimeRules.canLeaveFarm(visit, NOW + 3)).toBe(false)
 		end)
-		it("someone caught carrying loot from another farm stays arrestable after the sack goes back", function()
+		it("someone caught carrying another farm's crop stays arrestable after it goes back", function()
 			local visit = CrimeRules.newVisit()
 			CrimeRules.enter(visit, NOW)
 			expect(CrimeRules.knockOut(visit, NOW, true)).toBe(true)

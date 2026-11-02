@@ -72,7 +72,7 @@ local function build(info)
 	end
 	if look.vest then -- hi-vis, with a reflective band
 		table.insert(parts, { piece(model, "Vest", Vector3.new(2.2, 2, 1.2), look.vest), CFrame.new(0, 3.45, 0) })
-		table.insert(parts, { piece(model, "VestBand", Vector3.new(2.25, 0.25, 1.25), Color3.fromRGB(230, 236, 240)), CFrame.new(0, 3.1, 0) })
+		table.insert(parts, { piece(model, "VestBand", Vector3.new(2.3, 0.25, 1.3), Color3.fromRGB(230, 236, 240)), CFrame.new(0, 3.1, 0) })
 	end
 	if look.sash then
 		table.insert(parts, { piece(model, "Sash", Vector3.new(0.5, 2.9, 1.25), look.sash), CFrame.new(0, 3.35, 0) * CFrame.Angles(0, 0, math.rad(35)) })

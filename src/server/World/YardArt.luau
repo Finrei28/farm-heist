@@ -114,8 +114,9 @@ function YardArt.crate(crate, cframe: CFrame, parent: Instance): Model
 	return model
 end
 
--- Puts a crate in a character's arms (welded in front of their chest), or
--- takes it away (crate = nil).
+-- Puts a crate in a character's arms (welded in front of their chest, a
+-- LeftHold and RightHold on its sides for the hands), or takes it away
+-- (crate = nil).
 function YardArt.carry(character: Model, crate)
 	local old = character:FindFirstChild("CarriedCrate")
 	if old then
@@ -127,6 +128,13 @@ function YardArt.carry(character: Model, crate)
 	end
 	local model = YardArt.crate(crate, root.CFrame * CFrame.new(0, -0.6, -2.1), character)
 	model.Name = "CarriedCrate"
+	-- where the hands go (client/PoseController): the sides, toward the body
+	for _, side in { -1, 1 } do
+		local spot = Instance.new("Attachment")
+		spot.Name = if side < 0 then "LeftHold" else "RightHold"
+		spot.Position = Vector3.new(side * (CRATE.X / 2 + 0.15), 0.1, 0.8)
+		spot.Parent = model.Box
+	end
 	for _, child in model:GetDescendants() do
 		if child:IsA("BasePart") then
 			child.Anchored = false
@@ -168,7 +176,7 @@ function YardArt.showHold(model: Model, crates)
 			end
 			local spot = (i - 1) % 4
 			local layer = (i - 1) // 4
-			local offset = Vector3.new((spot % 2) * 3.4 - 1.7, P.dock.height + layer * CRATE.Y, (spot // 2) * -3.4 + 1.2)
+			local offset = Vector3.new((spot % 2) * 3.4 - 1.7, P.dock.height + 0.2 + layer * CRATE.Y, (spot // 2) * -3.4 + 1.2) -- (on the rack's boards)
 			YardArt.crate(crate, frame * CFrame.new(at + offset), rack)
 		end
 		return
@@ -265,7 +273,7 @@ local function body(truck: Model, base: CFrame, z0: number, z1: number, floor: n
 	box("BoxRoof", Vector3.new(0, floor + height + 0.1, mid), Vector3.new(8.9, 0.2, length + 0.1), skin)
 	box("DoorRoll", Vector3.new(0, floor + height - 0.6, z1 - 0.5), Vector3.new(8.2, 1, 1), band)
 	for _, x in { -4.3, 4.3 } do
-		box("DoorFrame", Vector3.new(x, floor + height / 2, z1), Vector3.new(0.5, height, 0.4), COLORS.metal)
+		box("DoorFrame", Vector3.new(x, floor + height / 2 - 0.05, z1), Vector3.new(0.5, height + 0.1, 0.4), COLORS.metal)
 		box("Taillight", Vector3.new(x, floor - 0.6, z1 + 0.05), Vector3.new(0.6, 0.6, 0.15), COLORS.barnRed, { Material = Enum.Material.Neon })
 	end
 	box("RearBumper", Vector3.new(0, floor - 1, z1), Vector3.new(8, 0.5, 0.4), COLORS.dark)
@@ -276,6 +284,14 @@ local function body(truck: Model, base: CFrame, z0: number, z1: number, floor: n
 		face.CanTouch = false
 	end
 end
+
+-- A truck's body is solid (you walk round it, or climb into its bed); its
+-- trim (glass, lights, grille, bands, words) is decoration on that body.
+local SOLID = {
+	Chassis = true, Hood = true, Cab = true, CabTop = true, Roof = true, Bumper = true, RearBumper = true,
+	BedFloor = true, BedSide = true, BedFront = true, Tailgate = true, BoxSide = true, BoxFront = true, BoxRoof = true,
+	DoorFrame = true, Wheel = true, LandingGear = true, Cooler = true, FuelTank = true, Spoiler = true, Exhaust = true,
+}
 
 -- Builds a truck model of a kind (Config/Warehouse.BUILDINGS truck) in the
 -- farm's colour, parked at `parked` (its middle on the ground, nose -Z).
@@ -302,7 +318,7 @@ local function buildTruck(kind: string, paint: Color3, parked: CFrame, name: str
 		for _, z in { -6.5, 6 } do
 			axle(truck, base, z, 3.9, 3.2)
 		end
-		box("Chassis", Vector3.new(0, 2.2, 0), Vector3.new(8.2, 1, 20), COLORS.dark)
+		box("Chassis", Vector3.new(0, 2.2, 0), Vector3.new(8.2, 1, 19.8), COLORS.dark)
 		box("Hood", Vector3.new(0, 3.6, -7.7), Vector3.new(8.4, 2, 4.6), paint)
 		box("Cab", Vector3.new(0, 4.9, -3.4), Vector3.new(8.4, 4.6, 4.2), paint)
 		box("Windshield", Vector3.new(0, 5.6, -5.55), Vector3.new(7.4, 2.4, 0.15), GLASS, { Reflectance = 0.2 })
@@ -320,7 +336,7 @@ local function buildTruck(kind: string, paint: Color3, parked: CFrame, name: str
 			box("BedSide", Vector3.new(x, 3.9, 4.2), Vector3.new(0.4, 1.8, 11.6), paint)
 		end
 		box("BedFront", Vector3.new(0, 3.9, -1.4), Vector3.new(8.2, 1.8, 0.4), paint)
-		box("Tailgate", Vector3.new(0, 3.9, 9.8), Vector3.new(8.2, 1.8, 0.4), COLORS.cream)
+		box("Tailgate", Vector3.new(0, 3.9, 9.86), Vector3.new(7.5, 1.8, 0.4), COLORS.cream) -- (between the bed's sides)
 		bed:SetAttribute("Floor", 3)
 		bed:SetAttribute("Back", 7.6)
 	elseif kind == "BoxTruck" then
@@ -343,7 +359,7 @@ local function buildTruck(kind: string, paint: Color3, parked: CFrame, name: str
 		local skin = if reefer then Color3.fromRGB(240, 244, 246) else Color3.fromRGB(196, 202, 208)
 		local trailerFront = back + 1.6
 		body(truck, base, trailerFront, half, 3.8, 10, skin, paint, if reefer then "❄ FARM FRESH" else "FARM FRESH")
-		prop({ Name = "LandingGear", Size = Vector3.new(6, 2.4, 0.5), CFrame = base * CFrame.new(0, 2.6, trailerFront + 3), Color = COLORS.dark }, truck)
+		prop({ Name = "LandingGear", Size = Vector3.new(6, 2.4, 0.5), CFrame = base * CFrame.new(0, 2.55, trailerFront + 3), Color = COLORS.dark }, truck) -- (its top just under the bed floor's)
 		if reefer then
 			prop({ Name = "Cooler", Size = Vector3.new(6.4, 4.4, 1.4), CFrame = base * CFrame.new(0, 3.8 + 10 - 3, trailerFront - 0.6), Color = Color3.fromRGB(226, 230, 234) }, truck)
 			prop({ Name = "CoolerGrille", Size = Vector3.new(5.2, 3, 0.1), CFrame = base * CFrame.new(0, 3.8 + 10 - 3, trailerFront - 1.35), Color = COLORS.slate }, truck)
@@ -352,6 +368,11 @@ local function buildTruck(kind: string, paint: Color3, parked: CFrame, name: str
 		bed:SetAttribute("Back", half - 2.2)
 	end
 	bed.Parent = truck
+	for _, piece in truck:GetDescendants() do
+		if piece:IsA("BasePart") and SOLID[piece.Name] then
+			piece.CanCollide = true
+		end
+	end
 	truck.WorldPivot = parked
 	truck.Parent = parent
 	return truck
@@ -389,10 +410,12 @@ local function buildShed(warehouse: Model, frame: CFrame)
 	plotBox("Floor", frame, Vector3.new(s.min.X, 0.3, s.min.Z), Vector3.new(s.max.X, 0.5, s.max.Z), { Color = COLORS.edging }, shed)
 	for _, x in { s.min.X + 0.5, (s.min.X + s.max.X) / 2, s.max.X - 0.5 } do
 		for _, z in { s.min.Z + 0.5, s.max.Z - 0.5 } do
-			plotBox("Post", frame, Vector3.new(x - 0.5, 0.5, z - 0.5), Vector3.new(x + 0.5, 11, z + 0.5), { Color = COLORS.post }, shed)
+			-- (the back posts stand proud of the back wall on both faces: flush, they flickered)
+			local d = if z > s.min.Z + 1 then 0.65 else 0.5
+			plotBox("Post", frame, Vector3.new(x - 0.5, 0.5, z - d), Vector3.new(x + 0.5, 11, z + d), { Color = COLORS.post }, shed)
 		end
 	end
-	plotBox("BackWall", frame, Vector3.new(s.min.X, 0.5, s.max.Z - 1), Vector3.new(s.max.X, 10.5, s.max.Z), { Color = COLORS.cream }, shed)
+	plotBox("BackWall", frame, Vector3.new(s.min.X + 0.3, 0.5, s.max.Z - 1), Vector3.new(s.max.X - 0.3, 10.5, s.max.Z), { Color = COLORS.cream }, shed) -- (its ends inside the corner posts)
 	-- A gable roof in barn red, the ridge running across.
 	local ridgeZ = (s.min.Z + s.max.Z) / 2
 	local half = (s.max.Z - s.min.Z) / 2 + 1
@@ -474,13 +497,19 @@ local function wall(frame: CFrame, parent: Instance, axis: string, c0: number, c
 	-- A darker band along the bottom outside (long metal walls need a line
 	-- to sit on), stopping at doorways.
 	local o0, o1 = if inward > 0 then c0 - 0.15 else c1 - 0.05, if inward > 0 then c0 + 0.05 else c1 + 0.15
+	-- Round the corners: the front and back ("X") walls' bands reach 0.2
+	-- past their ends, the side walls' a wall's thickness (to tuck under
+	-- them). Ending flush with each other, they flickered.
+	local reach = if axis == "X" then 0.2 else 1
+	from, to = from - reach, to + reach
 	local u = from
 	for _, hole in holes do
 		if hole.bottom <= FLOOR + 0.01 then
 			if hole.a > u then
-				plotBox("BaseBand", frame, point(u, FLOOR, o0), point(hole.a, FLOOR + 1.6, o1), { Color = BAND }, parent)
+				-- (a little short of the doorway: ending flush with the wall's edge, they flickered)
+				plotBox("BaseBand", frame, point(u, FLOOR, o0), point(hole.a - 0.08, FLOOR + 1.6, o1), { Color = BAND }, parent)
 			end
-			u = hole.b
+			u = hole.b + 0.08
 		end
 	end
 	if u < to then
@@ -530,7 +559,7 @@ local function buildLine(frame: CFrame, parent: Instance, stage: number, paint: 
 	local height = FLOOR + 3
 	plotBox("Belt", frame, Vector3.new(x - 1.6, height - 0.4, z0), Vector3.new(x + 1.6, height, z1), { Color = BELT }, parent)
 	for _, side in { -1, 1 } do
-		plotBox("BeltRail", frame, Vector3.new(x + side * 1.9 - 0.3, height - 0.7, z0), Vector3.new(x + side * 1.9 + 0.3, height + 0.35, z1), { Color = paint }, parent)
+		plotBox("BeltRail", frame, Vector3.new(x + side * 1.9 - 0.3, height - 0.7, z0 - 0.08), Vector3.new(x + side * 1.9 + 0.3, height + 0.35, z1 + 0.08), { Color = paint }, parent)
 	end
 	for z = z0 + 2, z1 - 1, 6 do
 		for _, side in { -1, 1 } do
@@ -541,9 +570,10 @@ local function buildLine(frame: CFrame, parent: Instance, stage: number, paint: 
 	local room = layout.coldRoom
 	local branchZ = (room.min.Z + room.max.Z) / 2
 	if room.min.X > x + 2 then
-		plotBox("Belt", frame, Vector3.new(x + 1.6, height - 0.4, branchZ - 1.6), Vector3.new(room.min.X - 0.6, height, branchZ + 1.6), { Color = BELT }, parent)
-		plotBox("BeltRail", frame, Vector3.new(x + 1.6, height - 0.7, branchZ - 1.9), Vector3.new(room.min.X - 0.6, height + 0.35, branchZ - 1.3), { Color = paint }, parent)
-		plotBox("BeltRail", frame, Vector3.new(x + 1.6, height - 0.7, branchZ + 1.3), Vector3.new(room.min.X - 0.6, height + 0.35, branchZ + 1.9), { Color = paint }, parent)
+		-- (the branch's rails reach a little past its belt: ending level, they flickered)
+		plotBox("Belt", frame, Vector3.new(x + 1.8, height - 0.4, branchZ - 1.6), Vector3.new(room.min.X - 0.6, height, branchZ + 1.6), { Color = BELT }, parent)
+		plotBox("BeltRail", frame, Vector3.new(x + 1.72, height - 0.7, branchZ - 1.9), Vector3.new(room.min.X - 0.52, height + 0.35, branchZ - 1.3), { Color = paint }, parent)
+		plotBox("BeltRail", frame, Vector3.new(x + 1.72, height - 0.7, branchZ + 1.3), Vector3.new(room.min.X - 0.52, height + 0.35, branchZ + 1.9), { Color = paint }, parent)
 	end
 	-- Each station: a spot for its worker (a part on the floor, named for it)
 	-- and its look.
@@ -660,7 +690,7 @@ local function buildWarehouse(warehouse: Model, frame: CFrame, stage: number, in
 	local roof = Instance.new("Model")
 	roof.Name = "Roof"
 
-	plotBox("Slab", frame, Vector3.new(min.X, 0, min.Z), Vector3.new(max.X, FLOOR, max.Z), { Color = CONCRETE }, building)
+	plotBox("Slab", frame, Vector3.new(min.X, 0.3, min.Z), Vector3.new(max.X, FLOOR, max.Z), { Color = CONCRETE }, building) -- (on the gravel site, 0.3 thick)
 	-- floor markings: a yellow walkway line along the gate-side wall
 	plotBox("FloorLine", frame, Vector3.new(min.X + 3, FLOOR, min.Z + 2), Vector3.new(min.X + 3.4, FLOOR + 0.02, max.Z - 2), { Color = COLORS.hay, CastShadow = false }, building)
 
@@ -684,8 +714,8 @@ local function buildWarehouse(warehouse: Model, frame: CFrame, stage: number, in
 	local side = windows(min.Z + 16, max.Z - 4, 12, 6, FLOOR + 4, FLOOR + 8.5, {})
 	table.insert(side, { a = doorZ - 2.5, b = doorZ + 2.5, bottom = FLOOR, top = FLOOR + 7.5 })
 	wall(frame, building, "Z", min.X, min.X + 1, min.Z + 1, max.Z - 1, h, side, skin, 1)
-	plotBox("DoorFrame", frame, Vector3.new(min.X - 0.3, FLOOR, doorZ - 2.9), Vector3.new(min.X, FLOOR + 7.9, doorZ - 2.5), { Color = trim }, building)
-	plotBox("DoorFrame", frame, Vector3.new(min.X - 0.3, FLOOR, doorZ + 2.5), Vector3.new(min.X, FLOOR + 7.9, doorZ + 2.9), { Color = trim }, building)
+	plotBox("DoorFrame", frame, Vector3.new(min.X - 0.3, FLOOR - 0.06, doorZ - 2.9), Vector3.new(min.X, FLOOR + 7.9, doorZ - 2.5), { Color = trim }, building)
+	plotBox("DoorFrame", frame, Vector3.new(min.X - 0.3, FLOOR - 0.06, doorZ + 2.5), Vector3.new(min.X, FLOOR + 7.9, doorZ + 2.9), { Color = trim }, building)
 	plotBox("DoorFrame", frame, Vector3.new(min.X - 0.3, FLOOR + 7.5, doorZ - 2.9), Vector3.new(min.X, FLOOR + 7.9, doorZ + 2.9), { Color = trim }, building)
 	plotBox("Awning", frame, Vector3.new(min.X - 2.4, FLOOR + 8.4, doorZ - 3.4), Vector3.new(min.X, FLOOR + 8.8, doorZ + 3.4), { Color = trim }, building)
 	plotBox("Step", frame, Vector3.new(min.X - 2, 0, doorZ - 2.5), Vector3.new(min.X, FLOOR - 0.4, doorZ + 2.5), { Color = CONCRETE }, building)
@@ -784,7 +814,7 @@ local function buildDocks(warehouse: Model, frame: CFrame, stage: number, trucks
 	docks.Parent = warehouse
 	local box = PlotLayout.dockBox(stage)
 	plotBox("Dock", frame, box.min, box.max, { Color = if stage == 1 then COLORS.edging else CONCRETE }, docks)
-	plotBox("DockEdge", frame, Vector3.new(box.min.X, box.max.Y - 0.05, box.min.Z), Vector3.new(box.max.X, box.max.Y + 0.02, box.min.Z + 0.6), { Color = COLORS.hay, CastShadow = false }, docks)
+	plotBox("DockEdge", frame, Vector3.new(box.min.X - 0.06, box.max.Y - 0.05, box.min.Z - 0.06), Vector3.new(box.max.X + 0.06, box.max.Y + 0.06, box.min.Z + 0.6), { Color = COLORS.hay, CastShadow = false }, docks)
 	for i, across in PlotLayout.WAREHOUSES[stage].docks do
 		for _, side in { -1, 1 } do
 			plotBox("Bumper", frame, Vector3.new(across + side * 4.6 - 0.6, 0.1, box.min.Z - 0.5), Vector3.new(across + side * 4.6 + 0.6, box.max.Y + 0.3, box.min.Z), { Color = COLORS.dark }, docks)

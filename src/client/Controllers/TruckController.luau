@@ -6,6 +6,12 @@
 -- lifts as its truck goes through. Only this client's copy moves: the
 -- server's trucks stay parked. The warehouse side is rebuilt as farms level
 -- up, so trucks are found again whenever their models change.
+--
+-- Trucks are solid, so a truck never drives through anyone: it stops (and
+-- beeps) while someone stands in its way or in its bed, then makes up the
+-- time at half as fast again. The trip's timing is the server's: only the
+-- picture waits.
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
@@ -17,8 +23,11 @@ local SPEED = 40 -- studs a second (faster if a route wouldn't fit in half the t
 local BOOM_UP = math.rad(80)
 local BOOM_NEAR = 24 -- studs from the gate that lift the boom
 local HIDDEN = CFrame.new(0, -40, PlotLayout.HIGHWAY.to + 40) -- (underground beyond the tunnel)
+local CLEAR_AHEAD = 6 -- studs in front of a truck that must be clear for it to move
+local CLEAR_SIDE = 5.6 -- studs from its middle line (it's 8.8 wide)
+local CATCH_UP = 0.5 -- extra share of speed while making up lost time
 
-local trucks = {} -- [truck Model] = { boom, hinge, parked, route, length, firstLeg, lift, gate, angle, home }
+local trucks = {} -- [truck Model] = { boom, hinge, parked, route, length, firstLeg, lift, gate, angle, home, late, beep }
 
 local function track(index: number, truck: Model)
 	local warehouse = truck.Parent and truck.Parent.Parent
@@ -39,14 +48,83 @@ local function track(index: number, truck: Model)
 		gate = PlotLayout.toWorld(index, Vector3.new(across, 0, -0.5)),
 		angle = 0,
 		home = true,
+		late = 0, -- seconds behind the server's timing (waiting for people)
 	}
 end
 
--- Where a truck is at server time t, or nil when it's parked.
-local function place(farm, truck: Model, t: number): CFrame?
-	local departAt = truck:GetAttribute("DepartAt") or 0
-	local arriveAt = truck:GetAttribute("ArriveAt") or 0
+-- "BEEP BEEP!" over the cab while a truck waits for someone to move.
+local function beep(farm, truck: Model, on: boolean)
+	if on and not farm.beep then
+		local gui = Instance.new("BillboardGui")
+		gui.Name = "Beep"
+		gui.Size = UDim2.fromOffset(150, 44)
+		gui.StudsOffsetWorldSpace = Vector3.new(0, 11, 0)
+		gui.MaxDistance = 120
+		gui.LightInfluence = 0
+		local label = Instance.new("TextLabel")
+		label.Size = UDim2.fromScale(1, 1)
+		label.BackgroundColor3 = Color3.fromRGB(255, 244, 220)
+		label.TextColor3 = Color3.fromRGB(200, 69, 45)
+		label.Font = Enum.Font.FredokaOne
+		label.TextScaled = true
+		label.Text = "BEEP BEEP!"
+		local corner = Instance.new("UICorner")
+		corner.CornerRadius = UDim.new(0.3, 0)
+		corner.Parent = label
+		local padding = Instance.new("UIPadding")
+		padding.PaddingTop, padding.PaddingBottom = UDim.new(0.12, 0), UDim.new(0.12, 0)
+		padding.Parent = label
+		label.Parent = gui
+		gui.Adornee = truck:FindFirstChild("Cab") or truck:FindFirstChildWhichIsA("BasePart")
+		gui.Parent = truck
+		farm.beep = gui
+	elseif not on and farm.beep then
+		farm.beep:Destroy()
+		farm.beep = nil
+	end
+end
+
+-- Whether anyone stands where a truck at `at`, moving along `direction`,
+-- is about to go (`clear` studs past its end), or in its bed, or on it.
+local function inTheWay(at: CFrame, direction: Vector3, length: number, clear: number): boolean
+	for _, player in Players:GetPlayers() do
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		if root then
+			local offset = root.Position - at.Position
+			local ahead = offset:Dot(direction)
+			local side = (offset - direction * ahead) * Vector3.new(1, 0, 1)
+			if math.abs(offset.Y) < 14 and side.Magnitude < CLEAR_SIDE and ahead > -length / 2 - 1 and ahead < length / 2 + clear then
+				return true
+			end
+		end
+	end
+	return false
+end
+
+-- The trip under way ({ departAt, arriveAt, returnAt }, from the truck's
+-- attributes), kept on this client while the truck is running late: the
+-- server clears the attributes once the trip's time is up, and a truck
+-- still waiting for someone mustn't jump home through them.
+local function tripOf(farm, truck: Model)
 	local returnAt = truck:GetAttribute("ReturnAt") or 0
+	if returnAt > 0 then
+		local departAt = truck:GetAttribute("DepartAt") or 0
+		if farm.trip and farm.trip.departAt ~= departAt then
+			farm.late = 0 -- (a new trip: back on time)
+		end
+		farm.trip = { departAt = departAt, arriveAt = truck:GetAttribute("ArriveAt") or 0, returnAt = returnAt }
+	elseif farm.late <= 0 then
+		farm.trip = nil
+	end
+	return farm.trip
+end
+
+-- Where a truck is at server time t on a trip, or nil when it's parked.
+local function place(farm, trip, t: number): CFrame?
+	if not trip then
+		return nil
+	end
+	local departAt, arriveAt, returnAt = trip.departAt, trip.arriveAt, trip.returnAt
 	if returnAt <= 0 or t >= returnAt or t < departAt then
 		return nil
 	end
@@ -68,13 +146,33 @@ local function place(farm, truck: Model, t: number): CFrame?
 end
 
 local function step(dt: number)
-	local t = workspace:GetServerTimeNow()
+	local now = workspace:GetServerTimeNow()
 	for truck, farm in trucks do
 		if not truck.Parent then
 			trucks[truck] = nil -- (the warehouse was rebuilt: its new trucks are tracked)
 			continue
 		end
-		local cframe = place(farm, truck, t)
+		local trip = tripOf(farm, truck)
+		local cframe = place(farm, trip, now - farm.late)
+		local waiting = false
+		if cframe and cframe ~= HIDDEN then
+			-- stop for anyone in the way; otherwise drive, making up lost time
+			local nextAt = place(farm, trip, now - farm.late + 0.1)
+			local moving = if nextAt and nextAt ~= HIDDEN then (nextAt.Position - cframe.Position) * Vector3.new(1, 0, 1) else nil
+			-- (backing up to the dock it only needs the room left to go: people on the dock are fine)
+			local left = (cframe.Position - farm.parked.Position).Magnitude
+			local clear = if nextAt and (nextAt.Position - farm.parked.Position).Magnitude < left then math.min(CLEAR_AHEAD, left + 0.5) else CLEAR_AHEAD
+			if moving and moving.Magnitude > 1e-3 and inTheWay(truck:GetPivot(), moving.Unit, truck:GetAttribute("Length") or 20, clear) then
+				waiting = true
+				farm.late += dt
+				cframe = place(farm, trip, now - farm.late)
+			elseif farm.late > 0 then
+				farm.late = math.max(0, farm.late - dt * CATCH_UP)
+			end
+		else
+			farm.late = 0 -- (out of sight or parked: back on time)
+		end
+		beep(farm, truck, waiting and farm.late > 0.4)
 		if cframe then
 			truck:PivotTo(cframe)
 			farm.home = false

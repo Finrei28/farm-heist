@@ -1,21 +1,23 @@
--- Raids (docs/GameDesign.md §4.10–4.12): stealing ripe crops from someone
--- else's field into your Loot Sack, emptying it at your own barn, the
--- owner's bat, knockouts, Suspects, arrests and fines, climbing the back
--- fence, and every way of dodging an arrest (the §4.12 table). The rules are
--- shared/CrimeRules, shared/SackRules and shared/FineRules; this applies them.
+-- Raids (docs/GameDesign.md §4.10–4.12): stealing a ripe crop from someone
+-- else's field and carrying it home in your hands (held up over your head:
+-- one at a time) to your own barn, the owner's bat, knockouts, Suspects,
+-- arrests and fines, climbing the back fence, and every way of dodging an
+-- arrest (the §4.12 table). The rules are shared/CrimeRules,
+-- shared/LootRules and shared/FineRules; this applies them.
 --
 -- Everything is timed and checked here, from trusted positions
 -- (MovementService): a steal hold (start → done ≥ the hold time, still in
--- reach, the crop still ripe, room in the sack), a swing (the owner's bat,
+-- reach, the crop still ripe, empty hands), a swing (the owner's bat,
 -- inside their farm, the target in front within reach with a clear line),
 -- an arrest hold (the target knocked out, a Suspect, within 8 studs).
 --
--- Players carry attributes the clients draw from: Sack (weight carried),
--- SackFrom (the farm the last crop came from), SuspectOf (the farm they're
--- a Suspect of, or 0), KnockedOut (server time they wake, or 0), KOSuspect,
--- KOPlot, ImmuneUntil, Climbing (a farm's index while climbing its back
--- fence). A field tile being stolen from has the tag "Stealing" and
--- StealBy (user id), StealStart / StealEnds (server time).
+-- Players carry attributes the clients draw from: StolenCrop (the stolen
+-- crop in their hands), SuspectOf (the farm they're a Suspect of, or 0),
+-- KnockedOut (server time they wake, or 0), KOSuspect, KOPlot, ImmuneUntil,
+-- Climbing (a farm's index while climbing its back fence). Characters carry
+-- SwingAt (server time of their last bat swing: clients play the swing).
+-- A field tile being stolen from has the tag "Stealing" and StealBy (user
+-- id), StealStart / StealEnds (server time).
 --
 -- Nothing here is saved except through FineRules (fines, debts, the arrest
 -- record); loot never saves until it's deposited.
@@ -33,7 +35,7 @@ local FineRules = require(Shared.FineRules)
 local PlotLayout = require(Shared.PlotLayout)
 local Rarities = require(Shared.Config.Rarities)
 local Remotes = require(Shared.Remotes)
-local SackRules = require(Shared.SackRules)
+local LootRules = require(Shared.LootRules)
 local Settings = require(Shared.Config.Settings)
 
 local Server = ServerScriptService.Server
@@ -64,14 +66,14 @@ local function now(): number
 	return workspace:GetServerTimeNow()
 end
 
--- A player's raid state: their visits to other farms, sack, the hold or
+-- A player's raid state: their visits to other farms, loot, the hold or
 -- climb under way, cooldowns, the owner's last swing.
 local function stateOf(player: Player)
 	local state = states[player]
 	if not state then
 		state = {
 			visits = {}, -- [plot] = shared/CrimeRules visit
-			sack = SackRules.new(),
+			loot = LootRules.new(), -- the stolen crop in their hands
 			farm = 0, -- the farm they were in at the last tick
 			hold = nil, -- { plot, tile, key, crop, ownerId, startedAt, seconds }
 			climb = nil, -- { plot, direction, token }
@@ -109,7 +111,7 @@ local function rootOf(player: Player): BasePart?
 end
 
 local function carrying(state): boolean
-	return not SackRules.isEmpty(state.sack)
+	return not LootRules.isEmpty(state.loot)
 end
 
 local function isKnockedOut(state, t: number): boolean
@@ -134,17 +136,15 @@ local function owners(): { [number]: Player }
 end
 
 ------------------------------------------------------------------------
--- The sack
+-- The stolen crop in their hands
 
-local function showSack(player: Player, state)
-	local weight = SackRules.weight(state.sack)
-	player:SetAttribute("Sack", weight)
-	local last = state.sack.items[#state.sack.items]
-	player:SetAttribute("SackCrop", last and last.crop or nil)
-	-- with a sack you only walk, slower (shared/SackRules; the client sets the speed)
-	MovementService.SetScale(player, if weight > 0 then Settings.WALK_SPEED * Crime.SACK_SPEED / Settings.RUN_SPEED else nil)
+local function showCarried(player: Player, state)
+	local cropId = LootRules.crop(state.loot)
+	player:SetAttribute("StolenCrop", cropId)
+	-- carrying it you only walk, slower (shared/LootRules; the client sets the speed)
+	MovementService.SetScale(player, if cropId then Settings.WALK_SPEED * Crime.CARRY_SPEED / Settings.RUN_SPEED else nil)
 	if player.Character then
-		CrimeArt.showSack(player.Character, weight, last and last.crop)
+		CrimeArt.showCarried(player.Character, cropId)
 	end
 end
 
@@ -155,8 +155,8 @@ local function returnLoot(player: Player, state, stopper: Player?)
 		return
 	end
 	local here = owners()
-	local items = SackRules.takeAll(state.sack)
-	local back = SackRules.returns(items, function(id)
+	local items = LootRules.takeAll(state.loot)
+	local back = LootRules.returns(items, function(id)
 		return here[id] ~= nil and DataService.Get(here[id]) ~= nil
 	end, stopper and stopper.UserId)
 	for key, list in back do
@@ -169,12 +169,12 @@ local function returnLoot(player: Player, state, stopper: Player?)
 					CrimeRules.raidRemove(ledgerOf(owner.UserId), item.entry)
 				end
 			end
-			Notice.send(owner, `Recovered from {player.DisplayName}: {SackRules.summary(list)}. It's back in your barn.`, "Good")
+			Notice.send(owner, `Recovered from {player.DisplayName}: {LootRules.summary(list)}. It's back in your barn.`, "Good")
 			DataService.NotifyState(owner)
 		end
 	end
 	if not leaving[player] then
-		showSack(player, state)
+		showCarried(player, state)
 	end
 end
 
@@ -338,9 +338,9 @@ local function knockOut(owner: Player, target: Player, plot: number)
 	local state = stateOf(target)
 	local visit = visitOf(state, plot)
 	local wasCarrying = carrying(state)
-	-- what they had: the sack, and the crop they were halfway through taking
-	local loot = SackRules.value(state.sack.items, priceOf)
-	local taken = table.clone(state.sack.items)
+	-- what they had: the crop in their hands, and the one they were halfway through taking
+	local loot = LootRules.value(state.loot.items, priceOf)
+	local taken = table.clone(state.loot.items)
 	if state.hold then
 		loot += priceOf(state.hold.crop)
 		table.insert(taken, { crop = state.hold.crop })
@@ -349,7 +349,7 @@ local function knockOut(owner: Player, target: Player, plot: number)
 	cancelClimb(target, state)
 	local suspect = CrimeRules.knockOut(visit, t, wasCarrying)
 	state.koToken += 1
-	state.ko = { plot = plot, token = state.koToken, loot = loot, charge = SackRules.summary(taken), by = owner.UserId, suspect = suspect }
+	state.ko = { plot = plot, token = state.koToken, loot = loot, charge = LootRules.summary(taken), by = owner.UserId, suspect = suspect }
 	returnLoot(target, state, owner)
 	TravelService.Cancel(target)
 	state.ko.facing = knockDown(target)
@@ -437,8 +437,8 @@ local function arrest(owner: Player, target: Player, fled: boolean)
 	local state = stateOf(target)
 	local ko = state.ko
 	local plot = (ko and ko.plot) or PlotService.plotOf(owner) or 0
-	local loot = if ko then ko.loot else SackRules.value(state.sack.items, priceOf)
-	local charge = if ko then ko.charge else SackRules.summary(state.sack.items)
+	local loot = if ko then ko.loot else LootRules.value(state.loot.items, priceOf)
+	local charge = if ko then ko.charge else LootRules.summary(state.loot.items)
 	returnLoot(target, state, owner)
 	local result = fine(target, owner, loot, fled)
 	if not result then
@@ -492,7 +492,7 @@ local function onEnter(player: Player, state, plot: number, t: number)
 		-- caught with stolen goods counts (§4.12): the owner sees a Suspect
 		local owner = PlotService.ownerOf(plot)
 		if owner then
-			alarm(owner, player, state, { carrying = SackRules.summary(state.sack.items), plot = plot })
+			alarm(owner, player, state, { carrying = LootRules.summary(state.loot.items), plot = plot })
 		end
 	end
 end
@@ -507,25 +507,28 @@ local function onExit(player: Player, state, plot: number, t: number)
 	end
 	cancelHold(state)
 	local owner = PlotService.ownerOf(plot)
-	if owner and SackRules.hasFrom(state.sack, owner.UserId) then
+	if owner and LootRules.hasFrom(state.loot, owner.UserId) then
 		state.cooldowns[tostring(owner.UserId)] = t + Crime.SAME_FARM_COOLDOWN
 		local mine = {}
-		for _, item in state.sack.items do
+		for _, item in state.loot.items do
 			if item.ownerId == owner.UserId then
 				table.insert(mine, item)
 			end
 		end
-		Notice.send(player, "Safe! Now get home and your sack empties into your barn.", "Good")
-		Notice.send(owner, `{player.DisplayName} got away with {SackRules.summary(mine)}. Harvest ripe crops fast, and bonk thieves with your bat!`, "Error")
+		Notice.send(player, "Safe! Now carry it home to your farmhouse door.", "Good")
+		Notice.send(owner, `{player.DisplayName} got away with {LootRules.summary(mine)}. Harvest ripe crops fast, and bonk thieves with your bat!`, "Error")
 	end
 end
 
--- The bat is yours only while you're inside your own farm (§4.12).
+-- The bat is yours only while you're inside your own farm (§4.12), and
+-- not while your hands are full (a stolen crop, or a crate: the Carrying
+-- attribute, WarehouseService).
 local function updateBat(player: Player, state)
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	local home = PlotService.plotOf(player)
-	local want = home ~= nil and state.farm == home and humanoid ~= nil and humanoid.Health > 0
+	local want = home ~= nil and state.farm == home and humanoid ~= nil and humanoid.Health > 0 and not carrying(state)
+		and player:GetAttribute("Carrying") == nil
 	local backpack = player:FindFirstChildOfClass("Backpack")
 	local tool = state.bat
 	if want and not (tool and tool.Parent) and backpack then
@@ -538,20 +541,20 @@ local function updateBat(player: Player, state)
 	end
 end
 
--- Emptying the sack at your own farmhouse door.
+-- Home with a stolen crop: at your own farmhouse door it goes in your barn.
 local function deposit(player: Player, state)
 	local data = DataService.Get(player)
 	if not data then
 		return
 	end
-	local items = SackRules.takeAll(state.sack)
+	local items = LootRules.takeAll(state.loot)
 	for _, item in items do
 		BarnRules.addCrops(data.inventory, item.key, 1) -- (always fits, §4.5)
 	end
-	data.stats.stolenValue += SackRules.value(items, priceOf)
-	showSack(player, state)
+	data.stats.stolenValue += LootRules.value(items, priceOf)
+	showCarried(player, state)
 	DataService.NotifyState(player)
-	CrimeEvent:FireClient(player, "Deposited", { text = `+{SackRules.summary(items)} (stolen) in your barn` })
+	CrimeEvent:FireClient(player, "Deposited", { text = `+{LootRules.summary(items)} (stolen) in your barn`, crop = items[1] and items[1].crop })
 	Analytics.event(player, "StealDeposited", #items)
 end
 
@@ -636,7 +639,7 @@ function actions.Steal(player, _data, arg)
 		now = t, inside = true, knockedOut = isKnockedOut(state, t),
 		thiefProtected = false, farmProtected = false, trusted = false, -- (the Sprout Shield, arrival grace and Trusted list come in week 6)
 		cooldownUntil = state.cooldowns[tostring(owner.UserId)], ripe = cropId ~= nil, rarity = rarity,
-		sackUsed = SackRules.weight(state.sack), raidUsed = CrimeRules.raidUsed(ledgerOf(owner.UserId), t),
+		carrying = carrying(state), raidUsed = CrimeRules.raidUsed(ledgerOf(owner.UserId), t),
 	})
 	if not ok then
 		return if why == "Cooldown" then "FarmCooldown" else why
@@ -685,11 +688,11 @@ function actions.StealDone(player, _data, _arg)
 	-- (the owner, a friend or a Farmhand may have picked it first: §4.10)
 	if FieldService.RipeCrop(owner, ownerData, hold.key) ~= hold.crop then
 		return "Gone"
-	elseif not SackRules.fits(state.sack, hold.crop) then
-		return "SackFull"
+	elseif not LootRules.fits(state.loot) then
+		return "HandsFull"
 	end
 	local ledger = ledgerOf(owner.UserId)
-	local weight = SackRules.weightOf(hold.crop)
+	local weight = LootRules.raidWeight(hold.crop)
 	if CrimeRules.raidUsed(ledger, t) + weight > Crime.RAID_CAP_WEIGHT then
 		return "RaidCap"
 	end
@@ -697,12 +700,12 @@ function actions.StealDone(player, _data, _arg)
 	if not cropId then
 		return "Gone"
 	end
-	SackRules.add(state.sack, cropId, key :: string, owner.UserId, CrimeRules.raidAdd(ledger, t, weight))
-	showSack(player, state)
+	LootRules.add(state.loot, cropId, key :: string, owner.UserId, CrimeRules.raidAdd(ledger, t, weight))
+	showCarried(player, state)
 	DataService.NotifyState(owner)
 	local crop = Crops.ById[cropId]
 	Notice.send(owner, `😠 {player.DisplayName} stole your {crop.icon} {crop.name}!`, "Error")
-	return nil, { crop = cropId, weight = SackRules.weight(state.sack) }
+	return nil, { crop = cropId }
 end
 
 function actions.StealCancel(player, _data, _arg)
@@ -719,7 +722,9 @@ function actions.Swing(player, _data, _arg)
 	local root = rootOf(player)
 	local tool = state.bat
 	local character = player.Character
-	if not plot or not root or not tool or not character then
+	if carrying(state) then
+		return "HandsFull"
+	elseif not plot or not root or not tool or not character then
 		Analytics.event(player, "HitRejected", 1)
 		return "NoBat"
 	end
@@ -734,6 +739,7 @@ function actions.Swing(player, _data, _arg)
 		return "Cooldown"
 	end
 	state.lastSwingAt = t
+	character:SetAttribute("SwingAt", t) -- (every client plays the swing: client/PoseController)
 	local from = MovementService.positionOf(player) or root.Position
 	local facing = root.CFrame.LookVector
 	local params = RaycastParams.new()
@@ -1009,7 +1015,7 @@ function CrimeService.Status(player: Player)
 	}
 end
 
--- Dev commands (/ko, /suspect, /sack, /crimelog).
+-- Dev commands (/ko, /suspect, /carry, /crimelog).
 function CrimeService.DevKnockOut(player: Player, suspect: boolean)
 	local plot = PlotService.inFarm(player)
 	if plot == 0 then
@@ -1030,22 +1036,21 @@ function CrimeService.DevSuspect(player: Player): number
 	return plot
 end
 
-function CrimeService.DevFillSack(player: Player, cropId: string, count: number, ownerId: number)
+-- Puts a stolen crop in your hands (nil: empties them; the crop is lost).
+function CrimeService.DevCarry(player: Player, cropId: string?, ownerId: number)
 	local state = stateOf(player)
-	for _ = 1, count do
-		if not SackRules.fits(state.sack, cropId) then
-			break
-		end
-		SackRules.add(state.sack, cropId, BarnRules.key(cropId), ownerId)
+	LootRules.takeAll(state.loot)
+	if cropId then
+		LootRules.add(state.loot, cropId, BarnRules.key(cropId), ownerId)
 	end
-	showSack(player, state)
+	showCarried(player, state)
 end
 
 function CrimeService.DevLog(player: Player): string
 	local state = stateOf(player)
 	local data = DataService.Get(player)
 	local t = now()
-	local lines = { `[crimelog] {player.Name}: farm {state.farm}, SuspectOf {player:GetAttribute("SuspectOf") or 0}, sack {SackRules.weight(state.sack)} ({SackRules.summary(state.sack.items)})` }
+	local lines = { `[crimelog] {player.Name}: farm {state.farm}, SuspectOf {player:GetAttribute("SuspectOf") or 0}, carrying {LootRules.summary(state.loot.items)}` }
 	for plot, visit in state.visits do
 		table.insert(lines, `  visit farm {plot}: inside {visit.inside}, suspect {CrimeRules.isSuspect(visit, t)}, KO {CrimeRules.isKnockedOut(visit, t)}, immune {CrimeRules.isImmune(visit, t)}`)
 	end
@@ -1089,7 +1094,7 @@ function CrimeService.Start()
 					onDied(player)
 				end)
 			end
-			task.defer(showSack, player, state)
+			task.defer(showCarried, player, state)
 		end)
 	end
 	Players.PlayerAdded:Connect(track)

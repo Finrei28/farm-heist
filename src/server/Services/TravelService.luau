@@ -1,11 +1,10 @@
 -- The travel buttons (docs/GameDesign.md §4.11, shared/TravelRules): Home
 -- (your farmhouse door), Town (the town spawn) and Visit (the sidewalk
 -- outside a player's gate). Each is a 3 s channel that moving cancels, then
--- the server teleports you (MovementService.Teleport). Cooldowns go on the
--- player as attributes (HomeReadyAt, TownReadyAt, VisitReadyAt: server
--- time), so the HUD can grey its buttons. Suspects, knocked-out players and
--- sack carriers can't travel (TravelService.status, set by CrimeService), and
--- starting a steal stops a channel under way.
+-- the server teleports you (MovementService.Teleport); no cooldown after.
+-- Suspects, knocked-out players and anyone carrying stolen crops can't
+-- travel (TravelService.status, set by CrimeService), and starting a steal
+-- stops a channel under way.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
@@ -72,12 +71,11 @@ local function begin(player: Player, kind: string, destination: CFrame): string?
 		local at = MovementService.positionOf(player) or position
 		local done, result = TravelRules.finish(travel, now(), at, statusOf(player))
 		if done then
-			player:SetAttribute(`{result}ReadyAt`, travel.readyAt[result])
 			MovementService.Teleport(player, destinations[player])
 		elseif result == "Moved" then
 			Notice.send(player, "Travel cancelled: you moved.", "Error")
 		elseif result == "Blocked" then
-			Notice.send(player, "Travel cancelled: you can't travel while you're a Suspect or carrying a sack.", "Error")
+			Notice.send(player, "Travel cancelled: you can't travel while you're a Suspect or carrying stolen crops.", "Error")
 		end
 		destinations[player] = nil
 	end)

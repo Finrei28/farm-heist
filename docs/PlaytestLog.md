@@ -19,6 +19,35 @@ Follow-ups: <what to test next time>
 
 ## Sessions
 
+### 2026-11-02 · carrying stolen crops, the bat, travel, flicker, trucks · build: this session's rework of week 5
+Testers: Claude, driving Studio · Setup: edit mode for a gallery of all 22 carried crops, solo Play for poses (one avatar, R15), then **Server & Clients with 2 players** (right the farmer, left the thief) · Lag: 0 (local) · Screenshots: [playtest/2026-11-02-carry/](playtest/2026-11-02-carry/)
+
+| Check | Result | OK? | Notes |
+|---|---|---|---|
+| The 22 carried crops | laid out in a row in edit mode and looked at three at a time ([01](playtest/2026-11-02-carry/01-produce-commons.jpg), [02](playtest/2026-11-02-carry/02-produce-uncommon-rare.jpg), [03](playtest/2026-11-02-carry/03-produce-epic-mythic.jpg)) | ✓ | fixed by eye: the carrots (a cream disc for twine, paper-flat leaves, roots splayed like stool legs → a slim tie, feathery fronds, the tips leaning in), the potatoes' and tomatoes' baskets (flat plates → deeper; then pancake-like bands → upright staves; the potatoes in a slatted crate), corn (eggs → kernel rows, longer husks), strawberries (upside down, then radishes → broad shoulders to a point, green stars: [04](playtest/2026-11-02-carry/04-strawberry-punnet.jpg)), the bell pepper's lid, the dragonfruit's paddles → scales on the skin, the golden apple, starfruit and Phoenix Pepper (flat Neon blobs → shaded; the pepper red to yellow: [05](playtest/2026-11-02-carry/05-golden-apple.jpg)), the Dragon's Eye's eye (buried in the pumpkin) |
+| Holding a crop up | both arms up, hands on its sides, over the head, from the front, side and behind and walking ([06](playtest/2026-11-02-carry/06-carry-pumpkin-front.jpg), [07](playtest/2026-11-02-carry/07-carry-potato-crate.jpg), [08](playtest/2026-11-02-carry/08-carry-tomato-basket.jpg), [11](playtest/2026-11-02-carry/11-carry-walking-from-behind.jpg)) | ✓ | tall crops (carrots, the Crystal Rose) left the arms hanging: an IK target near full stretch is dropped, so hand spots now sit within 80% of the arm's reach ([09](playtest/2026-11-02-carry/09-carry-carrots.jpg), [10](playtest/2026-11-02-carry/10-carry-crystal-rose.jpg)); a crop sent before its hand spots arrived left the arms down: tried again each frame; all a bit small to spot across a farm: 1.2× |
+| Climbing with a crop | up and over the back fence in 1.5 s, the crop held up throughout | ✓ | (a cartoon hop: no hands free for the fence) |
+| A crate in your arms | both hands on its sides, close to the body ([12](playtest/2026-11-02-carry/12-crate-in-both-hands.jpg)); the bat leaves the hotbar while you carry it | ✓ | a crate's Carrying attribute was the same name as the new stolen-crop one (crate carriers would have looked like thieves): stolen crops use StolenCrop |
+| The bat at rest | in the right hand by the grip, leaning back over the shoulder ([13](playtest/2026-11-02-carry/13-bat-rest-front.jpg), [14](playtest/2026-11-02-carry/14-bat-rest-side.jpg)) | ✓ | setting the arm's joints each frame was overwritten after the script ran: the hand follows an IK target instead |
+| The swing | slowed ten times to see each pose: back behind the head, over the top, level out in front ([15](playtest/2026-11-02-carry/15-bat-hit-level.jpg)), down across, back | ✓ | the bat pointed down at the hit and sideways halfway (a turn from back to front has no single way round): poses over the top and up in front added, and each pose says which way the forearm comes in |
+| Raids with 2 players | the steal ring and alarm ([16](playtest/2026-11-02-carry/16-steal-and-alarm.jpg)); the farmer sees the thief's arms up holding the pumpkin under the red ! ([17](playtest/2026-11-02-carry/17-farmer-sees-thief.jpg)); a bonk drops it back to the barn ([18](playtest/2026-11-02-carry/18-bonk-crop-returned.jpg)); HANDS FULL on a second crop ([19](playtest/2026-11-02-carry/19-hands-full.jpg)); the thief's screen shows the farmer's bat and swing | ✓ | in the farmer's own field the giant ripe pumpkins hide a carried one; the ! does the work there, and outside the field the crop overhead stands alone |
+| Travel | Home, then Town at once, then Home at once: each starts its 3 s channel; no countdown on the signs ([22](playtest/2026-11-02-carry/22-travel-no-cooldown.jpg)) | ✓ | |
+| Trucks | walking into the parked pickup stops at its tailgate; standing in its lane, the returning pickup backs in, stops 6 studs short with BEEP BEEP! ([20](playtest/2026-11-02-carry/20-truck-beep.jpg)), and parks once you step aside | ✓ | the first try went through: the server clears a trip's times when it's due, and the late truck jumped home; the client now keeps the trip until its truck is done |
+| Flicker | the Packing Shed's back corners from outside, two frames a second apart, the same ([21](playtest/2026-11-02-carry/21-shed-back-corner.jpg)) | ✓ | the test finds none anywhere the server builds |
+
+Not covered: R6 avatars (no poses; keep Game Settings → Avatar on R15), a phone, 8 players, lag on the swing (others see it from when the server hears of it).
+
+**Would a new player understand it?**
+
+| What a new player saw | Now |
+|---|---|
+| A stolen crop vanishing into a sack | the crop held up over the thief's head, the farm's own pumpkin, seen from anywhere |
+| STEAL on a second crop after the first | HANDS FULL with the crop in hand: "You can carry one crop at a time: take the Pumpkin home first" |
+| What to do with it: "🧺 2/5 · Get home!" | "🎃 Pumpkin · Get home!", then "· to your door!" in your own farm |
+| The STEAL stamp once you're a Suspect: "Hold 2.5 s · 🧺 0/5" | "Hold 2.5 s, then carry it home over your head" |
+| A truck driving through you | it stops and beeps until you move |
+| Home greyed out with a countdown after using it | Home and Town always work (unless you're a raider) |
+
 ### 2026-11-02 · week 5 smoke test (raids) · build: this session's week 5
 Testers: Claude, driving Studio (the chat's dev commands, the command bar for camera views) · Setup: solo Play for the art, then **Server & Clients with 2 players** side by side (left the farmer, right the thief), three sessions (fixes between them) · Lag: 0 (local) · Screenshots: [playtest/2026-11-02-week5/](playtest/2026-11-02-week5/)
 

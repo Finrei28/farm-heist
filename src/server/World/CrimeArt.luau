@@ -1,21 +1,17 @@
 -- The things raids add to characters (docs/ArtDirection.md §9): the bat an
--- owner holds inside their own farm, and the Loot Sack on a thief's back,
--- bigger than a head, with the top of the last crop taken sticking out. Both
--- are made by the server (CrimeService), so everyone sees the same thing.
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
+-- owner holds inside their own farm, and the stolen crop a thief holds up
+-- over their head (World/ProduceArt). Both are made by the server
+-- (CrimeService), so everyone sees the same thing; how arms hold them is
+-- each client's (client/PoseController).
 local Parts = require(script.Parent.Parts)
-local FarmArt = require(script.Parent.FarmArt)
-local Crime = require(ReplicatedStorage.Shared.Config.Crime)
+local ProduceArt = require(script.Parent.ProduceArt)
 
 local CrimeArt = {}
 
 local WOOD = Color3.fromRGB(222, 176, 112)
 local WOOD_DARK = Color3.fromRGB(184, 136, 80)
 local TAPE = Color3.fromRGB(200, 69, 45) -- barn red grip tape
-local BURLAP = Color3.fromRGB(190, 148, 96)
-local BURLAP_DARK = Color3.fromRGB(150, 110, 66)
-local ROPE = Color3.fromRGB(226, 204, 158)
+local CARRIED_SCALE = 1.2 -- stolen crops held up are this much bigger than in a crate
 
 local function loose(props, parent: Instance): BasePart
 	local p = Parts.part(props, parent)
@@ -63,52 +59,103 @@ function CrimeArt.bat(): Tool
 	return tool
 end
 
--- The Loot Sack on a character's back (replaced whenever what's in it
--- changes): a burlap bag that fills out with the weight, tied at the neck
--- with the last crop's top sticking out, on a rope strap across the chest.
-function CrimeArt.showSack(character: Model, weight: number, topCrop: string?)
-	local old = character:FindFirstChild("LootSack")
+-- How high a character's head reaches, in their torso's frame (from the
+-- neck joint, so a walk's bob doesn't matter), and the top of any hat or
+-- hair on it.
+local function headTops(torso: BasePart, head: BasePart, character: Model): (number, number)
+	local neck = head:FindFirstChild("Neck") or torso:FindFirstChild("Neck")
+	local centre = if neck and neck:IsA("Motor6D") and neck.Part0 == torso
+		then (neck.C0 * neck.C1:Inverse()).Position.Y
+		else torso.CFrame:PointToObjectSpace(head.Position).Y
+	local top = centre + head.Size.Y / 2
+	local hats = top
+	for _, accessory in character:GetChildren() do
+		local handle = accessory:IsA("Accessory") and accessory:FindFirstChild("Handle")
+		if handle and handle:IsA("BasePart") then
+			local up = torso.CFrame:PointToObjectSpace(handle.Position).Y + handle.Size.Y / 2
+			if up > hats and up < top + 3 then
+				hats = up
+			end
+		end
+	end
+	return top, hats
+end
+
+-- How far a character's arm reaches from its shoulder joint (R15: the three
+-- arm joints; otherwise a guess), and where that joint is in the torso.
+local function armReach(character: Model, side: string): (number, Vector3?)
+	local upper = character:FindFirstChild(`{side}UpperArm`)
+	local lower = character:FindFirstChild(`{side}LowerArm`)
+	local hand = character:FindFirstChild(`{side}Hand`)
+	local shoulder = upper and upper:FindFirstChild(`{side}Shoulder`)
+	local elbow = lower and lower:FindFirstChild(`{side}Elbow`)
+	local wrist = hand and hand:FindFirstChild(`{side}Wrist`)
+	if not (shoulder and elbow and wrist) then
+		return 2.2, nil
+	end
+	local reach = (shoulder.C1.Position - elbow.C0.Position).Magnitude + (elbow.C1.Position - wrist.C0.Position).Magnitude + wrist.C1.Position.Magnitude
+	return reach, shoulder.C0.Position
+end
+
+-- The stolen crop a thief carries, held up over their head in both hands
+-- (CrimeService; nil takes it away). It rests just over their head (or
+-- their hat), welded to their torso; LeftHold and RightHold attachments
+-- on its sides are where each client's PoseController puts the hands,
+-- placed low enough for this character's arms to reach.
+function CrimeArt.showCarried(character: Model, cropId: string?)
+	local old = character:FindFirstChild("CarriedCrop")
 	if old then
 		old:Destroy()
 	end
-	if weight <= 0 then
-		return
-	end
 	local torso = character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso")
-	if not torso or not torso:IsA("BasePart") then
+	local head = character:FindFirstChild("Head")
+	if not cropId or not torso or not torso:IsA("BasePart") or not head or not head:IsA("BasePart") then
 		return
 	end
-	local model = Instance.new("Model")
-	model.Name = "LootSack"
-	local fill = math.clamp(weight / Crime.SACK_CAPACITY, 0, 1)
-	local d = 1.7 + 0.6 * fill -- (a head is about 1.2: even a light sack is bigger)
-	-- (snug on the back, a little high, leaning out over the shoulders)
-	local back = torso.CFrame * CFrame.new(0, 0.3, torso.Size.Z / 2 + d * 0.36) * CFrame.Angles(math.rad(-12), 0, 0)
-	local bag = loose({ Name = "Bag", Shape = Enum.PartType.Ball, Size = Vector3.new(d, d * 1.05, d * 0.9), CFrame = back, Color = BURLAP }, model)
-	local parts = { bag }
-	table.insert(parts, loose({ Name = "Patch", Size = Vector3.new(d * 0.32, d * 0.3, 0.12), CFrame = back * CFrame.new(-d * 0.18, -d * 0.12, d * 0.43) * CFrame.Angles(0, 0, math.rad(12)),
-		Color = BURLAP_DARK }, model))
-	local neck = back * CFrame.new(0, d * 0.5, 0)
-	table.insert(parts, loose({ Name = "Neck", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.5, d * 0.42, d * 0.42),
-		CFrame = neck * CFrame.Angles(0, 0, math.rad(90)), Color = BURLAP_DARK }, model))
-	table.insert(parts, loose({ Name = "Tie", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.16, d * 0.46, d * 0.46),
-		CFrame = neck * CFrame.new(0, 0.05, 0) * CFrame.Angles(0, 0, math.rad(90)), Color = ROPE }, model))
-	if topCrop then
-		local color = FarmArt.cropColor(topCrop)
-		table.insert(parts, loose({ Name = "CropTop", Shape = Enum.PartType.Ball, Size = Vector3.new(0.9, 0.8, 0.9),
-			CFrame = neck * CFrame.new(0, 0.55, 0), Color = color }, model))
-		for i = 0, 2 do
-			table.insert(parts, loose({ Name = "Leaf", Size = Vector3.new(0.18, 0.75, 0.32),
-				CFrame = neck * CFrame.new(0, 1.1, 0) * CFrame.Angles(0, math.rad(i * 120), math.rad(22)) * CFrame.new(0, 0.1, 0.12),
-				Color = Parts.COLORS.leaf }, model))
+	local model, core = ProduceArt.build(cropId, CFrame.new())
+	model.Name = "CarriedCrop"
+	-- a little bigger than life, to be seen across a farm
+	for _, p in model:GetDescendants() do
+		if p:IsA("BasePart") then
+			p.Size *= CARRIED_SCALE
+			p.CFrame = CFrame.new(p.Position * CARRIED_SCALE) * p.CFrame.Rotation
+		elseif p:IsA("Attachment") then
+			p.Position *= CARRIED_SCALE
 		end
 	end
-	-- the strap: from the bag's neck over the shoulder, down across the chest
-	local strap = loose({ Name = "Strap", Size = Vector3.new(0.22, torso.Size.Y * 1.25, 0.14),
-		CFrame = torso.CFrame * CFrame.new(0, 0.05, -torso.Size.Z / 2 - 0.08) * CFrame.Angles(0, 0, math.rad(38)), Color = ROPE }, model)
-	table.insert(parts, strap)
-	for _, p in parts do
-		weld(torso :: BasePart, p)
+	for _, name in { "Width", "Height", "HoldY" } do
+		core:SetAttribute(name, core:GetAttribute(name) * CARRIED_SCALE)
+	end
+	local headTop, hatTop = headTops(torso, head, character)
+	local bottom = math.clamp(hatTop - 0.25, headTop + 0.12, headTop + 0.6) -- (a tall hat pokes into it a little)
+	local width, holdY = core:GetAttribute("Width"), core:GetAttribute("HoldY")
+	local reach, shoulder = armReach(character, "Right")
+	local hand = character:FindFirstChild("RightHand") or character:FindFirstChild("Right Arm")
+	local side = width / 2 + (if hand and hand:IsA("BasePart") then hand.Size.X * 0.3 else 0.15) -- (palms on its sides, not sunk in)
+	if shoulder then
+		local y = holdY
+		while y > 0.1 and (Vector3.new(side, bottom + y, 0) - shoulder).Magnitude > reach * 0.8 do -- (IK gives up near full stretch)
+			y -= 0.05
+		end
+		holdY = y
+	end
+	for _, name in { "LeftHold", "RightHold" } do
+		local spot = Instance.new("Attachment")
+		spot.Name = name
+		spot.Position = Vector3.new(if name == "LeftHold" then -side else side, holdY - core:GetAttribute("HoldY"), 0)
+		spot.Parent = core
+	end
+	local at = torso.CFrame * CFrame.new(0, bottom, -0.05)
+	for _, p in model:GetDescendants() do
+		if p:IsA("BasePart") then
+			p.CFrame = at * p.CFrame
+			p.Anchored = false
+			p.CanCollide = false
+			p.CanQuery = false
+			p.CanTouch = false
+			p.Massless = true
+			weld(torso, p)
+		end
 	end
 	model.Parent = character
 end

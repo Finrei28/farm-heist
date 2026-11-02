@@ -6,8 +6,8 @@
 -- A visit is one player's record for one farm:
 --   { inside, visitSuspect, lastSuspectAt, koUntil, immuneUntil, lastSwungAt }
 -- lastSwungAt: when that farm's owner last swung the bat at them.
--- Whether someone carries a Loot Sack belongs to the player, not the visit,
--- so it's passed in where it matters.
+-- Whether someone carries a stolen crop belongs to the player, not the
+-- visit, so it's passed in where it matters.
 local Crime = require(script.Parent.Config.Crime)
 local Rarities = require(script.Parent.Config.Rarities)
 
@@ -50,7 +50,7 @@ function CrimeRules.markSuspect(visit, now: number)
 	visit.visitSuspect = true
 end
 
--- Suspect of this farm: carrying a sack inside it, or a suspicious act
+-- Suspect of this farm: carrying a stolen crop inside it, or a suspicious act
 -- during this visit, or one in the last SUSPECT_LINGER seconds.
 function CrimeRules.isSuspect(visit, now: number, carrying: boolean?): boolean
 	if carrying and visit.inside then
@@ -77,7 +77,8 @@ end
 -- Whether a steal hold may start. ctx:
 --   { now, inside, knockedOut, thiefProtected (Sprout Shield or arrival
 --     grace), farmProtected (the owner's), trusted, cooldownUntil (same-farm
---     cooldown), ripe, rarity, sackUsed, raidUsed }
+--     cooldown), ripe, rarity, carrying (a stolen crop in their hands),
+--     raidUsed }
 -- Returns ok, reason.
 function CrimeRules.canSteal(ctx): (boolean, string?)
 	if not ctx.inside then
@@ -101,10 +102,10 @@ function CrimeRules.canSteal(ctx): (boolean, string?)
 	if not ctx.ripe then
 		return false, "NotRipe"
 	end
-	local weight = Rarities.ById[ctx.rarity].sackWeight
-	if (ctx.sackUsed or 0) + weight > Crime.SACK_CAPACITY then
-		return false, "SackFull"
+	if ctx.carrying then
+		return false, "HandsFull" -- (one crop at a time: take it home first)
 	end
+	local weight = Rarities.ById[ctx.rarity].raidWeight
 	if (ctx.raidUsed or 0) + weight > Crime.RAID_CAP_WEIGHT then
 		return false, "RaidCap"
 	end
@@ -116,7 +117,7 @@ function CrimeRules.holdDone(startedAt: number, now: number, seconds: number): b
 	return now - startedAt >= seconds - 0.05
 end
 
--- The raid cap: a farm's ledger of sack weight lost, { { at, weight } }.
+-- The raid cap: a farm's ledger of raid weight lost, { { at, weight } }.
 function CrimeRules.raidUsed(ledger, now: number): number
 	local used = 0
 	for i = #ledger, 1, -1 do
@@ -129,7 +130,7 @@ function CrimeRules.raidUsed(ledger, now: number): number
 	return used
 end
 
--- Notes a finished steal. Returns the entry, kept with the loot in the sack.
+-- Notes a finished steal. Returns the entry, kept with the crop in the thief's hands.
 function CrimeRules.raidAdd(ledger, now: number, weight: number)
 	local entry = { at = now, weight = weight }
 	table.insert(ledger, entry)
@@ -201,7 +202,7 @@ end
 -- whether they're a Suspect (only Suspects can be arrested).
 function CrimeRules.knockOut(visit, now: number, carrying: boolean?): boolean
 	if carrying and visit.inside then
-		-- Caught with stolen goods (even from another farm): the sack goes
+		-- Caught with stolen goods (even from another farm): the crop goes
 		-- back, but they stay arrestable.
 		CrimeRules.markSuspect(visit, now)
 	end

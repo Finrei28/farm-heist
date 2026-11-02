@@ -26,7 +26,7 @@ return function(harness)
 	local crop = flat(PlotLayout.tileLocal(tile))
 	local fence = Vector3.new(crop.X, 0, P.backFence)
 	local run = (fence - crop).Magnitude
-	local walk = Settings.WALK_SPEED * Crime.SACK_SPEED
+	local walk = Settings.WALK_SPEED * Crime.CARRY_SPEED
 	local hold = Rarities.ById.Rare.stealHold
 	local reach = Crime.HIT_RANGE
 

@@ -5,14 +5,13 @@ return {
 	SHIELD_SECONDS = 45 * 60, -- Sprout Shield: your first 45 minutes of play
 	ARRIVAL_GRACE = 120, -- seconds after joining a server
 	SAME_FARM_COOLDOWN = 180, -- seconds before you can steal from a farm you just left with loot, or were arrested in
-	RAID_CAP_WEIGHT = 10, -- the most sack weight a farm can lose ...
+	RAID_CAP_WEIGHT = 10, -- the most raid weight (Config/Rarities raidWeight) a farm can lose ...
 	RAID_WINDOW = 600, -- ... in this many seconds, to all thieves together
-	SACK_CAPACITY = 5,
-	SACK_SPEED = 0.85, -- walk speed with a sack (no sprinting)
+	CARRY_SPEED = 0.85, -- walk speed with a stolen crop in your hands (no sprinting); one crop at a time
 	CLOCHE_HOLD = 2, -- steal holds take this many times longer under a Glass Cloche
 	HARVEST_MOON_HOLD = 0.75, -- ... and this much as long on a Harvest Moon (Heist Night)
 
-	DEPOSIT_RANGE = 12, -- studs from your own farmhouse door where your sack empties into your barn
+	DEPOSIT_RANGE = 12, -- studs from your own farmhouse door where a stolen crop goes into your barn
 	ALARM_GAP = 15, -- seconds between theft alarms about the same thief
 
 	-- Climbing and the defences that slow thieves (§4.11)
