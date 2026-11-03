@@ -66,7 +66,7 @@ return function(spec, harness)
 			local town = PlotLayout.TOWN
 			for i, a in town.buildings do
 				local reach = a.radius + math.sqrt(a.size.X ^ 2 + a.size.Z ^ 2) / 2
-				expect(reach <= town.plazaRadius).toBe(true)
+				expect(reach <= town.walkRadius - 4).toBe(true) -- (clear of the walk round the town, 8 wide)
 				for j, b in town.buildings do
 					if i < j then
 						local gap = (PlotLayout.polar(a.angle, a.radius) - PlotLayout.polar(b.angle, b.radius)).Magnitude
@@ -219,7 +219,7 @@ return function(spec, harness)
 			local counter = PlotLayout.frontOf("Seeds", 4)
 			local building = PlotLayout.building("Seeds")
 			expect(radius(counter)).toBeLessThan(building.radius - building.size.Z / 2)
-			expect(radius(counter)).toBeLessThan(PlotLayout.TOWN.plazaRadius)
+			expect(radius(counter)).toBeLessThan(PlotLayout.TOWN.radius)
 		end)
 		it("has its spawn inside and its Visit point outside the farm", function()
 			for index = 1, PlotLayout.COUNT do

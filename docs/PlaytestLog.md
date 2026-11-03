@@ -19,6 +19,25 @@ Follow-ups: <what to test next time>
 
 ## Sessions
 
+### 2026-11-04 · the town's look, by eye · build: week 7 + the town's look (uncommitted), with the fixes below
+Testers: Claude, driving Studio · Setup: the props file imported again (29 meshes, the town's 7 new), solo Play, TOWN from the farm, `/weather clear`, `/time noon` · `night`, a Scriptable camera at the render views (spawn, plaza, fountain, tower, Barley's, the Hiring Hall, the Exchange, the elevator, a signpost, the green, above), Studio's iPhone emulation · Lag: 0 (local) · Screenshots: [playtest/2026-11-04-town/](playtest/2026-11-04-town/)
+
+| Check | Result | OK? | Notes |
+|---|---|---|---|
+| Arriving in town | the character lands on the spawn facing the Exchange, but the camera kept its old angle: you looked back at the Police Station and the Hiring Hall, the character's face to you ([01](playtest/2026-11-04-town/01-arrival-camera-faced-backwards.jpg)) | ✓ | fixed: after Home or Town the camera turns to look the way you arrive facing: the tower, the Exchange behind it, Barley's and the Auction House either side ([21](playtest/2026-11-04-town/21-arrival-camera-faces-the-exchange.jpg)) |
+| The spawn's view, the plaza | the tower in the fountain, the elevator and price board beside it, the clover, benches, lamps, flowerbeds ([02](playtest/2026-11-04-town/02-spawn-view-tower-exchange-barleys.jpg), [03](playtest/2026-11-04-town/03-plaza-from-above.jpg), [04](playtest/2026-11-04-town/04-fountain-and-clover.jpg)) | ✓ | |
+| The clocks | at game time 13.38 the hands say 1:23 ([06](playtest/2026-11-04-town/06-clock-shows-game-time-1-23.jpg)); the minute hand moves with the sky's clock | ✓ | |
+| The fountain | its spouts gave a few faint sparkles, hardly water ([07](playtest/2026-11-04-town/07-fountain-jets-too-faint.jpg)) | ✓ | fixed: thicker, longer arcs that land inside the rim, a splash where each lands ([22](playtest/2026-11-04-town/22-fountain-jets-fixed.jpg)) |
+| The price board | every crop and price reads from the walk in front ([08](playtest/2026-11-04-town/08-exchange-board-reads.jpg)), by night too ([19](playtest/2026-11-04-town/19-exchange-board-at-night.jpg)), and on a phone from the desk ([20](playtest/2026-11-04-town/20-phone-board-from-the-desk.jpg)) | ✓ | |
+| Barley's Seeds | the sign, the motto, packets in the windows, Barley at the SEED RACK, the "FRESH SEEDS new stock every 5 min" easel ([09](playtest/2026-11-04-town/09-barleys-seeds.jpg), [10](playtest/2026-11-04-town/10-barley-at-the-seed-rack.jpg)) | ✓ | |
+| The Hiring Hall | a porch post stood in front of the job board, cutting "first hire free!" ([11](playtest/2026-11-04-town/11-hiring-hall.jpg), [12](playtest/2026-11-04-town/12-porch-post-cuts-the-job-board.jpg)) | ✓ | fixed: the middle posts frame the door, the step as wide as the gap between them ([23](playtest/2026-11-04-town/23-hiring-hall-fixed.jpg), [24](playtest/2026-11-04-town/24-job-board-clear-of-the-posts.jpg)) |
+| The elevator, the signposts, the green, from above | CLOVERDALE on the elevator; "FARM 1 / XD2MUCH" on its signpost, the others "for rent"; the walk round the town and the farm paths ([13](playtest/2026-11-04-town/13-grain-elevator.jpg), [14](playtest/2026-11-04-town/14-signpost-farm-1-owner.jpg), [15](playtest/2026-11-04-town/15-the-green.jpg), [16](playtest/2026-11-04-town/16-town-from-above.jpg)) | ✓ | |
+| Night | the plaza's lamps light the paving, the clocks, the park lamps and the shop windows glow ([17](playtest/2026-11-04-town/17-plaza-at-night.jpg), [18](playtest/2026-11-04-town/18-spawn-view-at-night.jpg)) | ✓ | |
+| Frame rate | 60 fps (Studio's cap) at the farm and in town; Studio's memory 2,636 → 2,641 MB; 1,944 parts in the town on the client | ✓ | a phone's frame rate needs a real phone (Stage D) |
+| Errors | none in the Output | ✓ | |
+
+Seen and left: on a phone at the spawn the HUD covers most of the screen and the camera sits close (week 9's mobile layout); from the spawn the coin sign hangs over the far price board (you read it from its walk, or MARKET); the plaza is mostly open paving (room for 8 players to meet and trade); the green past the walk is plain lawn and trees (the valley's woods come in week 8).
+
 ### 2026-11-04 · a stolen crop is yours once you're back in your farm · build: week 7 + this change (uncommitted)
 Testers: Claude, driving Studio · Setup: solo Play, `/tp town` + `/carry Pumpkin`, a pathfinding walk home, then `/tp back` + `/carry Pumpkin` + Climb; a client logger printing the farm you're in and the crop in your hands, with the distance to your farmhouse door · Lag: 0 (local) · Screenshots: [playtest/2026-11-04-home-in-farm/](playtest/2026-11-04-home-in-farm/)
 

@@ -117,4 +117,9 @@ PROP_COLOURS.update({
     "brass": (214, 168, 64), "brassDark": (160, 118, 40), "brassLight": (240, 206, 112),
     "lampBody": (60, 64, 70), "lampGlass": (255, 244, 196),
     "glass": (214, 236, 244),
+    # the town (tools/crop_art/town.py)
+    "stone": (214, 204, 182), "stoneShade": (204, 194, 172), "stoneLight": (232, 224, 204), "stoneDark": (170, 160, 140),
+    "pool": (74, 146, 178), "poolDeep": (58, 120, 156),
+    "fir": (58, 120, 66), "firDark": (44, 98, 56), "firDeep": (34, 80, 48), "firLight": (78, 142, 78),
+    "tulipRed": (222, 52, 52), "tulipRedDark": (184, 34, 40), "bedSoil": (98, 68, 46), "bedSoilDark": (80, 54, 36),
 })

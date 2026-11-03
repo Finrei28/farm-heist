@@ -29,6 +29,13 @@ return {
 		MudPatch = { size = Vector3.new(10.636, 0.293, 11.731), centre = Vector3.new(-0.144, 0.12, 0.055) },
 		AlarmBell = { size = Vector3.new(1.16, 1.35, 1.16), centre = Vector3.new(0, 0.525, 0) },
 		Spotlight = { size = Vector3.new(1.2, 1.28, 0.88), centre = Vector3.new(0, 0.64, -0.02) },
+		Pyramid = { size = Vector3.new(1, 1, 1), centre = Vector3.new(0, 0.5, 0) },
+		Cone = { size = Vector3.new(1, 1, 1), centre = Vector3.new(0, 0.5, 0) },
+		FountainBasin = { size = Vector3.new(20, 2.5, 20), centre = Vector3.new(0, 1.25, 0) },
+		OakTree = { size = Vector3.new(14.841, 16.291, 16.131), centre = Vector3.new(0.213, 7.897, 0.033) },
+		PineTree = { size = Vector3.new(12.393, 20.65, 12.228), centre = Vector3.new(0.035, 10.125, -0.445) },
+		Bush = { size = Vector3.new(4.916, 3.427, 4.814), centre = Vector3.new(-0.056, 1.727, -0.074) },
+		FlowerBed = { size = Vector3.new(7, 2.647, 7), centre = Vector3.new(0, 1.323, 0) },
 	},
 	wild = {
 		obstacles = {

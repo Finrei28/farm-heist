@@ -283,10 +283,15 @@ local boardCells = {} -- [cropId] = { price, arrow }
 local boardEvents
 
 local function buildBoard()
-	local exchange = workspace:WaitForChild("World"):WaitForChild("Town"):WaitForChild("Exchange")
+	-- (the board is the Exchange hall's front, toward the square: its +Z
+	-- face; drawn 800 pixels wide whatever its size, the rows filling its
+	-- height)
+	local board = workspace:WaitForChild("World"):WaitForChild("Town"):WaitForChild("Exchange"):WaitForChild("PriceBoard")
+	local pixels = 800 / board.Size.X
+	local height = board.Size.Y * pixels
 	local gui = make("SurfaceGui", {
-		Name = "ExchangeBoard", Face = Enum.NormalId.Front, SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud,
-		PixelsPerStud = 20, LightInfluence = 0.3, MaxDistance = 400, ResetOnSpawn = false, Parent = exchange,
+		Name = "ExchangeBoard", Face = Enum.NormalId.Back, SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud,
+		PixelsPerStud = pixels, LightInfluence = 0.3, MaxDistance = 400, ResetOnSpawn = false, Parent = board,
 	})
 	local back = make("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(30, 34, 32), BorderSizePixel = 0, Parent = gui })
 	local header = make("Frame", { Size = UDim2.new(1, 0, 0, 110), BorderSizePixel = 0, Parent = back })
@@ -300,7 +305,7 @@ local function buildBoard()
 		TextSize = 30, TextColor3 = GOLD_CHALK, Parent = header,
 	})
 	local perColumn = math.ceil(#Crops.List / 2)
-	local rowHeight = (800 - 130) / perColumn
+	local rowHeight = (height - 130) / perColumn
 	for i, crop in Crops.List do
 		local column, rowIndex = (i - 1) // perColumn, (i - 1) % perColumn
 		local cell = make("Frame", {

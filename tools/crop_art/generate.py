@@ -45,6 +45,7 @@ from scene import lawn, stage  # noqa: E402
 from shelves import SHELF, piece  # noqa: E402
 from wild import GRASS, OBSTACLES  # noqa: E402
 import defences  # noqa: E402  (registers the defences' meshes)
+import town  # noqa: F401,E402  (registers the town's meshes)
 import props_preview  # noqa: E402
 
 ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))

@@ -267,6 +267,32 @@ local TravelAction = Remotes.func("TravelAction")
 local signs = {}
 local channelToken = 0
 
+-- on arriving, turn the camera the way you now face (the town's spawn faces
+-- the Exchange's board; Roblox's camera would keep its old angle)
+local function faceArrival()
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if not root then
+		return
+	end
+	local started, last = os.clock(), root.Position
+	local connection
+	connection = RunService.Heartbeat:Connect(function()
+		if os.clock() - started > TravelRules.CHANNEL + 3 or not root.Parent then
+			connection:Disconnect()
+			return
+		end
+		local now = root.Position
+		if (now - last).Magnitude > 30 then
+			connection:Disconnect()
+			local camera = workspace.CurrentCamera
+			if camera.CameraType == Enum.CameraType.Custom then
+				camera.CFrame = CFrame.lookAt(now - root.CFrame.LookVector * 12 + Vector3.new(0, 5, 0), now + Vector3.new(0, 1.5, 0))
+			end
+		end
+		last = now
+	end)
+end
+
 local function travel(kind: string, label: string)
 	local result = TravelAction:InvokeServer(kind)
 	if not result.ok then
@@ -276,6 +302,7 @@ local function travel(kind: string, label: string)
 		end
 		return
 	end
+	faceArrival()
 	channelToken += 1
 	local token = channelToken
 	channelBar.Visible = true

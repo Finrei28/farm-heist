@@ -32,7 +32,7 @@ end
 
 local function townFrame(): CFrame
 	local at = PlotLayout.TOWN.spawn + Vector3.new(0, 3, 0)
-	return CFrame.lookAt(at, at + Vector3.new(0, 0, 1))
+	return CFrame.lookAt(at, PlotLayout.TOWN.spawnLook + Vector3.new(0, 3, 0))
 end
 
 local function visitFrame(index: number): CFrame

@@ -151,6 +151,50 @@ return function(spec, harness)
 			local expected = PlotLayout.frontOf("Seeds", 4)
 			expect((counter.CFrame.Position - expected).Magnitude).toBeLessThan(2)
 		end)
+		it("dresses the town (World/PlazaArt, TownArt): the clocktower's four clocks, a signpost per farm, the boards the services use", function()
+			local town = world.Town
+			local clocks = 0
+			for _, part in town.Clocktower:GetDescendants() do
+				if part.Name == "ClockFace" then
+					clocks += 1
+					expect(part:FindFirstChildOfClass("SurfaceGui"):FindFirstChild("Hour") ~= nil).toBe(true) -- (SkyController turns it)
+				end
+			end
+			expect(clocks).toBe(4)
+			for index = 1, PlotLayout.COUNT do
+				local board = town[`Signpost{index}`].SignBoard
+				local owners = 0
+				for _, gui in board:GetChildren() do
+					if gui:FindFirstChild("Owner") then
+						owners += 1 -- (PlotService writes the owner's name on both faces)
+					end
+				end
+				expect(owners).toBe(2)
+			end
+			expect(town.Exchange:FindFirstChild("PriceBoard") ~= nil).toBe(true) -- (MarketController draws the prices on it)
+			expect(town:FindFirstChild("JobBoard") ~= nil).toBe(true) -- (WorkerService's prompt)
+		end)
+		it("makes the Exchange's elevator the tallest thing in town, and arrivals see past the clocktower to it", function()
+			local function top(model)
+				local best = -math.huge
+				for _, part in model:GetDescendants() do
+					if part:IsA("BasePart") then
+						best = math.max(best, part.CFrame.Position.Y + part.Size.Magnitude / 2)
+					end
+				end
+				return best
+			end
+			local exchange = world.Town.Exchange
+			for _, other in { "Clocktower", "AuctionHouse", "PoliceStation", "SeedShop", "HiringHall" } do
+				expect(top(exchange)).toBeGreaterThan(top(world.Town[other]))
+			end
+			-- the line from the spawn to what it faces (the Exchange) passes
+			-- clear of the clocktower (its clock stage is 7.6 across)
+			local from, to = PlotLayout.TOWN.spawn, PlotLayout.TOWN.spawnLook
+			local along = (to - from).Unit
+			local nearest = from + along * math.clamp(-from:Dot(along), 0, (to - from).Magnitude)
+			expect(roblox.Vector3.new(nearest.X, 0, nearest.Z).Magnitude).toBeGreaterThan(7)
+		end)
 	end)
 
 	describe("every store building on a plot (World/StoreArt)", function()

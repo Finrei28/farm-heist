@@ -332,6 +332,23 @@ local function setNight(on: boolean)
 end
 
 ------------------------------------------------------------------------
+-- The clocktower's four clocks (World/PlazaArt: "ClockFace" parts, their
+-- hands "Hour" and "Minute") show the sky's time.
+
+local function setClocks(clock: number)
+	local hour, minute = (clock % 12) * 30, (clock % 1) * 360
+	for _, face in CollectionService:GetTagged("ClockFace") do
+		local gui = face:FindFirstChildOfClass("SurfaceGui")
+		local hourHand = gui and gui:FindFirstChild("Hour")
+		local minuteHand = gui and gui:FindFirstChild("Minute")
+		if hourHand and minuteHand then
+			hourHand.Rotation = hour
+			minuteHand.Rotation = minute
+		end
+	end
+end
+
+------------------------------------------------------------------------
 -- Name tags at night, and the Floodlights' outlines
 
 local DAY_TAGS = 100 -- (Roblox's own distance)
@@ -547,6 +564,7 @@ function SkyController.Start()
 		local diff = (target - shown + 12) % 24 - 12
 		shown = if math.abs(diff) > 0.05 then (shown + math.sign(diff) * math.min(math.abs(diff), 8 * step)) % 24 else target
 		Lighting.ClockTime = shown
+		setClocks(shown)
 
 		local looks = LOOKS[id]
 		local look = mix(mix(NIGHT, looks.night, weight), mix(DAY, looks.day, weight), dayness(shown))

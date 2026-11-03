@@ -27,9 +27,12 @@ PlotLayout.FENCE_BLOCK = 11 -- an invisible wall this high over every fence is w
 PlotLayout.HEDGE_HEIGHT = 12
 
 PlotLayout.TOWN = {
-	plazaRadius = 160, -- (the design map's town, to scale)
+	radius = 160, -- the town's edge: its buildings and park inside it (the design map's town, to scale)
+	plazaRadius = 60, -- the paved plaza round the clocktower's fountain (docs/ArtDirection.md §6)
+	walkRadius = 150, -- the walk round the town behind its buildings, where the farm paths start
 	fountainRadius = 10,
-	spawn = Vector3.new(0, 0, -30), -- the town's SpawnLocation (arrivals, Town button)
+	spawn = Vector3.new(12, 0, -26), -- the town's SpawnLocation (arrivals, Town button): beside the clocktower, not behind it (and every farm gate 285–345 studs off)
+	spawnLook = Vector3.new(0, 0, 96), -- what you face as you arrive: the Exchange's price board, the clocktower on your right
 	buildings = { -- angle from north, distance from the square's centre, footprint
 		{ id = "Exchange", name = "Cloverdale Exchange", angle = 0, radius = 115, size = Vector3.new(40, 40, 30) },
 		{ id = "Auction", name = "Auction House", angle = 72, radius = 115, size = Vector3.new(44, 26, 34) },

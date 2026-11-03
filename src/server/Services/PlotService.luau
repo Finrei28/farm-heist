@@ -78,7 +78,7 @@ function PlotService.OnReleased(callback)
 end
 
 -- The name plank on the gate arch (both faces).
-local function setGateLabel(index: number, text: string)
+local function setGateLabel(index: number, text: string, owner: string)
 	local arch = PlotService.model(index):FindFirstChild("GateArch")
 	local plank = arch and arch:FindFirstChild("NamePlank")
 	for _, gui in (plank and plank:GetChildren()) or {} do
@@ -87,6 +87,16 @@ local function setGateLabel(index: number, text: string)
 			if label then
 				label.Text = text
 			end
+		end
+	end
+	-- and on the farm's signpost in town (World/PlazaArt)
+	local town = workspace:FindFirstChild("World") and workspace.World:FindFirstChild("Town")
+	local post = town and town:FindFirstChild(`Signpost{index}`)
+	local board = post and post:FindFirstChild("SignBoard")
+	for _, gui in (board and board:GetChildren()) or {} do
+		local label = gui:IsA("SurfaceGui") and gui:FindFirstChild("Owner")
+		if label then
+			label.Text = owner
 		end
 	end
 end
@@ -124,7 +134,7 @@ local function assign(player: Player, data)
 	local model = PlotService.model(index)
 	model:SetAttribute("OwnerId", player.UserId)
 	model:SetAttribute("OwnerName", player.DisplayName)
-	setGateLabel(index, `{player.DisplayName}'s farm`)
+	setGateLabel(index, `{player.DisplayName}'s farm`, player.DisplayName)
 	for _, callback in assignedCallbacks do
 		task.spawn(callback, player, index, data)
 	end
@@ -141,7 +151,7 @@ local function release(player: Player)
 	local model = PlotService.model(index)
 	model:SetAttribute("OwnerId", nil)
 	model:SetAttribute("OwnerName", nil)
-	setGateLabel(index, `Farm {index}: for rent`)
+	setGateLabel(index, `Farm {index}: for rent`, "for rent")
 	for _, callback in releasedCallbacks do
 		task.spawn(callback, player, index)
 	end

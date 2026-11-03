@@ -1,5 +1,6 @@
--- Builds the greybox of Cloverdale from shared/PlotLayout (docs/GameDesign.md
--- §3): the valley and hills, the town square and its five buildings, the
+-- Builds Cloverdale from shared/PlotLayout (docs/GameDesign.md §3): the
+-- valley and hills (greybox until week 8), the town (World/PlazaArt, its
+-- buildings: World/PoliceArt, AuctionArt, TownArt), the
 -- ring road and its sidewalk, the highway and tunnel, the back trail, and the
 -- 8 farms with their hedges, picket fences, gate arch, store, Packing Shed,
 -- pickup, farmhouse and barn (World/FarmhouseArt) and 8×8 field (the start corner tilled, the rest
@@ -22,10 +23,12 @@ local AuctionArt = require(script.Parent.AuctionArt)
 local PoliceArt = require(script.Parent.PoliceArt)
 local FarmhouseArt = require(script.Parent.FarmhouseArt)
 local DefenceArt = require(script.Parent.DefenceArt)
+local PlazaArt = require(script.Parent.PlazaArt)
+local TownArt = require(script.Parent.TownArt)
 
 local WorldBuilder = {}
 
-WorldBuilder.VERSION = 7
+WorldBuilder.VERSION = 8
 
 local COLORS = Parts.COLORS
 local part, plotBox = Parts.part, Parts.plotBox
@@ -132,81 +135,36 @@ local function buildTown(world: Instance)
 	town.Name = "Town"
 	town.Parent = world
 	local square = PlotLayout.TOWN
-	disc("Plaza", square.plazaRadius, 0.4, 0.2, COLORS.plaza, town)
-	disc("Fountain", square.fountainRadius, 2, 1, COLORS.water, town)
-	for _, building in square.buildings do
-		if building.id == "Police" then
-			PoliceArt.build(town) -- (its front, porch and desk: World/PoliceArt)
-			continue
-		elseif building.id == "Auction" then
-			AuctionArt.build(town) -- (the hall you bid in: World/AuctionArt)
-			continue
-		end
-		local position = PlotLayout.polar(building.angle, building.radius, building.size.Y / 2)
-		local block = part({
-			Name = building.id,
-			Size = building.size,
-			CFrame = CFrame.lookAt(position, Vector3.new(0, position.Y, 0)),
-			Color = COLORS.cream,
-		}, town)
-		label(building.name, block, building.size.Y / 2 + 4, 4, 260)
-	end
+	-- the plaza, clocktower and fountain, the park, signposts, the green and
+	-- the street lamps (World/PlazaArt); the buildings (Police, Auction:
+	-- their own modules; Barley's Seeds, the Hiring Hall, the Exchange:
+	-- World/TownArt)
+	PlazaArt.build(town)
+	PoliceArt.build(town) -- (its front, porch and desk)
+	AuctionArt.build(town) -- (the hall you bid in)
+	TownArt.build(town)
 
-	-- Barley's counter, in front of the seed shop (SeedShopService puts the
-	-- Seed Rack prompt on it), and Barley in his straw hat behind it.
-	local counterAt = PlotLayout.frontOf("Seeds", 4) + Vector3.new(0, 1.75, 0)
-	local facing = CFrame.lookAt(counterAt, Vector3.new(0, counterAt.Y, 0))
-	part({ Name = "SeedCounter", Size = Vector3.new(12, 3.5, 3), CFrame = facing, Color = COLORS.kraft }, town)
-	part({ Name = "CounterTop", Size = Vector3.new(12.6, 0.4, 3.6), CFrame = facing * CFrame.new(0, 1.95, 0), Color = COLORS.post }, town)
-	local barley = Instance.new("Model")
-	barley.Name = "Barley"
-	local feet = facing * CFrame.new(0, -1.75, 2.8)
-	part({ Name = "Body", Size = Vector3.new(2.4, 3.4, 1.4), CFrame = feet * CFrame.new(0, 1.7, 0), Color = COLORS.leaf }, barley)
-	Parts.ball("Head", feet * CFrame.new(0, 4.3, 0), 2, { Color = Color3.fromRGB(240, 196, 150) }, barley)
-	Parts.cylinder("HatBrim", feet * CFrame.new(0, 5, 0), 3.6, 0.25, { Color = COLORS.hay }, barley)
-	Parts.cylinder("HatCrown", feet * CFrame.new(0, 5.5, 0), 2, 1, { Color = COLORS.hay }, barley)
-	barley.Parent = town
-	label("Barley", barley.Body, 4.6, 1.4, 90)
-
-	-- The Hiring Hall's job board on two posts (WorkerService opens the
-	-- Workers window's Hire tab from it): today's candidates pinned up.
-	local boardAt = PlotLayout.frontOf("HiringHall", 4)
-	local boardFrame = CFrame.lookAt(boardAt, Vector3.new(0, 0, 0))
-	for _, x in { -5, 5 } do
-		part({ Name = "BoardPost", Size = Vector3.new(0.6, 8, 0.6), CFrame = boardFrame * CFrame.new(x, 4, 0.15), Color = COLORS.post }, town) -- (just behind the board's face)
-	end
-	local jobBoard = part({ Name = "JobBoard", Size = Vector3.new(10, 5, 0.6), CFrame = boardFrame * CFrame.new(0, 5, 0), Color = COLORS.kraft }, town)
-	for i, color in { COLORS.cream, COLORS.hay, COLORS.cream, COLORS.water, COLORS.cream, COLORS.leaf } do
-		local x, y = -3.4 + ((i - 1) % 3) * 3.4, if i <= 3 then 1 else -1.2
-		Parts.prop({ Name = "Notice", Size = Vector3.new(2.4, 1.8, 0.1), CFrame = jobBoard.CFrame * CFrame.new(x, y, -0.35) * CFrame.Angles(0, 0, math.rad((i * 37) % 9 - 4)), Color = color }, town)
-	end
-	label("Help wanted", jobBoard, 3.6, 1.6, 90)
-
-	-- The Exchange's desk (MarketService opens the Market window from it);
-	-- the price board on the building's face is drawn by the clients.
-	local deskAt = PlotLayout.frontOf("Exchange", 4) + Vector3.new(0, 1.75, 0)
-	part({ Name = "ExchangeDesk", Size = Vector3.new(12, 3.5, 3), CFrame = CFrame.lookAt(deskAt, Vector3.new(0, deskAt.Y, 0)), Color = COLORS.slate }, town)
-
+	-- The spawn stands on the medallion in the paving (PlazaArt), facing
+	-- the Exchange with the clocktower beside it (not the Police Station).
 	local spawn = Instance.new("SpawnLocation")
 	spawn.Name = "TownSpawn"
 	spawn.Anchored = true
 	spawn.Neutral = true
 	spawn.Duration = 0
-	spawn.Size = Vector3.new(8, 1, 8)
-	-- facing north, at the fountain and the Exchange (not the Police Station)
-	local spawnAt = square.spawn + Vector3.new(0, 0.5, 0)
-	spawn.CFrame = CFrame.lookAt(spawnAt, spawnAt + Vector3.new(0, 0, 1))
-	spawn.Color = COLORS.hay
-	spawn.TopSurface = Enum.SurfaceType.Smooth
+	spawn.Size = Vector3.new(8, 0.2, 8)
+	spawn.Transparency = 1
+	spawn.CanCollide = false
+	local spawnAt = square.spawn + Vector3.new(0, PlazaArt.SPAWN_TOP - 0.1, 0)
+	spawn.CFrame = CFrame.lookAt(spawnAt, square.spawnLook + Vector3.new(0, spawnAt.Y, 0))
 	spawn.Parent = town
 
 	ring("RingRoad", PlotLayout.RING_ROAD.radius, PlotLayout.RING_ROAD.width, 72, COLORS.road, world)
 	ring("Sidewalk", PlotLayout.SIDEWALK.radius, PlotLayout.SIDEWALK.width, 120, COLORS.plaza, world) -- (shoppers walk it)
 	ring("BackTrail", PlotLayout.BACK_TRAIL.radius, PlotLayout.BACK_TRAIL.width, 120, COLORS.trail, world)
 
-	-- Paths from the square to each farm's gate.
+	-- Paths from the walk round the town to each farm's gate.
 	for index = 1, PlotLayout.COUNT do
-		local from = PlotLayout.polar(PlotLayout.angle(index), square.plazaRadius, 0.1)
+		local from = PlotLayout.polar(PlotLayout.angle(index), square.walkRadius + 3.5, 0.1)
 		local to = PlotLayout.visitWorld(index) + Vector3.new(0, 0.1, 0)
 		part({
 			Name = `Path{index}`,
