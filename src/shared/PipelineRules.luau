@@ -236,7 +236,8 @@ function PipelineRules.simulate(state, seconds: number, rate: number, startTime:
 					break
 				end
 				local tile = state.tiles[key]
-				if tile and not tile.leave and GrowthRules.isRipe(tile) and GrowthRules.yieldOf(tile) <= state.barnRoom then
+				-- (a mutated crop waits for you: it only mutates while you're here)
+				if tile and not tile.leave and not tile.mutation and GrowthRules.isRipe(tile) and GrowthRules.yieldOf(tile) <= state.barnRoom then
 					local count = GrowthRules.yieldOf(tile)
 					budget.harvest -= 1
 					report.harvested += count
@@ -320,10 +321,10 @@ function PipelineRules.simulate(state, seconds: number, rate: number, startTime:
 						if (state.premium or 0) > 0 and (rarity == "Legendary" or rarity == "Mythic") then
 							price = math.floor(price * (1 + state.premium) + 0.5)
 						end
-						local value = math.floor(crate.units * price * (if crate.grade == "A" then Warehouse.GRADE_A else 1) + 0.5)
+						local value = CrateRules.value(crate, price)
 						coins += value
-						atBase += crate.units * Crops.ById[crate.crop].value
-						table.insert(lines, { crop = crate.crop, units = crate.units, grade = crate.grade, price = price, coins = value })
+						atBase += crate.units * Crops.ById[crate.crop].value * CrateRules.mutationValue(crate)
+						table.insert(lines, { crop = crate.crop, key = crate.key, units = crate.units, grade = crate.grade, price = price, coins = value })
 					end
 					if coins >= (state.minPrice or 0) * atBase then
 						local run = { truck = index, at = t, arriveAt = t + truck.roundTrip / 2, returnAt = t + truck.roundTrip, crates = lines, coins = coins }

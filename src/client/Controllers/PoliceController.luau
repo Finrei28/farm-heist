@@ -65,7 +65,7 @@ local function render()
 		line(2, "If a farmer catches you stealing, they can bonk you and arrest you. You pay a fine to them, and what you can't pay becomes a debt.", { color = C.soil })
 		return
 	end
-	line(1, `You owe {total} coins.`, { font = UI.HEAD, size = 24, color = C.red })
+	line(1, `You owe {UI.formatNumber(total)} coins.`, { font = UI.HEAD, size = 24, color = C.red })
 	local now = os.time()
 	for i, debt in debts do
 		local who = debt.ownerName or "a farmer"
@@ -76,7 +76,7 @@ local function render()
 	local row = make("Frame", { Size = UDim2.new(1, -8, 0, 50), BackgroundTransparency = 1, LayoutOrder = 60, ZIndex = 23, Parent = panel.list },
 		{ make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder }) })
 	local payAll = math.min(total, state.coins)
-	local holder, button = UI.button({ text = if payAll >= total then `Pay it all ({total})` else `Pay {payAll} now`, kind = "gold",
+	local holder, button = UI.button({ text = if payAll >= total then `Pay it all ({UI.formatNumber(total)})` else `Pay {UI.formatNumber(payAll)} now`, kind = "gold",
 		size = UDim2.fromOffset(220, 46), order = 1, zIndex = 23, parent = row })
 	if payAll <= 0 then
 		UI.setButtonKind(holder, "cream")

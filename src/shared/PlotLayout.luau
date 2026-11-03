@@ -402,6 +402,24 @@ function PlotLayout.building(id: string)
 	return nil
 end
 
+-- A town building's frame: origin at the middle of its front wall on the
+-- ground, +Z out toward the square, +X to the right as you face it.
+function PlotLayout.buildingFrame(id: string): CFrame
+	local building = PlotLayout.building(id)
+	local out = -direction(building.angle) -- (toward the square)
+	local origin = PlotLayout.polar(building.angle, building.radius - building.size.Z / 2)
+	return CFrame.fromMatrix(origin, Vector3.yAxis:Cross(out), Vector3.yAxis, out)
+end
+
+-- Whether a world position is inside a town building's room: within its
+-- walls, `margin` studs in from them (walls 1 stud thick), below its eaves.
+function PlotLayout.insideBuilding(id: string, position: Vector3, margin: number?): boolean
+	local building = PlotLayout.building(id)
+	local p = PlotLayout.buildingFrame(id):PointToObjectSpace(position)
+	local m = 1 + (margin or 0)
+	return math.abs(p.X) <= building.size.X / 2 - m and p.Z <= -m and p.Z >= -building.size.Z + m and p.Y >= -2 and p.Y <= building.size.Y
+end
+
 -- The spot `gap` studs in front of a town building, on the square's side
 -- (where its counter is: Barley stands here).
 function PlotLayout.frontOf(id: string, gap: number): Vector3

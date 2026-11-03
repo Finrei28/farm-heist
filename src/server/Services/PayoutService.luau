@@ -16,6 +16,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 
 local Shared = ReplicatedStorage.Shared
 local FineRules = require(Shared.FineRules)
+local Format = require(Shared.Format)
 local PayoutRules = require(Shared.PayoutRules)
 local Remotes = require(Shared.Remotes)
 
@@ -77,7 +78,7 @@ local function pay(debtorId: number, ownerId: number, amount: number)
 		local debtor = Players:GetPlayerByUserId(debtorId)
 		local name = if debtor then debtor.DisplayName else "A thief you arrested"
 		note(owner, "Got", amount, function(total)
-			return `💰 {name} paid you {total} coins of their fine.`
+			return `💰 {name} paid you {Format.number(total)} coins of their fine.`
 		end)
 		return
 	end
@@ -134,7 +135,7 @@ local function claim(player: Player)
 	if total > 0 then
 		PayoutRules.claim(data.payoutsClaimed, ids, os.time())
 		DataService.AddCoins(player, total, Analytics.GAMEPLAY, "DebtPayment")
-		Notice.send(player, `💰 Thieves you arrested paid off {total} coins of their fines.`, "Good")
+		Notice.send(player, `💰 Thieves you arrested paid off {Format.number(total)} coins of their fines.`, "Good")
 	end
 	PayoutRules.pruneClaimed(data.payoutsClaimed, os.time())
 	local claimed = data.payoutsClaimed
@@ -158,7 +159,7 @@ local function garnish(player: Player, data, coins: number): number
 		Notice.send(player, "Debt paid off! You keep all your sales again.", "Good")
 	else
 		note(player, "Paid", coins - kept, function(total)
-			return `{total} coins of your sales went to your debts ({left} left to pay).`
+			return `{Format.number(total)} coins of your sales went to your debts ({Format.number(left)} left to pay).`
 		end)
 	end
 	return kept

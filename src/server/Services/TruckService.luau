@@ -11,7 +11,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local Shared = ReplicatedStorage.Shared
+local BarnRules = require(Shared.BarnRules)
+local CrateRules = require(Shared.CrateRules)
 local Crops = require(Shared.Config.Crops)
+local Format = require(Shared.Format)
 local Remotes = require(Shared.Remotes)
 local TruckRules = require(Shared.TruckRules)
 local Warehouse = require(Shared.Config.Warehouse)
@@ -23,6 +26,7 @@ local Analytics = require(Server.Util.Analytics)
 local Notice = require(Server.Util.Notice)
 local YardArt = require(Server.World.YardArt)
 local DataService = require(script.Parent.DataService)
+local QuestService = require(script.Parent.QuestService)
 local MarketService = require(script.Parent.MarketService)
 local MovementService = require(script.Parent.MovementService)
 local PlotService = require(script.Parent.PlotService)
@@ -163,11 +167,13 @@ function TruckService.Dispatch(player: Player, truck: number?, by: string?): str
 			local run, why = TruckRules.dispatch(data.warehouse, i, now(), MarketService.priceAt(), TruckService.tripFor(player, data, i))
 			if run then
 				sent += 1
+				QuestService.Bump(player, "crates", #run.crates)
 				local lines = {}
 				for _, crate in run.crates do
 					local crop = Crops.ById[crate.crop]
+					local _, mutation = BarnRules.parse(crate.key or "")
 					table.insert(lines, {
-						text = `{crop.icon or ""} {crop.name} ×{crate.units}{if crate.grade == "A" then " (A)" else ""} @ {crate.price}`,
+						text = `{crop.icon or ""} {if mutation then mutation .. " " else ""}{crop.name} ×{crate.units}{if crate.grade == "A" then " (A)" else ""}{if mutation then ` (×{CrateRules.mutationValue(crate)})` else ""} @ {Format.number(crate.price)}`,
 						coins = crate.coins,
 					})
 				end
@@ -218,7 +224,7 @@ local function settle(player: Player, live: boolean)
 		DataService.Earn(player, run.coins, "TruckSale", live)
 	end
 	if paid > 0 and live then
-		Notice.send(player, `🚚 Your {truckName(data)} reached the City: +{paid} coins`, "Good")
+		Notice.send(player, `🚚 Your {truckName(data)} reached the City: +{Format.number(paid)} coins`, "Good")
 	end
 	local back = TruckRules.tidy(warehouse, t)
 	if #due > 0 or back > 0 then

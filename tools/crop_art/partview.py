@@ -156,12 +156,21 @@ VIEWS = {
     "cloches": ((-22, 10, 128), (-36, 2, 152), (-80, -2, 120), (20, 40, 200)),
     "camera": ((-44, 10, 126), (-53, 9, 113), (-80, -2, 100), (-20, 40, 140)),
     "trail": ((-14, 7, 280), (0, 5, 250), (-60, -2, 220), (60, 40, 300)),
+    # the Auction House (partdump ... auction: the hall's frame, +Z to the square)
+    "hallfront": ((-14, 9, 44), (0, 11, -12), (-60, -2, -60), (60, 60, 60), (4, 0.6, 3)),
+    "hallside": ((48, 14, 18), (0, 12, -17), (-60, -2, -60), (60, 60, 60), (4, 0.6, 3)),
+    "hallabove": ((34, 52, 34), (0, 16, -17), (-60, -2, -60), (60, 60, 60), (4, 0.6, 3)),
+    "hallin": ((-4, 7, -3), (2, 7, -30), (-25, -2, -36), (25, 15.5, 2), (-1, 0.6, -6)),
+    "hallstage": ((-14, 8, -14), (6, 6, -29), (-25, -2, -36), (25, 15.5, 2), (-6, 0.6, -21)),
+    "goldie": ((5, 8, -18), (9, 7, -29), (-25, -2, -36), (25, 15.5, 2), (2, 3.2, -26)),
+    "belltower": ((10, 33, 6), (0, 29, -5.5), (-60, 20, -60), (60, 60, 60), (4, 0.6, 3)),
 }
 
 
 def shoot(parts, view, size=(960, 600)):
-    eye, target, lo, hi = VIEWS[view]
-    figure_mesh = figure(np.array([[1, 0, 0, -20], [0, 1, 0, 0.4], [0, 0, 1, 93], [0, 0, 0, 1.0]]))
+    eye, target, lo, hi = VIEWS[view][:4]
+    at = VIEWS[view][4] if len(VIEWS[view]) > 4 else (-20, 0.4, 93)  # (a figure for scale)
+    figure_mesh = figure(np.array([[1, 0, 0, at[0]], [0, 1, 0, at[1]], [0, 0, 1, at[2]], [0, 0, 0, 1.0]]))
     tris, cols = world_of(clip(parts, lo, hi), figure_mesh)
     return render(tris, cols, np.array(eye, dtype=float), np.array(target, dtype=float), size=size, ss=2)
 

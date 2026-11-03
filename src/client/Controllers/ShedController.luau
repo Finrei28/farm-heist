@@ -157,8 +157,9 @@ local function showWash(key: string, to: string)
 	local state = PlayerState.current
 	local units = math.min(state and state.inventory.crops[key] or 0, CrateRules.size(cropId))
 	chosen = { key = key, to = to }
+	local _, mutation = BarnRules.parse(key)
 	crateIcon.Text = crop.icon or "📦"
-	crateCount.Text = `{crop.name} ×{units}`
+	crateCount.Text = `{if mutation then mutation .. " " else ""}{crop.name} ×{units}`
 	local name, shed = trucks(state)
 	destination.Text = if to == "Store" then "🏪 for your store" elseif shed then `🚚 for the {string.lower(name)}` else "🚚 to the Cold Room, for the trucks"
 	water.Size = UDim2.fromScale(1, 0)
@@ -247,7 +248,8 @@ local function row(order: number, key: string, units: number, state)
 	local cropId, mutation, giant = BarnRules.parse(key)
 	local crop = Crops.ById[cropId]
 	local t = now()
-	local truckPrice = MarketPrice.price(cropId, t)
+	local bonus = CrateRules.mutationValue({ key = key }) -- (a mutated crop: the truck pays this many times more)
+	local truckPrice = math.floor(MarketPrice.price(cropId, t) * bonus + 0.5)
 	local storePrice = state.store.prices[cropId] or math.floor(ShopRules.reference(cropId, truckPrice) + 0.5)
 	-- (can any display your store has unlocked hold it? is there room in the stockroom?)
 	local holdable, needs = false, nil
@@ -269,11 +271,23 @@ local function row(order: number, key: string, units: number, state)
 	local name = `{if giant then "Giant " else ""}{if mutation then mutation .. " " else ""}{crop.name}`
 	UI.fit(UI.label({ Position = UDim2.fromOffset(58, 5), Size = UDim2.new(1, -330, 0, 22), Font = UI.HEAD, TextSize = 17, Text = string.upper(name), ZIndex = 23, Parent = frame }), 11)
 	UI.fit(UI.label({ Position = UDim2.fromOffset(58, 28), Size = UDim2.new(1, -330, 0, 20), Font = UI.HAND, TextSize = 18,
-		Text = `×{units} in the barn · {CrateRules.size(cropId)} a crate`, ZIndex = 23, Parent = frame }), 11)
+		Text = `×{units} in the barn · {CrateRules.size(cropId)} a crate{if mutation then ` · ✨ ×{bonus} by truck` else ""}`, ZIndex = 23, Parent = frame }), 11)
 	local carrying = player:GetAttribute("Carrying") ~= nil
 	local truckHolder, truckButton = UI.button({ text = `🚚 Truck {truckPrice}`, kind = if carrying then "cream" else "blue", size = UDim2.fromOffset(122, 42),
 		anchor = Vector2.new(1, 0.5), position = UDim2.new(1, -140, 0.5, 2), textSize = 17, zIndex = 23, parent = frame })
 	truckHolder.Name = "Truck"
+	if not CrateRules.storeable(key) then
+		-- (mutated crops go by truck: the truck's button takes the store's place)
+		truckHolder.Position = UDim2.new(1, -10, 0.5, 2)
+		truckButton.Activated:Connect(function()
+			if player:GetAttribute("Carrying") then
+				UI.toast("Load the crate you're carrying into the pickup first.", "Error", 3)
+			else
+				showWash(key, "Truck")
+			end
+		end)
+		return
+	end
 	local storeText = if not holdable then `🏪 Store Lv {needs}` elseif full then "🏪 Full" else `🏪 Store {storePrice}`
 	local _, storeButton = UI.button({ text = storeText, kind = if holdable and not full then "green" else "cream", size = UDim2.fromOffset(122, 42),
 		anchor = Vector2.new(1, 0.5), position = UDim2.new(1, -10, 0.5, 2), textSize = 17, zIndex = 23, parent = frame })

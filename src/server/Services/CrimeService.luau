@@ -37,11 +37,13 @@ local Crime = require(Shared.Config.Crime)
 local CrimeRules = require(Shared.CrimeRules)
 local Crops = require(Shared.Config.Crops)
 local FineRules = require(Shared.FineRules)
+local Format = require(Shared.Format)
 local PlotLayout = require(Shared.PlotLayout)
 local Rarities = require(Shared.Config.Rarities)
 local Remotes = require(Shared.Remotes)
 local LootRules = require(Shared.LootRules)
 local Settings = require(Shared.Config.Settings)
+local WeatherRules = require(Shared.WeatherRules)
 
 local Server = ServerScriptService.Server
 local ActionRemote = require(Server.Util.ActionRemote)
@@ -49,6 +51,7 @@ local Analytics = require(Server.Util.Analytics)
 local Notice = require(Server.Util.Notice)
 local CrimeArt = require(Server.World.CrimeArt)
 local DataService = require(script.Parent.DataService)
+local QuestService = require(script.Parent.QuestService)
 local DefenceService = require(script.Parent.DefenceService)
 local FieldService = require(script.Parent.FieldService)
 local MarketService = require(script.Parent.MarketService)
@@ -591,6 +594,7 @@ local function fine(thief: Player, owner: Player, loot: number, fled: boolean)
 		end
 		if countsForBoard(ownerData, thief.UserId, loot) then
 			DataService.AddXp(owner, Crime.ARREST_XP)
+			QuestService.Bump(owner, "arrests", 1) -- (staged arrests don't count here either)
 		end
 	end
 	return result
@@ -613,9 +617,9 @@ local function arrest(owner: Player, target: Player, fled: boolean)
 	cancelHold(state)
 	Analytics.event(target, if fled then "FledArrest" else "Arrest", result.fine)
 	local what = if charge ~= "" then `Crop theft: {charge}` else "Trespassing to steal"
-	local owed = if result.owed > 0 then ` ({result.owed} more as they pay off the debt)` else ""
+	local owed = if result.owed > 0 then ` ({Format.number(result.owed)} more as they pay off the debt)` else ""
 	if fled then
-		Notice.send(owner, `🚔 {target.DisplayName} fled arrest! Fined {result.fine} (×1.5): +{result.paid} coins{owed}.`, "Good")
+		Notice.send(owner, `🚔 {target.DisplayName} fled arrest! Fined {Format.number(result.fine)} (×1.5): +{Format.number(result.paid)} coins{owed}.`, "Good")
 		return
 	end
 	state.ko = nil
@@ -640,7 +644,7 @@ local function arrest(owner: Player, target: Player, fled: boolean)
 		MovementService.Teleport(target, porchFrame())
 		local debt = FineRules.totalDebt(data.crime, os.time())
 		Notice.send(target, if debt > 0
-			then `You owe {debt} coins. Half of your sales pay it off; or pay at the police desk here.`
+			then `You owe {Format.number(debt)} coins. Half of your sales pay it off; or pay at the police desk here.`
 			else `Fine paid. You can't steal from {owner.DisplayName}'s farm for 3 minutes.`)
 	end)
 end
@@ -681,7 +685,7 @@ local function onExit(player: Player, state, plot: number, t: number)
 				table.insert(mine, item)
 			end
 		end
-		Notice.send(player, "Safe! Now carry it home to your farmhouse door.", "Good")
+		Notice.send(player, "Safe! Now get it home: it's yours as soon as you're back in your own farm.", "Good")
 		Notice.send(owner, `{player.DisplayName} got away with {LootRules.summary(mine)}. Harvest ripe crops fast, and bonk thieves with your bat!`, "Error")
 	end
 end
@@ -707,7 +711,8 @@ local function updateBat(player: Player, state)
 	end
 end
 
--- Home with a stolen crop: at your own farmhouse door it goes in your barn.
+-- Home with a stolen crop: once you're back in your own farm (any way in:
+-- the gate, over the back fence) it goes in your barn.
 local function deposit(player: Player, state)
 	local data = DataService.Get(player)
 	if not data then
@@ -716,7 +721,10 @@ local function deposit(player: Player, state)
 	local items = LootRules.takeAll(state.loot)
 	for _, item in items do
 		BarnRules.addCrops(data.inventory, item.key, item.count or 1) -- (always fits, §4.5)
+		local _, mutation = BarnRules.parse(item.key)
+		QuestService.Record(player, item.crop, mutation)
 	end
+	QuestService.Bump(player, "deposits", 1)
 	data.stats.stolenValue += LootRules.value(items, priceOf)
 	showCarried(player, state)
 	DataService.NotifyState(player)
@@ -756,13 +764,12 @@ local function tick()
 				state.pickup = nil
 			end
 		end
-		-- home with loot: into the barn
+		-- home with loot: into the barn the moment you're back in your farm
+		-- (it was only at the farmhouse door: a long last walk for nothing,
+		-- since nobody can stop you in your own farm)
 		local home = PlotService.plotOf(player)
 		if carrying(state) and home and farm == home then
-			local position = MovementService.positionOf(player)
-			if position and (position - PlotLayout.spawnWorld(home)).Magnitude <= Crime.DEPOSIT_RANGE + 3 then
-				deposit(player, state)
-			end
+			deposit(player, state)
 		end
 		local suspect = suspectOf(player, state, t)
 		if (player:GetAttribute("SuspectOf") or 0) ~= suspect then
@@ -829,7 +836,7 @@ function actions.Steal(player, _data, arg)
 	if not ok then
 		return if why == "Cooldown" then "FarmCooldown" else why
 	end
-	local seconds = CrimeRules.stealHold(rarity, { cloche = DefenceService.cloche(owner, tile) })
+	local seconds = CrimeRules.stealHold(rarity, { cloche = DefenceService.cloche(owner, tile), harvestMoon = WeatherRules.isHeistNight(WeatherRules.now(t)) })
 	state.hold = { plot = plot, tile = tile, key = tostring(tile), crop = cropId, count = count, ownerId = owner.UserId, startedAt = t, seconds = seconds }
 	CrimeRules.markSuspect(visitOf(state, plot), t)
 	player:SetAttribute("SuspectOf", plot)
@@ -889,8 +896,7 @@ function actions.StealDone(player, _data, _arg)
 	LootRules.add(state.loot, cropId, key :: string, owner.UserId, CrimeRules.raidAdd(ledger, t, weight), count)
 	showCarried(player, state)
 	DataService.NotifyState(owner)
-	local crop = Crops.ById[cropId]
-	Notice.send(owner, `😠 {player.DisplayName} stole your {crop.icon} {Crops.count(cropId, count)}!`, "Error")
+	Notice.send(owner, `😠 {player.DisplayName} stole your {LootRules.summary({ { crop = cropId, key = key, count = count } })}!`, "Error")
 	theft(owner, player, hold.plot, PlotLayout.tileLocal(hold.tile))
 	return nil, { crop = cropId, count = count }
 end
@@ -1337,7 +1343,9 @@ function CrimeService.DevKnockOut(player: Player, suspect: boolean)
 	if suspect then
 		CrimeRules.markSuspect(visitOf(state, plot), now())
 	end
-	knockOut(player, player, plot)
+	-- (as if the farm's owner swung the bat: the dropped crop's notes name
+	-- their farm, not yours)
+	knockOut(PlotService.ownerOf(plot) or player, player, plot)
 end
 
 function CrimeService.DevSuspect(player: Player): number

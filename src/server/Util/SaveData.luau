@@ -75,6 +75,7 @@ local TEMPLATE = {
 		shieldDropped = false, -- dropped the Sprout Shield early (to start raiding)
 	},
 	payoutsClaimed = {}, -- ["payoutId"] = true: fines collected for you on other servers, already paid
+	auctionHeld = 0, -- coins held for the Auction House lot you lead (back on your next join if the server closed first)
 
 	onboarded = {}, -- [step] = true: onboarding steps logged to analytics (Util/Analytics)
 	guide = { done = {}, finished = false, hidden = false, rewarded = false },

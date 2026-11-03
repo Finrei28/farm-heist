@@ -428,6 +428,47 @@ local function camera(parent: Instance, frame: CFrame)
 	end)
 end
 
+-- Floodlights (§4.11, week 7): a lamp post just off each corner of the
+-- field, its lamp head on an arm tilted down at the field's middle. By day
+-- the lens is pale glass; at night (SkyController: "NightGlow" and
+-- "NightLight") it glows and a spotlight floods the field.
+local POST = Color3.fromRGB(62, 74, 66) -- (a dark green iron)
+local LENS = Color3.fromRGB(226, 224, 210)
+local function floodlights(parent: Instance, frame: CFrame)
+	local field = PlotLayout.PLOT.field
+	local x0, z0 = field.across, field.depth
+	local x1, z1 = x0 + field.size * field.tile, z0 + field.size * field.tile
+	local middle = frame:PointToWorldSpace(Vector3.new((x0 + x1) / 2, 0, (z0 + z1) / 2))
+	local TOP = 16
+	for _, corner in { { x0, z0, -1, -1 }, { x1, z0, 1, -1 }, { x0, z1, -1, 1 }, { x1, z1, 1, 1 } } do
+		local base = frame * CFrame.new(corner[1] + corner[3] * 1.6, 0, corner[2] + corner[4] * 1.6)
+		Parts.part({ Name = "FloodPlinth", Size = Vector3.new(1.6, 0.6, 1.6), CFrame = base * CFrame.new(0, 0.3, 0), Color = Color3.fromRGB(150, 146, 140) }, parent)
+		Parts.part({ Name = "FloodPost", Shape = Enum.PartType.Cylinder, Size = Vector3.new(TOP - 0.3, 0.55, 0.55),
+			CFrame = base * CFrame.new(0, 0.3 + (TOP - 0.3) / 2, 0) * CFrame.Angles(0, 0, math.rad(90)), Color = POST }, parent)
+		Parts.ball("FloodCap", base * CFrame.new(0, TOP, 0), 0.75, { Color = POST }, parent)
+		-- the arm out toward the field, and the head on it looking down at the middle
+		local toward = Vector3.new(middle.X - base.Position.X, 0, middle.Z - base.Position.Z).Unit
+		local headAt = base.Position + Vector3.new(0, TOP - 0.7, 0) + toward * 1.5
+		Parts.prop({ Name = "FloodArm", Size = Vector3.new(0.3, 0.3, 1.6), CFrame = CFrame.lookAt(base.Position + Vector3.new(0, TOP - 0.7, 0) + toward * 0.55, headAt), Color = POST }, parent)
+		local head = CFrame.lookAt(headAt, middle)
+		Parts.prop({ Name = "FloodHead", Size = Vector3.new(2.2, 0.9, 1.3), CFrame = head * CFrame.new(0, 0, 0.35), Color = IRON }, parent)
+		local lens = Parts.prop({ Name = "FloodLens", Size = Vector3.new(1.9, 0.68, 0.1), CFrame = head * CFrame.new(0, 0, -0.36), Color = LENS,
+			Material = Enum.Material.Glass, CastShadow = false }, parent)
+		lens:SetAttribute("NightColor", Color3.fromRGB(255, 246, 220))
+		lens:AddTag("NightGlow")
+		local light = Instance.new("SpotLight")
+		light.Face = Enum.NormalId.Front
+		light.Angle = 80
+		light.Range = 60
+		light.Brightness = 2.5
+		light.Color = Color3.fromRGB(255, 244, 222)
+		light.Shadows = false
+		light.Enabled = false
+		light.Parent = lens
+		light:AddTag("NightLight")
+	end
+end
+
 -- Redraws everything set out on a farm (shared/DefenceRules), and the back
 -- fence and the gate's lock to match. index: the plot (the farm's colour).
 function DefenceArt.show(model: Model, frame: CFrame, index: number, defences)
@@ -473,9 +514,16 @@ function DefenceArt.show(model: Model, frame: CFrame, index: number, defences)
 			holder.Name = "Camera"
 			camera(holder, frame)
 			holder.Parent = folder
+		elseif kind == "floods" then
+			local holder = Instance.new("Model")
+			holder.Name = "Floodlights"
+			floodlights(holder, frame)
+			holder.Parent = folder
 		end
 	end
 	folder.Parent = model
+	-- (the clients: name tags show from afar on this farm at night)
+	model:SetAttribute("Floodlights", defences.placed.floods == "Floodlights" or nil)
 	local fence = model:FindFirstChild("BackFence")
 	local tall = defences.placed.fence == "TallFence"
 	if not fence or fence:GetAttribute("Tall") ~= tall then

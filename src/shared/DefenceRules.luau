@@ -6,7 +6,7 @@
 -- defences = { owned = { [itemId] = how many you own },
 --              placed = { [spot] = itemId } }
 -- A spot is "yard:N" (PlotLayout.yardSpot, 1–26), "tile:N" (a field tile,
--- 1–64), or an item's own place: "gate", "fence", "camera". What you own
+-- 1–64), or an item's own place: "gate", "fence", "camera", "floods". What you own
 -- but haven't set out is put away (in the barn).
 --
 -- trusted = { { id, name } }, up to TRUSTED_MAX.
@@ -17,9 +17,9 @@ local PlotLayout = require(script.Parent.PlotLayout)
 
 local DefenceRules = {}
 
-local FIXED = { gate = true, fence = true, camera = true }
+local FIXED = { gate = true, fence = true, camera = true, floods = true }
 
--- "yard" · "tile" · "gate" · "fence" · "camera", and the number of a yard
+-- "yard" · "tile" · "gate" · "fence" · "camera" · "floods", and the number of a yard
 -- spot or tile; nil for anything else.
 function DefenceRules.spotKind(spot: string): (string?, number?)
 	if FIXED[spot] then

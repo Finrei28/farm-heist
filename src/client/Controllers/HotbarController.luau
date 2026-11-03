@@ -132,7 +132,7 @@ end
 
 local function order(a: string, b: string): boolean
 	local ca, cb = Crops.ById[a], Crops.ById[b]
-	local ra, rb = Rarities.ById[ca].order, Rarities.ById[cb].order
+	local ra, rb = Rarities.ById[ca.rarity].order, Rarities.ById[cb.rarity].order
 	if ra ~= rb then
 		return ra < rb
 	end

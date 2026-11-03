@@ -2,7 +2,7 @@
 -- functions over plain tables, so they're tested (tests/growth.test.luau).
 --
 -- A tile is
---   { crop = cropId, progress = 0–1, harvestsLeft, regrowing, watered, fresh, leave, yield }
+--   { crop = cropId, progress = 0–1, harvestsLeft, regrowing, watered, fresh, leave, yield, mutation? }
 -- progress is the share of the current stage done: the first grow, or a
 -- regrow for crops that give several harvests. yield: how many it gives
 -- when it's picked (6 carrots, 1 pumpkin ...: rolled when it's planted, and
@@ -10,6 +10,8 @@
 -- the patch can show them all while it grows. Services settle growth from
 -- elapsed time (FieldService online, every few seconds; DataService's
 -- welcome-back settle offline), so nothing ticks while a player is away.
+-- mutation: what the weather turned the ripe crop into while it was left
+-- in the field (shared/WeatherRules); picking it ends it.
 --   speed: 1 online (times weather, sprinklers, a Growth Boost);
 --          Growth.OFFLINE_RATE while the owner is offline (GrowthRules.offline).
 local Crops = require(script.Parent.Config.Crops)
@@ -113,6 +115,7 @@ function GrowthRules.harvest(tile, nextYield: number?): (boolean, boolean)
 		return false, true
 	end
 	tile.fresh = false -- (fresh soil helps the first crop only)
+	tile.mutation = nil -- (the next fruit starts plain)
 	if tile.harvestsLeft > 0 then
 		tile.harvestsLeft -= 1
 		tile.regrowing = true

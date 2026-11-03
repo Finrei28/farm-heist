@@ -60,6 +60,12 @@ return function(spec, harness)
 			local items = { { crop = "Pumpkin" }, { crop = "Carrot", count = 6 }, { crop = "Pumpkin", count = 1 } }
 			expect(LootRules.summary(items)).toBe("🎃 2 pumpkins, 🥕 6 carrots")
 		end)
+		it("say a mutated crop's mutation, and count it at its value (for the fine)", function()
+			local items = { { crop = "Carrot", key = "Carrot|Wet|", count = 6 } }
+			expect(LootRules.summary(items)).toBe("🥕 6 Wet carrots")
+			expect(LootRules.value(items)).toBeNear(6 * 30 * 1.3, 1e-6)
+			expect(LootRules.value({ { crop = "Pumpkin", key = "Pumpkin|Moonlit|" } })).toBe(6_100 * 5)
+		end)
 	end)
 
 	describe("returned loot", function()

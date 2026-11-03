@@ -18,7 +18,7 @@
 --   /state               prints your warehouse, trucks and crew to the Output
 --   /shoppers 5          the next N shoppers come to your store one after another
 --   /store 5             your store straight to Store Level N (up only; buildings done at once)
---   /tp town · /tp porch · /tp barley · /tp exchange · /tp hiring · /tp home · /tp shed (the bench) · /tp dock · /tp store · /tp 3 (a farm's gate)
+--   /tp town · /tp porch · /tp barley · /tp exchange · /tp hiring · /tp auction (inside, by the doors) · /tp home · /tp shed (the bench) · /tp dock · /tp store · /tp 3 (a farm's gate)
 --   /tp back [3]         outside a farm's back fence (yours by default), facing it
 --   /tp field [3]        in a farm's field (yours by default), on its first open block
 --   /plant Pumpkin       plant that crop on every open, empty tile of your field (free; /grow ripe ripens them)
@@ -26,13 +26,18 @@
 --   /land all · none     every block of your field cleared (all 64 tiles open) · back to the 4 start blocks
 --   /ko [suspect]        knock yourself out where you stand (as a Suspect: the arrest screen)
 --   /suspect             mark yourself a Suspect of the farm you're in
---   /carry Carrot 8      stolen crops in your hands (default: what a thief takes from a patch; from your own farm: walk to your door to put them away); /carry none empties them
+--   /carry Carrot 8      stolen crops in your hands (default: what a thief takes from a patch; in your own farm they go straight into your barn, so use it outside); /carry none empties them
 --   /debt 3000           owe 3,000 coins (to yourself) for the police desk and paying off debts
 --   /earn 2000           as if you'd sold crops for 2,000 coins (sales XP; half goes to any debts)
 --   /crimelog            prints your visits, what you carry, cooldowns, debts, arrests and your farm's raid ledger
 --   /shield off · on     end your Sprout Shield and arrival grace now · start them again (as a new player)
 --   /defences all · none one of every defence, set out round your field (4 mud patches, 4 cloches) · none at all
 --   /trust Name          put a player in this server on your Trusted list (/trust none empties it)
+--   /auction now        an auction starts this moment (three lots, off the 8-minute clock)
+--   /auction soon       the auction clock moves so the next one starts in 70 s (its 1-minute note, the bell); /auction off back to the real clock
+--   /quests Arrest Deposit Mutation   today's quests set to these (Harvest · Ship · Store · Mutation · Arrest · Deposit · Auction), at your level
+--   /weather Rain        that weather now, for its usual length (Clear · Rain · Thunderstorm · FrostNight · GoldenHour · HarvestMoon); /weather off back to the schedule; /weather says what's on
+--   /time night          the sky's clock to sunrise · noon · dusk · night · midnight or an hour (0–23), for everyone; /time off back to the real clock
 --   /wipe                start your save over (in place)
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -52,10 +57,16 @@ local ProgressionRules = require(Shared.ProgressionRules)
 local SeedStock = require(Shared.SeedStock)
 local WarehouseRules = require(Shared.WarehouseRules)
 local Store = require(Shared.Config.Store)
+local Auction = require(Shared.Config.Auction)
+local QuestRules = require(Shared.QuestRules)
+local Quests = require(Shared.Config.Quests)
+local Weather = require(Shared.Config.Weather)
+local WeatherRules = require(Shared.WeatherRules)
 local Workers = require(Shared.Config.Workers)
 
 local Server = ServerScriptService.Server
 local Analytics = require(Server.Util.Analytics)
+local AuctionService = require(script.Parent.AuctionService)
 local Notice = require(Server.Util.Notice)
 local Staff = require(Server.Util.Staff)
 local CrimeService = require(script.Parent.CrimeService)
@@ -239,7 +250,7 @@ function DevCommandService.Start()
 		for i, bed in w.beds do
 			table.insert(beds, `{i}:{#bed}`)
 		end
-		print(`[state] coins {data.coins} · Warehouse {w.level}{if w.build then ` (building to {w.build.to}, {math.ceil(w.build.left)} s)` else ""} · hold {#w.dock} · sorted {#w.sorted} · beds {table.concat(beds, " ")} · runs {#w.trucks} · strike {data.crew.strike}`)
+		print(`[state] coins {data.coins} · auction held {data.auctionHeld or 0} · Warehouse {w.level}{if w.build then ` (building to {w.build.to}, {math.ceil(w.build.left)} s)` else ""} · hold {#w.dock} · sorted {#w.sorted} · beds {table.concat(beds, " ")} · runs {#w.trucks} · strike {data.crew.strike}`)
 		for key, units in data.inventory.crops do
 			print(`[state] barn {key} ×{units}`)
 		end
@@ -299,6 +310,9 @@ function DevCommandService.Start()
 		elseif where == "home" then
 			local index = PlotService.plotOf(player)
 			frame = index and PlotService.homeFrame(index)
+		elseif where == "auction" then
+			local hall = PlotLayout.buildingFrame("Auction")
+			frame = hall * CFrame.new(0, 3.6, -9) -- (behind the benches, looking along −Z: at the stage)
 		elseif where == "hiring" then
 			local at = PlotLayout.frontOf("HiringHall", 12) + Vector3.new(0, 3, 0)
 			frame = CFrame.lookAt(at, PlotLayout.frontOf("HiringHall", 0) + Vector3.new(0, 3, 0))
@@ -328,7 +342,7 @@ function DevCommandService.Start()
 		if frame then
 			TravelService.Send(player, frame)
 		else
-			reply(player, "Where? /tp town · porch · barley · exchange · hiring · home · shed · dock · store · back · 1–8")
+			reply(player, "Where? /tp town · porch · barley · exchange · hiring · auction · home · shed · dock · store · back · 1–8")
 		end
 	end)
 
@@ -374,7 +388,7 @@ function DevCommandService.Start()
 		end
 		local count = tonumber(args[3])
 		CrimeService.DevCarry(player, crop.id, player.UserId, if count then math.clamp(math.floor(count), 1, 50) else nil)
-		reply(player, `Carrying stolen crops ({crop.name}). Walk to your farmhouse door to put them in your barn`)
+		reply(player, `Carrying stolen crops ({crop.name}). Walk into your own farm to put them in your barn`)
 	end)
 
 	register("DevLand", "/land", function(player, data, args)
@@ -456,6 +470,85 @@ function DevCommandService.Start()
 			end
 		end
 		reply(player, "Nobody here by that name")
+	end)
+
+	register("DevAuction", "/auction", function(player, _data, args)
+		local wanted = string.lower(args[2] or "now")
+		if wanted == "soon" then
+			local real = workspace:GetServerTimeNow()
+			ReplicatedStorage:SetAttribute("AuctionShift", (Auction.INTERVAL - 70 - real % Auction.INTERVAL) % Auction.INTERVAL)
+			reply(player, "The next auction starts in 70 s (its note comes 60 s before)")
+		elseif wanted == "off" then
+			ReplicatedStorage:SetAttribute("AuctionShift", nil)
+			reply(player, "The auction clock is back to the real time")
+		else
+			AuctionService.DevStart()
+			reply(player, "An auction starts now: /tp auction to bid")
+		end
+	end)
+
+	register("DevQuests", "/quests", function(player, data, args)
+		local tier, scale = QuestRules.tier(data.level)
+		local list = {}
+		for i = 2, #args do
+			for _, def in Quests.POOL do
+				if string.lower(def.id) == string.lower(args[i]) then
+					table.insert(list, { id = def.id, stat = def.stat, n = def.n[tier], reward = def.reward * scale, progress = 0, claimed = false })
+				end
+			end
+		end
+		if #list == 0 then
+			reply(player, "Quests: Harvest · Ship · Store · Mutation · Arrest · Deposit · Auction")
+			return
+		end
+		data.quests.day = QuestRules.day(os.time())
+		data.quests.list = list
+		data.quests.bonusClaimed = false
+		DataService.NotifyState(player)
+		reply(player, `Today's quests: {#list} set`)
+	end)
+
+	register("DevWeather", "/weather", function(player, _data, args)
+		local wanted = string.lower(args[2] or "")
+		if wanted == "off" then
+			ReplicatedStorage:SetAttribute("WeatherForce", nil)
+			ReplicatedStorage:SetAttribute("WeatherForceUntil", nil)
+		elseif wanted ~= "" then
+			local id = nil
+			for key in Weather.TYPES do
+				if string.lower(key) == wanted then
+					id = key
+				end
+			end
+			if not id then
+				reply(player, "Weather: Clear · Rain · Thunderstorm · FrostNight · GoldenHour · HarvestMoon (or off)")
+				return
+			end
+			ReplicatedStorage:SetAttribute("WeatherForce", id)
+			ReplicatedStorage:SetAttribute("WeatherForceUntil", WeatherRules.now() + (Weather.TYPES[id].length or Weather.SLOT))
+		end
+		local t = WeatherRules.now()
+		local w = WeatherRules.weather(t)
+		reply(player, `{Weather.TYPES[w.id].name} for {math.floor(w.endsAt - t)} s{if w.forced then " (forced)" else ""}; the next Harvest Moon in {math.floor((WeatherRules.nextMoon(t) - t) / 60)} min`)
+	end)
+
+	register("DevTime", "/time", function(player, _data, args)
+		local wanted = string.lower(args[2] or "")
+		local hours = ({ sunrise = 6, noon = 12, dusk = 16.5, night = 20, midnight = 0 })[wanted] or tonumber(wanted)
+		if wanted == "off" then
+			ReplicatedStorage:SetAttribute("ClockShift", nil)
+		elseif hours and hours >= 0 and hours < 24 then
+			-- seconds into the day that show this hour on the sky's clock
+			local daylight = Weather.DAY - Weather.NIGHT
+			local target = if hours >= 6 and hours < 18 then (hours - 6) / 12 * daylight else daylight + ((hours - 18) % 24) / 12 * Weather.NIGHT
+			local real = workspace:GetServerTimeNow()
+			ReplicatedStorage:SetAttribute("ClockShift", (target - real % Weather.DAY) % Weather.DAY)
+		else
+			reply(player, "Time: sunrise · noon · dusk · night · midnight, an hour 0–23, or off")
+			return
+		end
+		local t = WeatherRules.now()
+		reply(player, string.format("The clock says %02d:%02d%s", math.floor(WeatherRules.clock(t)), math.floor(WeatherRules.clock(t) % 1 * 60), if WeatherRules.isNight(t) then " (night)" else ""))
 	end)
 
 	register("DevWipe", "/wipe", function(player)

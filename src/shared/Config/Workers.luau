@@ -66,8 +66,18 @@ return {
 		Careful = { name = "Careful", gradeA = 0.1, text = "+10% grade A", ["for"] = "grade" },
 		NightOwl = { name = "Night Owl", night = 1.3, text = "+30% at night", ["for"] = "speed" },
 		Frugal = { name = "Frugal", wage = 0.8, text = "−20% wage" },
+		-- only rare workers, from auction contracts (not on the board):
+		Tireless = { name = "Tireless", away = 2, text = "works at 50% while you're away, not 25%" },
 	},
-	TRAIT_ORDER = { "Speedy", "Careful", "NightOwl", "Frugal" },
+	TRAIT_ORDER = { "Speedy", "Careful", "NightOwl", "Frugal" }, -- (the hiring board's: Tireless isn't one)
+
+	-- Rare workers (§4.9), won at the Auction House (Config/Auction): they
+	-- join your crew at their level with their own trait, if you have a free
+	-- slot for their job when you bid.
+	CONTRACTS = {
+		GrandmaRose = { name = "Grandma Rose", title = "Legendary Packer", type = "Packer", level = 8, trait = "Tireless", look = 7 },
+		SpeedySam = { name = "Speedy Sam", title = "Rare Farmhand", type = "Farmhand", level = 7, trait = "Speedy", look = 4 },
+	},
 
 	-- A Sorter's chance of grade A (a Shed Hand's too): this at Level 1, plus
 	-- this much a level (85% at Level 10), plus the Careful trait and the

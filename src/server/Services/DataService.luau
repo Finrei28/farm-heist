@@ -277,6 +277,7 @@ local function getPublicState(data)
 		guide = data.guide,
 		quests = data.quests,
 		streak = data.streak,
+		cropdex = data.cropdex,
 		settings = data.settings,
 	}
 end

@@ -4,10 +4,13 @@
 --   { crop = cropId, key = barn stack key, units = n, grade = "A" | "B" }
 -- (units: how many carrots, pumpkins, punnets ... are in it) and goes to
 -- the truck (priced when it leaves) or your store's stockroom
--- (shared/ShopRules). tests/crate.test.luau.
+-- (shared/ShopRules). A crate of a mutated crop (its key says which, §4.14)
+-- goes by truck only and sells at its mutation's multiplier.
+-- tests/crate.test.luau.
 local BarnRules = require(script.Parent.BarnRules)
 local Crops = require(script.Parent.Config.Crops)
 local Warehouse = require(script.Parent.Config.Warehouse)
+local WeatherRules = require(script.Parent.WeatherRules)
 
 local WASH = Warehouse.WASH
 
@@ -54,9 +57,21 @@ function CrateRules.pack(inventory, key: string, grade: string)
 	return { crop = cropId, key = key, units = units, grade = if grade == "A" then "A" else "B" }
 end
 
+-- × value for the crate's mutation (1 for a plain crop).
+function CrateRules.mutationValue(crate): number
+	local _, mutation = BarnRules.parse(crate.key or "")
+	return WeatherRules.value(mutation)
+end
+
+-- Whether a barn stack can go to your store: mutated crops go by truck.
+function CrateRules.storeable(key: string): boolean
+	local _, mutation, giant = BarnRules.parse(key)
+	return mutation == nil and not giant
+end
+
 -- What a unit of this crate is worth when a standard unit sells for `price`.
 function CrateRules.unitPrice(crate, price: number): number
-	return price * (if crate.grade == "A" then Warehouse.GRADE_A else 1)
+	return price * (if crate.grade == "A" then Warehouse.GRADE_A else 1) * CrateRules.mutationValue(crate)
 end
 
 -- Coins for the whole crate at `price` a standard unit.

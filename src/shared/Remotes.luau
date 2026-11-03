@@ -38,6 +38,9 @@
 --                        Sprout Shield, the camera's visitors (server/Services/DefenceService, shared/DefenceRules)
 --   DefenceEvent   S→C  ("Near", { name, userId }) the scarecrow's warning to an owner · ("ShieldOver") your
 --                        Sprout Shield ended (the Farm Rules card) · ("Bark", { plot }) · ("Bell", { plot })
+--   AuctionAction  C→S  ("Bid" amount) -> { ok, reason? } from inside the Auction House (server/Services/AuctionService;
+--                        the lot on the board is ReplicatedStorage.Auction's attributes)
+--   QuestAction    C→S  ("Claim" index | "Bonus") -> { ok, reason?, result = { coins } } (server/Services/QuestService)
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
@@ -60,6 +63,8 @@ local DEFINITIONS = {
 	PoliceAction = "RemoteFunction",
 	DefenceAction = "RemoteFunction",
 	DefenceEvent = "RemoteEvent",
+	AuctionAction = "RemoteFunction",
+	QuestAction = "RemoteFunction",
 }
 
 local IS_SERVER = RunService:IsServer()

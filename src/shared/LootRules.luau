@@ -10,9 +10,11 @@
 -- loot = { items = { { crop, key, ownerId, entry?, count } } } (at most one
 -- item: a whole patch's carrots, or one pumpkin; a list so the crop
 -- mid-steal can join it for a fine)
+local BarnRules = require(script.Parent.BarnRules)
 local Crime = require(script.Parent.Config.Crime)
 local Crops = require(script.Parent.Config.Crops)
 local Rarities = require(script.Parent.Config.Rarities)
+local WeatherRules = require(script.Parent.WeatherRules)
 
 local LootRules = {}
 
@@ -53,7 +55,8 @@ end
 function LootRules.value(items, priceOf: ((string) -> number)?): number
 	local total = 0
 	for _, item in items do
-		total += (item.count or 1) * (if priceOf then priceOf(item.crop) else Crops.ById[item.crop].value)
+		local _, mutation = BarnRules.parse(item.key or "")
+		total += (item.count or 1) * (if priceOf then priceOf(item.crop) else Crops.ById[item.crop].value) * WeatherRules.value(mutation)
 	end
 	return total
 end
@@ -121,15 +124,17 @@ end
 function LootRules.summary(items): string
 	local order, counts = {}, {}
 	for _, item in items do
-		if not counts[item.crop] then
-			table.insert(order, item.crop)
-			counts[item.crop] = 0
+		local _, mutation = BarnRules.parse(item.key or "")
+		local kind = `{item.crop}|{mutation or ""}`
+		if not counts[kind] then
+			table.insert(order, { crop = item.crop, mutation = mutation, kind = kind })
+			counts[kind] = 0
 		end
-		counts[item.crop] += item.count or 1
+		counts[kind] += item.count or 1
 	end
 	local parts = {}
-	for _, cropId in order do
-		table.insert(parts, `{Crops.ById[cropId].icon} {Crops.count(cropId, counts[cropId])}`)
+	for _, entry in order do
+		table.insert(parts, `{Crops.ById[entry.crop].icon} {Crops.count(entry.crop, counts[entry.kind], entry.mutation)}`)
 	end
 	return table.concat(parts, ", ")
 end

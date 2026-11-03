@@ -8,6 +8,11 @@
 -- bids only ever go up, so the last one leads.
 local Config = require(script.Parent.Config.Auction)
 local Crops = require(script.Parent.Config.Crops)
+local DefenceRules = require(script.Parent.DefenceRules)
+local Defences = require(script.Parent.Config.Defences)
+local Rarities = require(script.Parent.Config.Rarities)
+local WorkerRules = require(script.Parent.WorkerRules)
+local Workers = require(script.Parent.Config.Workers)
 
 local AuctionRules = {}
 
@@ -33,6 +38,14 @@ function AuctionRules.rollLots(seed: number)
 		total += entry.weight
 	end
 	local lots = {}
+	local function taken(kind: string, id: string): boolean
+		for _, lot in lots do
+			if lot.kind == kind and lot.id == id then
+				return true
+			end
+		end
+		return false
+	end
 	for _ = 1, Config.LOTS do
 		local pick = rng:NextNumber() * total
 		local chosen = Config.POOL[#Config.POOL]
@@ -50,11 +63,24 @@ function AuctionRules.rollLots(seed: number)
 					table.insert(options, crop)
 				end
 			end
+			-- (never the same lot twice in one auction: up to a few tries)
 			local crop = options[rng:NextInteger(1, #options)]
+			for _ = 1, 4 do
+				if not taken("Seed", crop.id) then
+					break
+				end
+				crop = options[rng:NextInteger(1, #options)]
+			end
 			table.insert(lots, { kind = "Seed", id = crop.id, rarity = crop.rarity, estimate = crop.seed })
 		else
 			local options = Config.ITEMS[chosen.kind]
 			local item = options[rng:NextInteger(1, #options)]
+			for _ = 1, 4 do
+				if not taken(chosen.kind, item.id) then
+					break
+				end
+				item = options[rng:NextInteger(1, #options)]
+			end
 			table.insert(lots, { kind = chosen.kind, id = item.id, estimate = item.estimate })
 		end
 	end
@@ -142,6 +168,46 @@ function AuctionRules.bidderLeft(lot, userId: number, canPay: (number, number) -
 		end
 	end
 	return nil
+end
+
+-- What a lot is, for the window, the hall's board and the notes:
+-- { icon, name, detail, color? (its rarity's) }.
+function AuctionRules.describe(lot)
+	if lot.kind == "Seed" then
+		local crop = Crops.ById[lot.id]
+		local rarity = Rarities.ById[crop.rarity]
+		return { icon = crop.icon or "🌱", name = `{crop.name} seed`, detail = `{crop.rarity} · plants one patch`, color = rarity.color }
+	elseif lot.kind == "WorkerContract" then
+		local contract = Workers.CONTRACTS[lot.id]
+		local trait = Workers.TRAITS[contract.trait]
+		return { icon = "📜", name = contract.name, detail = `{contract.title}, Level {contract.level} · {trait.name}: {trait.text}` }
+	elseif lot.kind == "Defence" then
+		local def = Defences.ITEMS[lot.id]
+		return { icon = def.icon, name = def.name, detail = `A defence for your farm · from Farm Level {def.level}` }
+	end
+	return { icon = "📦", name = lot.id, detail = "" }
+end
+
+-- Whether a player could take this lot home if they won it: a defence
+-- needs its Farm Level and room for one more, a rare worker a free slot for
+-- their job. ctx = { level, defences, workers, workerCtx (WorkerRules.slots)
+-- }. Returns ok, reason ("DefenceLocked" · "DefenceMax" · "NoSlot").
+-- Seeds always can (a Mythic waits in the bag for Farm Level 20).
+function AuctionRules.canWin(lot, ctx): (boolean, string?)
+	if lot.kind == "Defence" then
+		local def = Defences.ITEMS[lot.id]
+		if ctx.level < def.level then
+			return false, "DefenceLocked"
+		elseif DefenceRules.owned(ctx.defences, lot.id) >= def.max then
+			return false, "DefenceMax"
+		end
+	elseif lot.kind == "WorkerContract" then
+		local contract = Workers.CONTRACTS[lot.id]
+		if not WorkerRules.canHire(ctx.workers, contract.type, ctx.workerCtx) then
+			return false, "NoSlot"
+		end
+	end
+	return true, nil
 end
 
 -- Closes a lot once its clock runs out. Returns the winning bid (or nil:

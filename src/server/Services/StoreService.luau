@@ -41,6 +41,7 @@ local Notice = require(Server.Util.Notice)
 local StoreArt = require(Server.World.StoreArt)
 local StoreItems = require(Server.World.StoreItems)
 local DataService = require(script.Parent.DataService)
+local QuestService = require(script.Parent.QuestService)
 local MarketService = require(script.Parent.MarketService)
 local MovementService = require(script.Parent.MovementService)
 local PlotService = require(script.Parent.PlotService)
@@ -500,6 +501,7 @@ local function pay(st, shopper, t: number)
 	local checkout = shopper.checkout
 	if data and coins > 0 then
 		DataService.Earn(player, coins, "StoreSale", true)
+		QuestService.Bump(player, "storeCoins", coins)
 		Analytics.step(player, data, "FirstShopSale")
 	end
 	leave(st, shopper, t, nil, Shop.SCORE_BOUGHT)

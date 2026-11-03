@@ -9,7 +9,7 @@ A farming game for Roblox. Grow crops on your own plot (which gets bigger as you
 
 ## Status
 
-Weeks 1–3 of the MVP plan (design doc §9) are in. Week 1: you get a farm, plant, water and harvest, buy seeds from Barley, level up, clear land with Land Permits, and travel Home and to Town, all in Farm Heist's own "Kraft & Crate" interface, with a first look pass (light, the field, crops). Week 2, selling: pack crates at the Packing Shed, truck them to the City at the global market price (it locks when the pickup leaves), or sell them at your Farm Stand at your own price to NPC shoppers; the Exchange board in town and the Market window show where prices are heading. The rules are tested (239 tests), the XP curve is tuned with a progression sim, and Cloverdale is built from one layout file. Play-test Stage A passed in Studio on 2026-10-30. Week 2 was played in Studio on 2026-10-31 (docs/PlaytestLog.md). Week 3, your own store (design doc §4.8): it replaces the Farm Stand; you lay it out and decorate it on a grid (displays, checkouts, decor, wall items), fill its displays from the stockroom, set prices, and grow it through Store Levels 1–20 and four buildings, while NPC shoppers walk its aisles and queue to pay (281 tests; played in Studio on 2026-10-31). Next: week 4, Warehouse Levels 1–20 and workers with Levels 1–10 (design doc §4.6, §4.9).
+Weeks 1–7 of the MVP plan (design doc §9) are built. Week 1, the farming loop: plant, water and harvest, Barley's seeds, Farm Levels, Land Permits, Home and Town, in Farm Heist's own "Kraft & Crate" interface. Week 2, selling: the Packing Shed, trucks to the City at the global market price, the Exchange. Week 3, your own store, laid out and decorated on a grid, with NPC shoppers in its aisles. Week 4, Warehouse Levels 1–20 and workers with Levels 1–10. Week 5, raids: stealing, the bat, knockouts, arrests, fines and debt (then stolen crops held up in your hands, a patch giving several crops, Field Levels, and the crops, farmhouse and barn drawn as meshes). Week 6, defences, the Sprout Shield, Trusted friends and the Watchman, with raids rebalanced and a bonked thief dropping the crop. Week 7 (built and played in Studio on 2026-11-03): day and night, the weather and mutations, the Harvest Moon, Floodlights, the Auction House with Goldie Gavel, daily quests, the login streak and the Cropdex; the town's look comes next. Every week was played in Studio as it landed (docs/PlaytestLog.md). 469 tests, no flicker, and the XP curve is tuned with a progression sim.
 
 ## One-time setup (Windows)
 
@@ -72,14 +72,16 @@ lune run tests/run
 | `flicker` | no two faces fighting over one plane anywhere the server builds, at every level, every defence set out (`lune run tools/flicker` lists them) |
 | `defences`, `defenceart` | buying and setting out defences, what each does, the yard spots round the field, the gate (locked, shut by the Watchman, walking out), the Trusted list, the Sprout Shield, the raid cap's dome; every defence drawn on its spot (meshes or stand-ins), the gate swinging, the gatehouse, the domes |
 | `zone` | inside a farm or not: the edge, turned plots, climbing |
-| `auction` | bids, quick bids, anti-snipe, the leader leaving |
+| `auction` | bids, quick bids, anti-snipe, the leader leaving; seeds, rare workers and defences as lots, what you can win (a defence's level, room for one more, a free slot for a rare worker) |
+| `weather` | the 24-minute day, the weather's shares and where it falls, the Harvest Moon (and Heist Night), mutation odds and values, `/weather` and `/time` |
+| `quests` | three quests a day for your level, claiming, the bonus, the 7-day streak, the Cropdex and what finding a rarity or a mutation set pays |
 | `workers` | wages, speeds, fees, station caps |
 | `pipeline` | the farm running while you're away, with nothing lost or made up |
 | `progression` | the XP curve, harvest and sales XP, level-ups bringing Land Permits |
 | `layout` | nothing in Cloverdale overlaps, the distances in the doc, the raid race's balance (a sharp farmer catches a fully defended raid by about a second, a slow one in town loses it), the truck's road and the shoppers' sidewalk keeping out of every farm |
 | `world` | builds the greybox for real with Lune's Roblox instances and checks it matches the layout; the front boundary walled except the gate; the shed, dock, pickup and Farm Stand where the services look; every crop at every stage; the field following a save's land |
 | `barn`, `plot` | crop stacks and barn capacity; which farm a joining player gets |
-| `crate`, `truck`, `shop` | packing and washing to grade A; loading, the price locking at dispatch, paying once on arrival (even after you've left); the Farm Stand's shelves, prices, shoppers buying as often as `demand` says, the rating |
+| `crate`, `truck`, `shop` | packing and washing to grade A (a mutated crop's crate at its multiple, by truck only); loading, the price locking at dispatch, paying once on arrival (even after you've left); the Farm Stand's shelves, prices, shoppers buying as often as `demand` says, the rating |
 | `movement` | the anti-teleport check |
 | `config`, `savedata` | the tables agree with each other and with the design doc; saves are DataStore-safe |
 

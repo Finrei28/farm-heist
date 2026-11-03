@@ -22,6 +22,7 @@ local Shared = ReplicatedStorage.Shared
 local BarnRules = require(Shared.BarnRules)
 local CrateRules = require(Shared.CrateRules)
 local Crops = require(Shared.Config.Crops)
+local Format = require(Shared.Format)
 local GrowthRules = require(Shared.GrowthRules)
 local LandRules = require(Shared.LandRules)
 local PipelineRules = require(Shared.PipelineRules)
@@ -32,6 +33,7 @@ local Store = require(Shared.Config.Store)
 local StoreLayout = require(Shared.StoreLayout)
 local TruckRules = require(Shared.TruckRules)
 local WarehouseRules = require(Shared.WarehouseRules)
+local WeatherRules = require(Shared.WeatherRules)
 local WorkerRules = require(Shared.WorkerRules)
 local Workers = require(Shared.Config.Workers)
 
@@ -105,17 +107,7 @@ local function registers(store): { string }
 end
 
 -- What WorkerRules.slots needs about a farm.
-local function context(data)
-	local info = WarehouseRules.level(data.warehouse.level)
-	return {
-		warehouseLevel = data.warehouse.level,
-		storeLevel = data.store.level,
-		farmLevel = data.level,
-		openTiles = LandRules.openTiles(data.land),
-		registers = #registers(data.store),
-		trucks = info.trucks,
-	}
-end
+local context = WorkerRules.context
 WorkerService.context = context
 
 ------------------------------------------------------------------------
@@ -498,7 +490,7 @@ local function payWages(player: Player, data)
 		end
 	elseif not data.crew.strike then
 		data.crew.strike = true
-		Notice.send(player, `🪧 Your crew is on strike: wages are {due} coins a minute and you're short. They'll start again once you can pay.`, "Error")
+		Notice.send(player, `🪧 Your crew is on strike: wages are {Format.number(due)} coins a minute and you're short. They'll start again once you can pay.`, "Error")
 		showCrew(player)
 	end
 end
@@ -512,7 +504,7 @@ local function tick(player: Player, data, st, index: number, t: number)
 		return
 	end
 	local info = WarehouseRules.level(data.warehouse.level)
-	local opts = { conveyors = info.conveyors }
+	local opts = { conveyors = info.conveyors, night = WeatherRules.isNight(WeatherRules.now(t)) } -- (Night Owls: +30%)
 	st.ripe = nil
 	st.trucksChanged, st.holdChanged = false, false
 	local counts = {}
@@ -548,7 +540,7 @@ local STATIONS = {
 }
 
 local function crateOf(crate)
-	return { crop = crate.crop, key = `{crate.crop}||`, units = crate.units, grade = crate.grade or "B" }
+	return { crop = crate.crop, key = crate.key or `{crate.crop}||`, units = crate.units, grade = crate.grade or "B" }
 end
 
 -- Builds the pipeline's state from the save: growth, the plain barn stacks
@@ -589,7 +581,7 @@ local function pipelineState(player: Player, data)
 		local route = WarehouseRules.route(data.warehouse, cropId)
 		state.routes[cropId] = if route == nil then "Keep" else route
 	end
-	local speeds, wages = WorkerRules.crew(data.workers, { conveyors = info.conveyors })
+	local speeds, wages = WorkerRules.crew(data.workers, { conveyors = info.conveyors, away = true })
 	state.speeds, state.wages = speeds, wages
 	local graders = ofType(data, if info.stage == 1 then "ShedHand" else "Sorter")
 	local chance = 0
@@ -664,7 +656,7 @@ local function settleAway(player: Player, data, away: number)
 	for _, run in report.runs do
 		local lines = {}
 		for _, line in run.crates do
-			table.insert(lines, { crop = line.crop, key = BarnRules.key(line.crop), units = line.units, grade = line.grade, price = line.price, coins = line.coins })
+			table.insert(lines, { crop = line.crop, key = line.key or BarnRules.key(line.crop), units = line.units, grade = line.grade, price = line.price, coins = line.coins })
 		end
 		table.insert(data.warehouse.trucks, {
 			id = `{math.floor(run.at * 1000)}-{run.truck}`, truck = run.truck, crates = lines, coins = run.coins,
@@ -878,6 +870,22 @@ end
 ------------------------------------------------------------------------
 
 -- Dev command /hire Type [level]: a worker of that type joins now (free, past the slots).
+-- A rare worker won at the Auction House (AuctionService) joins the crew:
+-- `worker` from WorkerRules.fromContract.
+function WorkerService.AddWorker(player: Player, worker)
+	local data = DataService.Get(player)
+	if not data or not Workers.TYPES[worker.type] then
+		return false
+	end
+	local uid = tostring(data.crew.nextId)
+	data.crew.nextId += 1
+	worker.hiredAt = os.time()
+	data.workers[uid] = worker
+	showCrew(player)
+	DataService.NotifyState(player)
+	return true
+end
+
 function WorkerService.DevHire(player: Player, typeName: string, level: number?)
 	local data = DataService.Get(player)
 	if not data or not Workers.TYPES[typeName] then

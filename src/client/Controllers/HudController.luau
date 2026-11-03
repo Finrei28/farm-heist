@@ -153,17 +153,41 @@ local grid = make("UIGridLayout", { CellSize = UDim2.fromOffset(58, 52), CellPad
 local crates = {}
 
 -- Phones get smaller crates, so the column stays above the thumbstick.
-local function sizeCrate(crate: Frame)
-	crate.Size = if UI.compact then UDim2.fromOffset(58, 52) else UDim2.fromOffset(72, 68)
-	crate.Icon.TextSize = if UI.compact then 20 else 26
-	crate.Icon.Size = UDim2.new(1, 0, 0, if UI.compact then 22 else 30)
-	crate.Icon.Position = UDim2.fromOffset(0, if UI.compact then 5 else 7)
-	crate.Label.Size = UDim2.new(1, -8, 0, if UI.compact then 15 else 18)
+local function sizeCrate(crate: Frame, small: boolean)
+	crate.Size = if small then UDim2.fromOffset(58, 52) else UDim2.fromOffset(72, 68)
+	crate.Icon.TextSize = if small then 20 else 26
+	crate.Icon.Size = UDim2.new(1, 0, 0, if small then 22 else 30)
+	crate.Icon.Position = UDim2.fromOffset(0, if small then 5 else 7)
+	crate.Label.Size = UDim2.new(1, -8, 0, if small then 15 else 18)
 	local text = crate.Label:FindFirstChildOfClass("TextLabel")
-	text.TextSize = if UI.compact then 11 else 13
+	text.TextSize = if small then 11 else 13
 	local fit = text:FindFirstChildOfClass("UITextSizeConstraint")
 	if fit then
 		fit.MaxTextSize = text.TextSize
+	end
+end
+
+local THUMB_ROOM = 84 -- (px a phone's thumbstick takes at the bottom, measured on an iPhone)
+
+local function layoutSide()
+	-- Phones: at the top and smaller, in two columns, or three when a short
+	-- screen would put the last row on the thumbstick (the seventh crate,
+	-- Quests, did on an iPhone at 64 px down). A computer window too short
+	-- for the column (Quests fell off the bottom) gets the phones' grid.
+	local height = UI.screen.AbsoluteSize.Y
+	local small = UI.compact or #crates * 76 - 8 > height - 40
+	local columns = 2
+	if small and 12 + math.ceil(#crates / 2) * 58 - 6 > height - (if UI.touch then THUMB_ROOM else 12) then
+		columns = 3
+	end
+	sideBar.AnchorPoint = if small then Vector2.zero else Vector2.new(0, 0.5)
+	sideBar.Position = if small then UDim2.fromOffset(14, 12) else UDim2.new(0, 14, 0.55, 0)
+	sideBar.Size = UDim2.fromOffset(if small then 58 * columns + 6 * (columns - 1) else 72, 0)
+	grid.FillDirectionMaxCells = columns
+	column.Parent = if small then nil else sideBar
+	grid.Parent = if small then sideBar else nil
+	for _, crate in crates do
+		sizeCrate(crate, small)
 	end
 end
 
@@ -171,21 +195,11 @@ end
 function HudController.sideButton(icon: string, name: string, order: number)
 	local crate, button = UI.crate({ name = name, icon = icon, text = name, size = UDim2.fromOffset(72, 68), order = order, parent = sideBar })
 	table.insert(crates, crate)
-	sizeCrate(crate)
+	layoutSide()
 	return button
 end
 
-UI.onLayout(function()
-	-- (phones: higher up and smaller, out of the thumbstick's way)
-	sideBar.AnchorPoint = if UI.compact then Vector2.zero else Vector2.new(0, 0.5)
-	sideBar.Position = if UI.compact then UDim2.fromOffset(14, 64) else UDim2.new(0, 14, 0.55, 0)
-	sideBar.Size = UDim2.fromOffset(if UI.compact then 58 * 2 + 6 else 72, 0)
-	column.Parent = if UI.compact then nil else sideBar
-	grid.Parent = if UI.compact then sideBar else nil
-	for _, crate in crates do
-		sizeCrate(crate)
-	end
-end)
+UI.onLayout(layoutSide)
 
 ------------------------------------------------------------------------
 -- Travel: Home and Town signposts
@@ -275,6 +289,9 @@ local function travel(kind: string, label: string)
 	end)
 end
 
+-- (other screens send you too: the auction's note has a Town button)
+HudController.travel = travel
+
 for _, entry in { { "Home", "🏠 HOME", "Heading home... (stand still)", true }, { "Town", "TOWN 🏘️", "Heading to town... (stand still)", false } } do
 	local kind = entry[1]
 	local holder, board, label = signpost(entry[2], entry[4])
@@ -322,10 +339,17 @@ local noteLabel = UI.label({
 	TextXAlignment = Enum.TextXAlignment.Center, Text = "", ZIndex = 31, Parent = note,
 })
 local cardToken = 0
+local shownLevel = nil -- (the notice on the card now)
 
 local function showLevelUp(notice)
+	local wait = UI.centreFreeIn()
+	if wait > 0 then -- (after the big card that's up: the arrest pop hid its note)
+		task.delay(wait + 0.2, showLevelUp, notice)
+		return
+	end
 	cardToken += 1
 	local token = cardToken
+	shownLevel = notice
 	bigLabel.Text = `Lv {notice.level}`
 	local lines = { `Farm Level {notice.level}!` }
 	if (notice.permits or 0) > 0 then
@@ -341,6 +365,17 @@ local function showLevelUp(notice)
 		end
 	end)
 end
+
+-- A big card taking the middle (the arrest pop came a moment after the
+-- level-up it gave, and covered it): the rosette steps aside, then comes
+-- back in full.
+UI.centreTaken:Connect(function()
+	if card.Visible and shownLevel then
+		cardToken += 1
+		card.Visible = false
+		showLevelUp(shownLevel)
+	end
+end)
 
 ------------------------------------------------------------------------
 -- The truck receipt: a paper slip with a torn bottom edge, listing each

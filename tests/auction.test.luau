@@ -29,6 +29,25 @@ return function(spec, harness)
 				end
 			end
 		end)
+		it("offers seeds, rare workers and defences, each something you can get", function()
+			local Workers = harness.load("Config/Workers")
+			local Defences = harness.load("Config/Defences")
+			local kinds = {}
+			for seed = 1, 400 do
+				for _, entry in AuctionRules.rollLots(seed) do
+					kinds[entry.kind] = true
+					if entry.kind == "WorkerContract" then
+						expect(Workers.CONTRACTS[entry.id] ~= nil).toBe(true)
+					elseif entry.kind == "Defence" then
+						expect(Defences.ITEMS[entry.id] ~= nil).toBe(true)
+						expect(entry.estimate).toBe(Defences.ITEMS[entry.id].cost)
+					end
+					local d = AuctionRules.describe(entry)
+					expect(#d.name > 0 and #d.icon > 0).toBe(true)
+				end
+			end
+			expect(kinds.Seed and kinds.WorkerContract and kinds.Defence).toBe(true)
+		end)
 		it("offers Mythic seeds now and then (about 8% of lots)", function()
 			local mythic, total = 0, 0
 			for seed = 1, 3000 do
@@ -109,6 +128,44 @@ return function(spec, harness)
 				return true
 			end)).toBe(nil)
 			expect(AuctionRules.leader(l)).toBe(nil)
+		end)
+	end)
+
+	describe("what you can win", function()
+		local DefenceRules = harness.load("DefenceRules")
+		local function ctx(level)
+			return {
+				level = level, defences = { owned = {}, placed = {} }, workers = {},
+				workerCtx = { warehouseLevel = 5, storeLevel = 1, farmLevel = level, openTiles = 16, registers = 0, trucks = 1 },
+			}
+		end
+		it("a defence needs its Farm Level and room for one more", function()
+			local dog = { kind = "Defence", id = "GuardDog", estimate = 600_000 }
+			expect(select(2, AuctionRules.canWin(dog, ctx(15)))).toBe("DefenceLocked")
+			local c = ctx(16)
+			expect(AuctionRules.canWin(dog, c)).toBe(true)
+			DefenceRules.buy(c.defences, "GuardDog")
+			expect(select(2, AuctionRules.canWin(dog, c))).toBe("DefenceMax")
+		end)
+		it("a rare worker needs a free slot for their job", function()
+			local rose = { kind = "WorkerContract", id = "GrandmaRose", estimate = 200_000 }
+			local c = ctx(10)
+			expect(AuctionRules.canWin(rose, c)).toBe(true)
+			c.workerCtx.warehouseLevel = 1 -- (no Packers at the Packing Shed)
+			expect(select(2, AuctionRules.canWin(rose, c))).toBe("NoSlot")
+		end)
+		it("a seed always, even a Mythic before you can plant it", function()
+			expect(AuctionRules.canWin({ kind = "Seed", id = "CrystalRose", estimate = 400_000 }, ctx(1))).toBe(true)
+		end)
+		it("a rare worker joins at their level with their own trait, and works harder while you're away", function()
+			local WorkerRules = harness.load("WorkerRules")
+			local rose = WorkerRules.fromContract("GrandmaRose")
+			expect(rose.type).toBe("Packer")
+			expect(rose.level).toBe(8)
+			expect(rose.trait).toBe("Tireless")
+			local plain = { type = "Packer", level = 8, xp = 0 }
+			expect(WorkerRules.speed(rose, { away = true })).toBeNear(2 * WorkerRules.speed(plain, { away = true }), 1e-9)
+			expect(WorkerRules.speed(rose)).toBeNear(WorkerRules.speed(plain), 1e-9)
 		end)
 	end)
 

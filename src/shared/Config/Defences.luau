@@ -8,8 +8,9 @@
 --   "yard"  a 12-stud spot in the ring round the field (glowing while you
 --           place it: the scarecrow, the kennel, mud),
 --   "tile"  an open field tile (the cloche covers its crop),
---   "gate" · "fence" · "camera"  its own fixed place, set up as you buy it.
--- max: how many a farm can have. (Floodlights come with night, week 7.)
+--   "gate" · "fence" · "camera" · "floods"  its own fixed place, set up as
+--           you buy it.
+-- max: how many a farm can have.
 -- They open one at a time over the first two weeks or so of play (Farm
 -- Level 5 to 24, about 3M coins for the lot: §4.11's raid race), so a
 -- farm is never sealed early and a thief always has a way to a crop.
@@ -24,6 +25,11 @@ return {
 			name = "Gate Lock", icon = "🔒", cost = 80_000, level = 8, max = 1, spot = "gate",
 			blurb = "Only you and Trusted friends walk in. Anyone else has to climb the gate, which makes them a Suspect.",
 			detail = "Climbing the gate takes 2 s · walking out is always free",
+		},
+		Floodlights = {
+			name = "Floodlights", icon = "💡", cost = 120_000, level = 10, max = 1, spot = "floods",
+			blurb = "Four lamps on posts at your field's corners. At night anyone in your field shows a red outline on your screen, and name tags on your farm show from afar, like by day.",
+			detail = "On at night · without them, name tags only show within 20 studs after dark",
 		},
 		TallFence = {
 			name = "Tall Back Fence", icon = "🪵", cost = 300_000, level = 12, max = 1, spot = "fence",
@@ -52,13 +58,14 @@ return {
 		},
 	},
 	-- The order they're listed in (the Defences window), cheapest level first.
-	ORDER = { "Scarecrow", "GateLock", "TallFence", "Cloche", "GuardDog", "Camera", "MudPatch" },
+	ORDER = { "Scarecrow", "GateLock", "Floodlights", "TallFence", "Cloche", "GuardDog", "Camera", "MudPatch" },
 
 	SCARECROW_RANGE = 25, -- studs from the field's edge
 	SCARECROW_GAP = 60, -- seconds before the scarecrow warns you about the same person again
 	DOG_RANGE = 30, -- studs from the kennel: thefts the dog runs at
 	DOG_RUN = 32, -- studs a second, there and back
 	MUD_SLOW = 0.2,
+	NIGHT_TAGS = 20, -- studs: how far name tags show at night (§4.14), except on a farm with Floodlights
 	VISITOR_LOG = 30 * 60, -- the camera's list of who came in: this far back ...
 	VISITOR_MAX = 20, -- ... and at most this many
 

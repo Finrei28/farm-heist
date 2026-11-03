@@ -67,6 +67,8 @@ return function(spec, harness)
 				state.tiles[tostring(tile)] = GrowthRules.plant("Carrot")
 			end
 			state.tiles["16"].leave = true
+			state.tiles["15"].progress = 1
+			state.tiles["15"].mutation = "Wet" -- (mutated while you were here: it waits for you)
 			state.seeds.Carrot = 10
 			state.speeds.Field = 15
 			local report = PipelineRules.simulate(state, HOUR, Workers.OFFLINE_RATE, NOW)
@@ -74,6 +76,7 @@ return function(spec, harness)
 			expect(state.seeds.Carrot).toBe(0)
 			expect(state.barn.Carrot).toBe(report.harvested)
 			expect(GrowthRules.isRipe(state.tiles["16"])).toBe(true) -- left in the field
+			expect(state.tiles["15"].mutation).toBe("Wet")
 			expect(report.worked.Field).toBeGreaterThan(0)
 		end)
 		it("replant the cheapest seed in the bag when told to", function()

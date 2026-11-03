@@ -4,7 +4,8 @@
 --   lune run tools/partdump [out.json] [fieldLevel] [blocksOpen] [plot] [defences]
 -- (every mesh stands in for its import; the field has `blocksOpen` blocks
 -- cleared, the rest overgrown; `defences`: every defence set out, the gate
--- shut and locked, the Watchman's gatehouse; `dome`: those and a dome).
+-- shut and locked, the Watchman's gatehouse; `dome`: those and a dome;
+-- `auction`: the Auction House instead of a farm, in its own frame).
 local fs = require("@lune/fs")
 local process = require("@lune/process")
 local roblox = require("@lune/roblox")
@@ -78,8 +79,13 @@ if extras == "defences" or extras == "dome" then
 	end
 end
 
+local source = plot
+if extras == "auction" then
+	source = world.Town.AuctionHouse
+	frame = PlotLayout.buildingFrame("Auction")
+end
 local parts = {}
-for _, part in plot:GetDescendants() do
+for _, part in source:GetDescendants() do
 	if part:IsA("BasePart") and part.Transparency < 1 then
 		local cf = frame:ToObjectSpace(part.CFrame)
 		local entry = {

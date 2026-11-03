@@ -1,7 +1,9 @@
 -- The field (docs/GameDesign.md §4.2, §4.5): planting, watering and
 -- harvesting through the FieldAction remote (and Farmhands' harvests,
--- WorkerService), growth while the owner is online (every TICK), and
--- drawing it all on their farm (World/FarmArt). Growth while they were
+-- WorkerService), growth while the owner is online (every TICK, at the
+-- weather's speed), the weather's mutations on ripe crops left in the field
+-- (every Weather.ROLL seconds, shared/WeatherRules), and drawing it all on
+-- their farm (World/FarmArt). Growth while they were
 -- away is settled with the crew's work when they join (WorkerService,
 -- shared/PipelineRules, at Growth.OFFLINE_RATE).
 --
@@ -25,6 +27,8 @@ local Progression = require(Shared.Config.Progression)
 local ProgressionRules = require(Shared.ProgressionRules)
 local Rarities = require(Shared.Config.Rarities)
 local Remotes = require(Shared.Remotes)
+local Weather = require(Shared.Config.Weather)
+local WeatherRules = require(Shared.WeatherRules)
 
 local Server = ServerScriptService.Server
 local ActionRemote = require(Server.Util.ActionRemote)
@@ -34,6 +38,7 @@ local FarmArt = require(Server.World.FarmArt)
 local DataService = require(script.Parent.DataService)
 local MovementService = require(script.Parent.MovementService)
 local PlotService = require(script.Parent.PlotService)
+local QuestService = require(script.Parent.QuestService)
 
 local FieldService = {}
 
@@ -81,9 +86,10 @@ local function settle(player: Player, data, draw: boolean)
 		return
 	end
 	local index = PlotService.plotOf(player)
+	local speed = WeatherRules.growth(WeatherRules.now(t))
 	for key, tile in data.field do
 		local before = FarmArt.stage(tile)
-		GrowthRules.advance(tile, elapsed, 1)
+		GrowthRules.advance(tile, elapsed, speed)
 		if draw and index and FarmArt.stage(tile) ~= before then
 			FarmArt.showTile(tilePart(index, tonumber(key)), tile, t)
 		end
@@ -232,13 +238,20 @@ function actions.Harvest(player, data, arg)
 		Notice.send(player, if helping then `{owner.DisplayName}'s barn is full.` else "Barn full! Sell some crops to make room.", "Error")
 		return "BarnFull"
 	end
-	local regrowing = planted.regrowing
+	local regrowing, mutation = planted.regrowing, planted.mutation
 	local _, stays = GrowthRules.harvest(planted, rollYield(ownerData, planted.crop))
 	if not stays then
 		ownerData.field[key] = nil
 	end
-	BarnRules.addCrops(ownerData.inventory, BarnRules.key(planted.crop), count)
+	BarnRules.addCrops(ownerData.inventory, BarnRules.key(planted.crop, mutation), count)
 	ownerData.stats.harvested += count
+	QuestService.Record(owner, planted.crop, mutation)
+	if not helping then
+		QuestService.Bump(player, "harvest", count)
+		if mutation then
+			QuestService.Bump(player, "mutations", 1)
+		end
+	end
 	FarmArt.showTile(tilePart(index, tile), ownerData.field[key], now())
 	local xp = ProgressionRules.harvestXp(planted.crop, regrowing)
 	if helping then
@@ -248,7 +261,7 @@ function actions.Harvest(player, data, arg)
 		Analytics.step(player, data, "FirstHarvest")
 		DataService.AddXp(player, xp)
 	end
-	return nil, { crop = planted.crop, count = count, owner = if helping then owner.DisplayName else nil }
+	return nil, { crop = planted.crop, count = count, mutation = mutation, owner = if helping then owner.DisplayName else nil }
 end
 
 -- A Farmhand's harvest of a ripe tile (not one flagged to stay), replanted
@@ -267,11 +280,12 @@ function FieldService.WorkerHarvest(player: Player, data, key: string, replant: 
 	elseif not BarnRules.hasRoom(data.inventory, data.silo, GrowthRules.yieldOf(planted)) then
 		return "BarnFull"
 	end
-	local regrowing = planted.regrowing
+	local regrowing, mutation = planted.regrowing, planted.mutation
 	local count = GrowthRules.yieldOf(planted)
 	local _, stays = GrowthRules.harvest(planted, rollYield(data, planted.crop))
-	BarnRules.addCrops(data.inventory, BarnRules.key(planted.crop), count)
+	BarnRules.addCrops(data.inventory, BarnRules.key(planted.crop, mutation), count)
 	data.stats.harvested += count
+	QuestService.Record(player, planted.crop, mutation)
 	if not stays then
 		data.field[key] = nil
 		local seed = nil
@@ -318,12 +332,12 @@ function FieldService.TakeRipe(player: Player, data, key: string): (string?, str
 	if not index or not tile or not GrowthRules.isRipe(tile) then
 		return nil, nil, 0
 	end
-	local count = GrowthRules.carryOf(tile)
+	local count, mutation = GrowthRules.carryOf(tile), tile.mutation
 	if not GrowthRules.take(tile, count, rollYield(data, tile.crop)) then
 		data.field[key] = nil
 	end
 	FarmArt.showTile(tilePart(index, tonumber(key) :: number), data.field[key], now())
-	return tile.crop, BarnRules.key(tile.crop), count
+	return tile.crop, BarnRules.key(tile.crop, mutation), count
 end
 
 -- Ripe tiles Farmhands could harvest now (not flagged to stay), in tile order.
@@ -339,6 +353,42 @@ function FieldService.RipeTiles(player: Player, data): { string }
 		return tonumber(a) < tonumber(b)
 	end)
 	return keys
+end
+
+-- Every Weather.ROLL seconds: each ripe crop left in a field rolls the
+-- weather's mutation (and the any-weather ones). One mutation at most; it
+-- shows as an aura that thieves see too (§4.14).
+local function rollMutations()
+	local t = now()
+	local weatherId = WeatherRules.weather(WeatherRules.now(t)).id
+	for player in PlotService.owners() do
+		local data = DataService.Get(player)
+		local index = PlotService.plotOf(player)
+		if data and index and lastTick[player] then
+			settle(player, data, true)
+			local turned = {}
+			for key, tile in data.field do
+				if not tile.mutation and GrowthRules.isRipe(tile) then
+					local mutation = WeatherRules.mutate(weatherId, math.random())
+					if mutation then
+						tile.mutation = mutation
+						FarmArt.showTile(tilePart(index, tonumber(key) :: number), tile, t)
+						table.insert(turned, tile)
+					end
+				end
+			end
+			if #turned == 1 then
+				local tile = turned[1]
+				local crop = Crops.ById[tile.crop]
+				Notice.send(player, `✨ Your {crop.icon} {Crops.count(tile.crop, GrowthRules.yieldOf(tile))} turned {tile.mutation}: worth ×{WeatherRules.value(tile.mutation)} now!`, "Good")
+			elseif #turned > 1 then
+				Notice.send(player, `✨ {#turned} of your ripe crops mutated! Harvest them, or leave them out for more.`, "Good")
+			end
+			if #turned > 0 then
+				Analytics.event(player, "Mutation", #turned)
+			end
+		end
+	end
 end
 
 -- 🚩 Leave in field: Farmhands skip it (§4.2).
@@ -393,6 +443,7 @@ function FieldService.Start()
 	end)
 
 	task.spawn(function()
+		local speed = nil
 		while true do
 			task.wait(TICK)
 			for player in PlotService.owners() do
@@ -401,6 +452,21 @@ function FieldService.Start()
 					settle(player, data, true)
 				end
 			end
+			-- the weather changed how fast crops grow: every tile's ripe time
+			-- (the RipeAt the client counts down) changes with it
+			local nowSpeed = WeatherRules.growth(WeatherRules.now(now()))
+			if speed and nowSpeed ~= speed then
+				for player in PlotService.owners() do
+					FieldService.Render(player)
+				end
+			end
+			speed = nowSpeed
+		end
+	end)
+	task.spawn(function()
+		while true do
+			task.wait(Weather.ROLL)
+			rollMutations()
 		end
 	end)
 end

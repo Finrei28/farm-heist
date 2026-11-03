@@ -117,20 +117,25 @@ function FarmhouseArt.build(model: Model, frame: CFrame, index: number): Model
 		end
 	end
 	-- A window on a wall facing `out` ("+X", "-Z" or "+Z"): glass, a frame,
-	-- a sill, and shutters in the farm colour if `shutters`.
+	-- a sill, and shutters in the farm colour if `shutters`. The farmhouse's
+	-- glow warm at night (SkyController: "NightGlow"); the barn's stay dark.
+	local lit = false
 	local function window(face: string, at: number, plane: number, y0: number, y1: number, width: number, shutters: boolean)
 		local s = if string.sub(face, 1, 1) == "-" then -1 else 1
 		local function on(name, a0, b0, a1, b1, proud, depth, color)
 			-- (a0..a1 along the wall, b0..b1 up it, `proud` out from it)
 			local n0, n1 = plane + s * proud, plane + s * (proud + depth)
 			if string.sub(face, 2) == "X" then
-				box(name, n0, b0, a0, n1, b1, a1, color)
-			else
-				box(name, a0, b0, n0, a1, b1, n1, color)
+				return box(name, n0, b0, a0, n1, b1, a1, color)
 			end
+			return box(name, a0, b0, n0, a1, b1, n1, color)
 		end
 		local h = width / 2
-		on("Glass", at - h, y0, at + h, y1, 0, 0.1, GLASS)
+		local glass = on("Glass", at - h, y0, at + h, y1, 0, 0.1, GLASS)
+		if lit then
+			glass:SetAttribute("NightColor", Color3.fromRGB(255, 206, 120))
+			glass:AddTag("NightGlow")
+		end
 		on("Frame", at - h - 0.3, y1, at + h + 0.3, y1 + 0.3, 0, 0.25, TRIM)
 		on("Frame", at - h - 0.3, y0 - 0.25, at + h + 0.3, y0, 0, 0.35, TRIM) -- (the sill, deeper)
 		on("Frame", at - h - 0.3, y0, at - h, y1, 0, 0.25, TRIM)
@@ -321,8 +326,19 @@ function FarmhouseArt.build(model: Model, frame: CFrame, index: number): Model
 	local lz = doorZ - 2.45
 	box("LanternBracket", front, 6.3, lz - 0.08, front + 0.75, 6.45, lz + 0.08, COLORS.dark)
 	box("LanternCap", front + 0.35, 6.0, lz - 0.38, front + 1.05, 6.3, lz + 0.38, COLORS.dark)
-	box("LanternGlass", front + 0.42, 5.2, lz - 0.3, front + 0.98, 6.0, lz + 0.3, Color3.fromRGB(255, 222, 140))
+	local lantern = box("LanternGlass", front + 0.42, 5.2, lz - 0.3, front + 0.98, 6.0, lz + 0.3, Color3.fromRGB(255, 222, 140))
 	box("LanternBase", front + 0.38, 5.0, lz - 0.34, front + 1.02, 5.2, lz + 0.34, COLORS.dark)
+	-- (lit at night: a glow and a warm light on the porch and the doormat)
+	lantern:SetAttribute("NightColor", Color3.fromRGB(255, 200, 110))
+	lantern:AddTag("NightGlow")
+	local porchLight = Instance.new("PointLight")
+	porchLight.Color = Color3.fromRGB(255, 196, 120)
+	porchLight.Range = 16
+	porchLight.Brightness = 1.2
+	porchLight.Enabled = false
+	porchLight.Parent = lantern
+	porchLight:AddTag("NightLight")
+	lit = true
 	for _, z in { 87.2, 98.8 } do
 		window("+X", z, front, 2.6, 5.8, 2.6, true)
 	end

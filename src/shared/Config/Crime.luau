@@ -11,7 +11,6 @@ return {
 	CLOCHE_HOLD = 1.4, -- steal holds take this many times longer under a Glass Cloche
 	HARVEST_MOON_HOLD = 0.75, -- ... and this much as long on a Harvest Moon (Heist Night)
 
-	DEPOSIT_RANGE = 12, -- studs from your own farmhouse door where a stolen crop goes into your barn
 	GRAB_HOLD = 1.5, -- seconds to pick up a crop a bonked thief dropped: Take back (its owner, the farm's owner, their Trusted friends) or Grab (anyone else)
 	DROP_REACH = 6, -- studs from a dropped crop you can pick it up
 	DROP_SECONDS = 30, -- a dropped crop nobody picks up goes back to its owner's barn after this long

@@ -12,20 +12,27 @@ return {
 	QUICK = { 0.05, 0.10, 0.25 },
 	SNIPE = 10, -- a bid with less than this left puts the clock back to it
 
-	-- What a lot can be, by weight.
+	-- What a lot can be, by weight (out of 100). A seed lot is one seed of a
+	-- crop of that rarity. Golden tools and cosmetics come with the
+	-- cosmetics (week 9): until then their share is spread over the rest,
+	-- Mythic seeds keeping their 8%.
 	POOL = {
-		{ kind = "Seed", rarity = "Epic", weight = 30 },
-		{ kind = "Seed", rarity = "Legendary", weight = 20 },
+		{ kind = "Seed", rarity = "Epic", weight = 37 },
+		{ kind = "Seed", rarity = "Legendary", weight = 25 },
 		{ kind = "Seed", rarity = "Mythic", weight = 8 },
-		{ kind = "GoldenTool", weight = 12 },
-		{ kind = "WorkerContract", weight = 15 },
-		{ kind = "Defence", weight = 10 },
-		{ kind = "Cosmetic", weight = 5 },
+		{ kind = "WorkerContract", weight = 18 },
+		{ kind = "Defence", weight = 12 },
 	},
-	ITEMS = { -- estimates for the lots that aren't seeds
-		GoldenTool = { { id = "GoldenWateringCan", estimate = 80_000 }, { id = "GoldenHoe", estimate = 80_000 } },
+	ITEMS = { -- the lots that aren't seeds, and what they're thought to be worth
+		-- a rare worker (Config/Workers.CONTRACTS) who joins your crew
 		WorkerContract = { { id = "GrandmaRose", estimate = 200_000 }, { id = "SpeedySam", estimate = 90_000 } },
-		Defence = { { id = "GuardDog", estimate = 60_000 }, { id = "SecurityCamera", estimate = 40_000 }, { id = "GlassCloche", estimate = 4_000 } },
-		Cosmetic = { { id = "ScarecrowPumpkinKing", estimate = 50_000 }, { id = "TruckPaintHay", estimate = 30_000 } },
+		-- a defence for your barn, at its price in the Defences window
+		-- (you still need its Farm Level, and room for one more)
+		Defence = { { id = "GuardDog", estimate = 600_000 }, { id = "Camera", estimate = 800_000 }, { id = "Cloche", estimate = 30_000 } },
 	},
+
+	-- Inside the hall (World/AuctionArt), the only place you can bid from:
+	-- the room's floor, this far in from its walls.
+	HALL_MARGIN = 1.5,
+	CALLS = { "Going once...", "Going twice...", "SOLD" }, -- Goldie Gavel, in the last seconds
 }

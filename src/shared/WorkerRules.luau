@@ -4,6 +4,8 @@
 -- save under a uid). tests/workers.test.luau.
 local Workers = require(script.Parent.Config.Workers)
 local Warehouse = require(script.Parent.Config.Warehouse)
+local LandRules = require(script.Parent.LandRules)
+local WarehouseRules = require(script.Parent.WarehouseRules)
 
 local WorkerRules = {}
 
@@ -22,7 +24,9 @@ function WorkerRules.efficiency(level: number): number
 end
 
 -- Station units a minute (Config/Workers explains the units). opts: night
--- (Night Owls are quicker), conveyors (the warehouse's, for Sort, Pack and Load).
+-- (Night Owls are quicker), conveyors (the warehouse's, for Sort, Pack and
+-- Load), away (while you're away: a Tireless worker does twice the usual
+-- share, so 50% where the rest do 25%).
 function WorkerRules.speed(worker, opts): number
 	local kind = Workers.TYPES[worker.type]
 	if not kind or not kind.speed then
@@ -35,6 +39,9 @@ function WorkerRules.speed(worker, opts): number
 	end
 	if opts and opts.conveyors and (kind.station == "Sort" or kind.station == "Pack" or kind.station == "Load") then
 		speed *= opts.conveyors
+	end
+	if opts and opts.away then
+		speed *= trait.away or 1
 	end
 	return speed
 end
@@ -147,6 +154,25 @@ end
 
 ------------------------------------------------------------------------
 -- Slots
+
+-- The slots' ctx (below) from a save, or the client's copy of it: the
+-- server's crew and the Auction House's card both use it.
+function WorkerRules.context(data)
+	local registers = 0
+	for _, entry in data.store.layout do
+		if entry.item == "Register" then
+			registers += 1
+		end
+	end
+	return {
+		warehouseLevel = data.warehouse.level,
+		storeLevel = data.store.level,
+		farmLevel = data.level,
+		openTiles = LandRules.openTiles(data.land),
+		registers = registers,
+		trucks = WarehouseRules.level(data.warehouse.level).trucks,
+	}
+end
 
 -- How many of a type you can have. ctx = { warehouseLevel, storeLevel,
 -- farmLevel, openTiles, registers, trucks } (trucks: at the warehouse's level).
@@ -297,6 +323,15 @@ function WorkerRules.candidates(userId: number, window: number, typeName: string
 		table.insert(list, worker)
 	end
 	return list
+end
+
+-- A rare worker from an auction contract (Config/Workers.CONTRACTS), or nil.
+function WorkerRules.fromContract(contractId: string)
+	local contract = Workers.CONTRACTS[contractId]
+	if not contract then
+		return nil
+	end
+	return { type = contract.type, level = contract.level, xp = 0, trait = contract.trait, name = contract.name, look = contract.look, rare = contractId }
 end
 
 return WorkerRules

@@ -228,6 +228,8 @@ function actions.Wash(player, data, arg)
 	end
 	if (data.inventory.crops[key] or 0) <= 0 then
 		return "NoCrops"
+	elseif to == "Store" and not CrateRules.storeable(key) then
+		return "TruckOnly" -- (mutated crops go by truck)
 	end
 	local shed = WarehouseRules.level(data.warehouse.level).stage == 1
 	if shed and to == "Truck" and carrying[player] then

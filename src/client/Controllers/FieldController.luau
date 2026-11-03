@@ -25,6 +25,7 @@ local LandRules = require(Shared.LandRules)
 local PlotLayout = require(Shared.PlotLayout)
 local Rarities = require(Shared.Config.Rarities)
 local Remotes = require(Shared.Remotes)
+local WeatherRules = require(Shared.WeatherRules)
 
 local Reasons = require(script.Parent.Parent.Reasons)
 local UI = require(script.Parent.Parent.UI)
@@ -159,9 +160,10 @@ local function actionFor(part: BasePart, friend: string?): (string?, string)
 	end
 	if cropId then
 		local crop = Crops.ById[cropId]
-		local name = `{crop.icon} {Crops.count(cropId, part:GetAttribute("Yield") or crop.perPatch)}`
+		local mutation = part:GetAttribute("Mutation")
+		local name = `{crop.icon} {Crops.count(cropId, part:GetAttribute("Yield") or crop.perPatch, mutation)}`
 		if part:GetAttribute("Stage") == "Ripe" then
-			return "Harvest", `{name} · Ripe!`
+			return "Harvest", if mutation then `✨ {name} · worth ×{WeatherRules.value(mutation)}!` else `{name} · Ripe!`
 		end
 		local left = (part:GetAttribute("RipeAt") or 0) - workspace:GetServerTimeNow()
 		local line = `{name} · ripe in {UI.formatTime(left)}`
@@ -244,7 +246,8 @@ local function act()
 	local crop = cropId and Crops.ById[cropId]
 	if result.ok then
 		if kind == "Harvest" and crop then
-			floatAtButton(`+{result.result and result.result.count or 1} {crop.icon}`, C.gold)
+			local mutation = result.result and result.result.mutation
+			floatAtButton(`+{result.result and result.result.count or 1} {crop.icon}{if mutation then ` ✨{mutation}` else ""}`, C.gold)
 		elseif kind == "Water" then
 			floatAtButton("💧", C.sky)
 		elseif kind == "Plant" and crop then

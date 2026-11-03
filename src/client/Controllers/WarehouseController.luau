@@ -137,7 +137,8 @@ local function pipelineTab(state)
 	local waiting, crates, sizes, count = 0, 0, 0, 0
 	for key, units in state.inventory.crops do
 		local cropId = BarnRules.parse(key)
-		if Crops.ById[cropId] and WarehouseRules.route(warehouse, cropId) then
+		-- (mutated stacks wait for you at the wash table: the crew leaves them)
+		if Crops.ById[cropId] and CrateRules.storeable(key) and WarehouseRules.route(warehouse, cropId) then
 			waiting += units
 			crates += units / CrateRules.size(cropId)
 			sizes += CrateRules.size(cropId)

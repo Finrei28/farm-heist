@@ -60,7 +60,11 @@ Build them in `DevCommandService` (Studio only, plus `Util/Staff` in live server
 | `/crimelog` ✅ | prints your visits, what you carry, cooldowns, debts, last arrests, your farm's raid ledger | Stage D |
 | `/carry Crop [N]` ✅ · `/carry none` · `/debt N` ✅ · `/earn N` ✅ | stolen crops held up in your hands (default what a thief takes from a patch; or empty them) · owe N coins (to yourself) · as if you'd sold crops for N (half pays debts) | Stage D |
 | `/plant Crop` ✅ · `/tp field [N]` ✅ · `/tp back [N]` ✅ · `/tp police` ✅ | plant every open tile · stand in a farm's field · outside a farm's back fence · the police porch | Stage D |
-| `/weather X` · `/auction now` | force weather; start an auction | Stage E |
+| `/weather X` ✅ · `/weather off` | that weather now for its usual length (Clear · Rain · Thunderstorm · FrostNight · GoldenHour · HarvestMoon); back to the schedule; `/weather` alone says what's on and when the next Harvest Moon is | Week 7, Stage E |
+| `/time night` ✅ · `/time off` | the sky's clock for everyone: sunrise · noon · dusk · night · midnight or an hour (0–23); back to the real clock (it moves the weather's schedule with it) | Week 7, Stage E |
+| `/auction now` ✅ · `/tp auction` ✅ | an auction starts this moment (off the 8-minute clock); inside the hall by its doors | Week 7, Stage E |
+| `/auction soon` ✅ · `/auction off` | the auction clock moves so the next auction starts in 70 s (its 1-minute note, the bell on the clock); back to the real clock | Week 7, Stage E |
+| `/quests Arrest Deposit Auction` ✅ | today's quests set to these, at your level (Harvest · Ship · Store · Mutation · Arrest · Deposit · Auction) | Week 7, Stage E |
 | `/wipe` ✅ | start your save over, in place | all |
 
 ## Stage A: walk the greybox (now: solo, Studio, ~30 min)

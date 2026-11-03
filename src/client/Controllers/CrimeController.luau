@@ -37,6 +37,7 @@ local DefenceRules = require(Shared.DefenceRules)
 local LootRules = require(Shared.LootRules)
 local PlotLayout = require(Shared.PlotLayout)
 local Remotes = require(Shared.Remotes)
+local WeatherRules = require(Shared.WeatherRules)
 
 local Reasons = require(script.Parent.Parent.Reasons)
 local UI = require(script.Parent.Parent.UI)
@@ -528,11 +529,13 @@ local function updateOffers()
 			else
 				-- the whole patch, or one of the big ones (a pumpkin, a melon)
 				local count = math.min(part:GetAttribute("Yield") or crop.perPatch, crop.carry or math.huge)
-				local hold = CrimeRules.stealHold(crop.rarity, { cloche = cloche })
+				local heist = WeatherRules.isHeistNight(WeatherRules.now())
+				local hold = (string.gsub(string.format("%.1f", CrimeRules.stealHold(crop.rarity, { cloche = cloche, harvestMoon = heist })), "%.0$", ""))
 				FieldController.offer("Steal", {
 					priority = 20, text = "STEAL\n ", sub = `{crop.icon} ×{count}`, kind = "red",
-					info = if suspect then `Hold {hold} s{if cloche then " (it's under glass)" else ""}, then carry {if count == 1 then "it" else "them"} home over your head`
+					info = if suspect then `Hold {hold} s{if cloche then " (it's under glass)" elseif heist then " (Heist Night!)" else ""}, then carry {if count == 1 then "it" else "them"} home over your head`
 						elseif cloche then `🔮 Under a glass cloche: {hold} s to steal. Stealing makes you a Suspect!`
+						elseif heist then `🌕 Heist Night: steals are quicker ({hold} s). Stealing makes you a Suspect!`
 						else "Stealing makes you a Suspect: the farmer can bonk and arrest you!",
 					press = function()
 						steal(here, tile, part)
@@ -884,9 +887,8 @@ local function updateCarrySign()
 	end
 	local crop = Crops.ById[cropId]
 	local mine = myPlot()
-	local home = mine > 0 and inFarm(player) == mine
 	local what = `{crop.icon} {Crops.count(cropId, player:GetAttribute("StolenCount") or 1)}`
-	carryLabel.Text = if home then `{what} · to your door!` else `{what} · Get home!`
+	carryLabel.Text = `{what} · Get home!` -- (it's yours once you're in your own farm)
 	local root = rootOf(player)
 	local camera = workspace.CurrentCamera
 	arrowDisc.Visible = mine > 0 and root ~= nil
@@ -1047,8 +1049,8 @@ local function bustedCard(info)
 	}
 	if info.owed > 0 then
 		table.insert(lines, if info.paid > 0
-			then `You had {info.paid}: you owe {info.owner} {info.owed} more. Half of your sales pay it off.`
-			else `You had no coins: you owe {info.owner} {info.owed}. Half of your sales pay it off.`)
+			then `You had {UI.formatNumber(info.paid)}: you owe {info.owner} {UI.formatNumber(info.owed)} more. Half of your sales pay it off.`
+			else `You had no coins: you owe {info.owner} {UI.formatNumber(info.owed)}. Half of your sales pay it off.`)
 	end
 	table.insert(lines, "Off to the police station!")
 	for i, text in lines do
@@ -1311,14 +1313,16 @@ local function arrestedPop(info)
 		make("UIListLayout", { Padding = UDim.new(0, 4), HorizontalAlignment = Enum.HorizontalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder }) })
 	UI.label({ Size = UDim2.new(1, 0, 0, 40), Font = UI.HEAD, TextSize = 34, Text = "🚔 ARRESTED!", TextColor3 = C.green, TextStrokeColor3 = C.soilDark,
 		TextStrokeTransparency = 0.6, TextXAlignment = Enum.TextXAlignment.Center, LayoutOrder = 1, ZIndex = 46, Parent = pop })
-	local text = if info.owed <= 0 then `{info.name} paid you their {info.fine}-coin fine.`
-		elseif info.paid > 0 then `{info.name} paid {info.paid} of their {info.fine}-coin fine to you. They owe you {info.owed} more: half of their sales come to you until it's paid.`
-		else `{info.name} had no coins, so they owe you their {info.fine}-coin fine: half of their sales come to you until it's paid.`
+	local fine, paid, owed = UI.formatNumber(info.fine), UI.formatNumber(info.paid), UI.formatNumber(info.owed)
+	local text = if info.owed <= 0 then `{info.name} paid you their {fine}-coin fine.`
+		elseif info.paid > 0 then `{info.name} paid {paid} of their {fine}-coin fine to you. They owe you {owed} more: half of their sales come to you until it's paid.`
+		else `{info.name} had no coins, so they owe you their {fine}-coin fine: half of their sales come to you until it's paid.`
 	UI.label({ Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, TextWrapped = true, Font = UI.HAND, TextSize = 21, Text = text,
 		TextXAlignment = Enum.TextXAlignment.Center, LayoutOrder = 2, ZIndex = 46, Parent = pop })
 	if info.paid > 0 then
-		UI.float(`+{info.paid}`, UDim2.fromScale(0.5, 0.2), C.gold)
+		UI.float(`+{paid}`, UDim2.fromScale(0.5, 0.2), C.gold)
 	end
+	UI.holdCentre(5)
 	task.delay(5, function()
 		pop:Destroy()
 	end)

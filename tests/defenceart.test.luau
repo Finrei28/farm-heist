@@ -122,15 +122,41 @@ return function(spec, harness)
 			end
 		end)
 
-		it("anchors everything, and nothing but the kennel and the blockers is solid", function()
+		it("anchors everything, and nothing but the kennel, the floodlights' posts and the blockers is solid", function()
 			for _, part in plot.Defences:GetDescendants() do
 				if part:IsA("BasePart") then
 					expect(part.Anchored).toBe(true)
-					if part.CanCollide and not string.find(part:GetFullName(), "Kennel") and not string.find(part.Name, "Solid") then
+					if part.CanCollide and not string.find(part:GetFullName(), "Kennel") and not string.find(part.Name, "Solid")
+						and part.Name ~= "FloodPost" and part.Name ~= "FloodPlinth" then
 						error(`{part:GetFullName()} is solid`)
 					end
 				end
 			end
+		end)
+		it("stands the floodlights just off the field's corners, clear of its tiles and the yard spots, lit only at night", function()
+			local floods = plot.Defences:FindFirstChild("Floodlights")
+			expect(floods ~= nil).toBe(true)
+			local field = PlotLayout.PLOT.field
+			local x0, z0 = field.across, field.depth
+			local x1, z1 = x0 + field.size * field.tile, z0 + field.size * field.tile
+			local posts, lights = 0, 0
+			for _, part in floods:GetDescendants() do
+				if part:IsA("BasePart") and part.Name == "FloodPost" then
+					posts += 1
+					local p = PlotLayout.frame(1):PointToObjectSpace(part.CFrame.Position)
+					local offX = math.min(math.abs(p.X - x0), math.abs(p.X - x1))
+					local offZ = math.min(math.abs(p.Z - z0), math.abs(p.Z - z1))
+					expect(offX < 3 and offZ < 3).toBe(true) -- (inside the 3-stud gap before the yard spots)
+					expect(p.X < x0 or p.X > x1 or p.Z < z0 or p.Z > z1).toBe(true) -- (off the field)
+				elseif part:IsA("SpotLight") then
+					lights += 1
+					expect(part.Enabled).toBe(false)
+					expect(part:HasTag("NightLight")).toBe(true)
+				end
+			end
+			expect(posts).toBe(4)
+			expect(lights).toBe(4)
+			expect(plot:GetAttribute("Floodlights")).toBe(true)
 		end)
 
 		it("uses the meshes once the props are imported", function()

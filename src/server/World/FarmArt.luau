@@ -16,6 +16,8 @@ local Rarities = require(ReplicatedStorage.Shared.Config.Rarities)
 local GrowthRules = require(ReplicatedStorage.Shared.GrowthRules)
 local LandRules = require(ReplicatedStorage.Shared.LandRules)
 local PlotLayout = require(ReplicatedStorage.Shared.PlotLayout)
+local Weather = require(ReplicatedStorage.Shared.Config.Weather)
+local WeatherRules = require(ReplicatedStorage.Shared.WeatherRules)
 local Meshes = require(script.Parent.Meshes)
 local Parts = require(script.Parent.Parts)
 
@@ -69,6 +71,7 @@ local CANOPY = Color3.fromRGB(64, 138, 56)
 local RIPE_LEAF = Color3.fromRGB(150, 156, 70) -- (potato and onion tops yellow when they're ready)
 local SPARKLE = "rbxasset://textures/particles/sparkles_main.dds"
 local FIRE = "rbxasset://textures/particles/fire_main.dds"
+local HAZE = "rbxasset://textures/particles/smoke_main.dds"
 
 -- The colour a crop's produce shows in (crates, shelves).
 function FarmArt.cropColor(cropId: string): Color3
@@ -772,6 +775,67 @@ function FarmArt.setTileOpen(tilePart: BasePart, open: boolean, fresh: boolean?)
 	end
 end
 
+-- A mutated crop's aura (§4.14): glowing motes in the mutation's colour
+-- rising off the patch, bigger and slower than ripe sparkles, and a soft
+-- light of that colour on it, so it shows across the farm and at night.
+-- Everyone sees it: thieves too. (Rainbow cycles through the colours.)
+local RAINBOW = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 90, 90)),
+	ColorSequenceKeypoint.new(0.25, Color3.fromRGB(255, 210, 70)),
+	ColorSequenceKeypoint.new(0.5, Color3.fromRGB(90, 230, 120)),
+	ColorSequenceKeypoint.new(0.75, Color3.fromRGB(90, 160, 255)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(220, 110, 255)),
+})
+local function showAura(tilePart: BasePart, base: CFrame, mutation: string?)
+	local old = tilePart:FindFirstChild("Aura")
+	if old and old:GetAttribute("Mutation") == mutation then
+		return
+	elseif old then
+		old:Destroy()
+	end
+	local info = mutation and Weather.MUTATIONS[mutation]
+	if not info then
+		return
+	end
+	local aura = prop({ Name = "Aura", Size = Vector3.new(FIELD.tile - 3, 0.2, FIELD.tile - 3), CFrame = base * CFrame.new(0, 1.15, 0),
+		Transparency = 1, CastShadow = false }, tilePart)
+	aura:SetAttribute("Mutation", mutation)
+	local motes = Instance.new("ParticleEmitter")
+	motes.Name = "Motes"
+	motes.Texture = SPARKLE
+	motes.Color = if mutation == "Rainbow" then RAINBOW else ColorSequence.new(info.color)
+	motes.LightEmission = 1
+	motes.Rate = 10
+	motes.Lifetime = NumberRange.new(1.4, 2.4)
+	motes.Speed = NumberRange.new(0.8, 1.6)
+	motes.SpreadAngle = Vector2.new(15, 15)
+	motes.EmissionDirection = Enum.NormalId.Top
+	motes.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.4), NumberSequenceKeypoint.new(0.3, 1.3), NumberSequenceKeypoint.new(1, 0) })
+	motes.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.6), NumberSequenceKeypoint.new(0.3, 0.1), NumberSequenceKeypoint.new(1, 1) })
+	motes.Parent = aura
+	-- (a soft haze of its colour round the plant: ripe Rare crops already
+	-- sparkle blue, so the motes alone didn't tell a Wet one apart)
+	local haze = Instance.new("ParticleEmitter")
+	haze.Name = "Haze"
+	haze.Texture = HAZE
+	haze.Color = motes.Color
+	haze.LightEmission = 0.7
+	haze.LightInfluence = 0
+	haze.Rate = 3
+	haze.Lifetime = NumberRange.new(2, 3)
+	haze.Speed = NumberRange.new(0.3, 0.8)
+	haze.EmissionDirection = Enum.NormalId.Top
+	haze.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 4), NumberSequenceKeypoint.new(1, 7) })
+	haze.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.3, 0.7), NumberSequenceKeypoint.new(1, 1) })
+	haze.Parent = aura
+	local light = Instance.new("PointLight")
+	light.Color = info.color
+	light.Range = 11
+	light.Brightness = 2
+	light.Shadows = false
+	light.Parent = aura
+end
+
 -- Shows a tile's crop (or none) and sets its attributes. `now`: server time.
 function FarmArt.showTile(tilePart: BasePart, tile, now: number)
 	local number = tilePart:GetAttribute("Tile")
@@ -788,7 +852,10 @@ function FarmArt.showTile(tilePart: BasePart, tile, now: number)
 	tilePart:SetAttribute("Crop", tile and tile.crop)
 	tilePart:SetAttribute("Stage", stage)
 	tilePart:SetAttribute("Yield", yield)
-	tilePart:SetAttribute("RipeAt", tile and now + GrowthRules.secondsLeft(tile))
+	-- (at the weather's growth now: FieldService redraws when it changes)
+	tilePart:SetAttribute("RipeAt", tile and now + GrowthRules.secondsLeft(tile, WeatherRules.growth(WeatherRules.now(now))))
+	tilePart:SetAttribute("Mutation", tile and tile.mutation)
+	showAura(tilePart, tileBase(tilePart, number), tile and tile.mutation)
 	tilePart:SetAttribute("Watered", tile and tile.watered or nil)
 	tilePart:SetAttribute("Leave", tile and tile.leave or nil)
 	if tilePart:GetAttribute("Open") then

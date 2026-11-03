@@ -85,5 +85,19 @@ return function(spec, harness)
 			expect(CrateRules.value(b, 20)).toBe(240)
 			expect(CrateRules.value(a, 20)).toBe(276)
 		end)
+		it("of a mutated crop is its mutation's multiple, by truck only (§4.14)", function()
+			local wet = { crop = "Carrot", key = "Carrot|Wet|", units = 12, grade = "B" }
+			local rainbowA = { crop = "Carrot", key = "Carrot|Rainbow|", units = 12, grade = "A" }
+			expect(CrateRules.value(wet, 20)).toBe(312)
+			expect(CrateRules.value(rainbowA, 20)).toBe(2208)
+			expect(CrateRules.storeable("Carrot||")).toBe(true)
+			expect(CrateRules.storeable("Carrot|Wet|")).toBe(false)
+		end)
+		it("packs a mutated stack into a crate that remembers it", function()
+			local inv = { crops = { ["Carrot|Moonlit|"] = 6 }, seeds = {} }
+			local crate = CrateRules.pack(inv, "Carrot|Moonlit|", "A")
+			expect(crate.key).toBe("Carrot|Moonlit|")
+			expect(CrateRules.mutationValue(crate)).toBe(5)
+		end)
 	end)
 end

@@ -73,17 +73,18 @@ for _, entry in Crops.List do
 end
 
 -- "6 carrots", "1 pumpkin", "4 punnets of strawberries" (lower case, for
--- sentences and tags).
-function Crops.count(cropId: string, n: number): string
+-- sentences and tags); with a mutation, "6 Wet carrots".
+function Crops.count(cropId: string, n: number, mutation: string?): string
 	local entry = Crops.ById[cropId]
+	local before = if mutation then `{n} {mutation} ` else `{n} `
 	if entry.unit then
-		return `{n} {entry.unit[if n == 1 then 1 else 2]}`
+		return `{before}{entry.unit[if n == 1 then 1 else 2]}`
 	end
 	local name = string.lower(entry.name)
 	if n == 1 then
-		return `1 {name}`
+		return `{before}{name}`
 	end
-	return `{n} {name}{if string.sub(name, -1) == "o" then "es" else "s"}` -- (potatoes, tomatoes)
+	return `{before}{name}{if string.sub(name, -1) == "o" then "es" else "s"}` -- (potatoes, tomatoes)
 end
 
 return Crops

@@ -15,8 +15,11 @@
 -- Colours mean the same everywhere: green = do it, gold = spend coins, red =
 -- danger, blue = go somewhere / info.
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
+
+local Format = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Format"))
 
 local player = Players.LocalPlayer
 
@@ -102,10 +105,7 @@ function UI.label(props)
 end
 
 -- 12345 → "12,345"
-function UI.formatNumber(n: number): string
-	local digits = tostring(math.floor(n)):reverse():gsub("(%d%d%d)", "%1,"):reverse()
-	return (digits:gsub("^,", ""))
-end
+UI.formatNumber = Format.number
 
 -- For tight spots (the purse): "987,654", then "1.23M", "45.6M", "789M", "1.23B".
 function UI.formatShort(n: number): string
@@ -791,6 +791,24 @@ function UI.clear(list: Instance)
 end
 
 ------------------------------------------------------------------------
+-- The middle of the screen holds one big card at a time: a card that takes
+-- it (the arrest pop) says for how long, and the level-up rosette waits,
+-- or steps aside if it was already up (UI.centreTaken) and comes back.
+
+local centreUntil = 0
+local centreTaken = Instance.new("BindableEvent")
+UI.centreTaken = centreTaken.Event
+
+function UI.holdCentre(seconds: number)
+	centreUntil = math.max(centreUntil, os.clock() + seconds)
+	centreTaken:Fire()
+end
+
+function UI.centreFreeIn(): number
+	return math.max(0, centreUntil - os.clock())
+end
+
+------------------------------------------------------------------------
 -- Toasts: paper notes pinned with a tack, top right, in handwriting.
 
 local toastStack = make("Frame", {
@@ -810,8 +828,9 @@ local TACKS = { Good = C.green, Error = C.alarm, Announce = C.sky }
 local toastOrder = 0
 local MAX_TOASTS = 4
 
--- kind: nil · "Good" · "Error" · "Announce" (on yellow paper)
-function UI.toast(text: string, kind: string?, seconds: number?)
+-- kind: nil · "Good" · "Error" · "Announce" (on yellow paper). action: a
+-- button under the words ({ text, press }), e.g. the auction's Town.
+function UI.toast(text: string, kind: string?, seconds: number?, action: { text: string, press: () -> () }?)
 	toastOrder += 1
 	local note = make("Frame", {
 		Size = UDim2.new(1, 0, 0, 0),
@@ -830,6 +849,11 @@ function UI.toast(text: string, kind: string?, seconds: number?)
 		Name = "Tack", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0, -8),
 		Size = UDim2.fromOffset(12, 12), BackgroundColor3 = TACKS[kind] or C.red, ZIndex = 41, Parent = note,
 	}, { UI.corner(6), UI.stroke(C.soilDark, 1.5) })
+	local body = note
+	if action then
+		body = make("Frame", { Name = "Body", Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, ZIndex = 41, Parent = note },
+			{ make("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder, HorizontalAlignment = Enum.HorizontalAlignment.Right }) })
+	end
 	UI.label({
 		Size = UDim2.new(1, 0, 0, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
@@ -838,9 +862,19 @@ function UI.toast(text: string, kind: string?, seconds: number?)
 		TextSize = if UI.compact then 18 else 21,
 		TextColor3 = if kind == "Error" then Color3.fromRGB(160, 40, 30) else C.ink,
 		Text = text,
+		LayoutOrder = 1,
 		ZIndex = 41,
-		Parent = note,
+		Parent = body,
 	})
+	if action then
+		local _, button = UI.button({ text = action.text, kind = "blue", size = UDim2.fromOffset(110, 36), textSize = 17, order = 2, zIndex = 42, parent = body })
+		button.Activated:Connect(function()
+			action.press()
+			if note.Parent then
+				note:Destroy()
+			end
+		end)
+	end
 	local notes = {}
 	for _, child in toastStack:GetChildren() do
 		if child:IsA("Frame") then
@@ -853,7 +887,8 @@ function UI.toast(text: string, kind: string?, seconds: number?)
 		end)
 		notes[1]:Destroy()
 	end
-	task.delay(seconds or 4, function()
+	-- (a note with a button stays long enough to read and press it)
+	task.delay(if action then math.max(seconds or 4, 12) else seconds or 4, function()
 		if note.Parent then
 			note:Destroy()
 		end

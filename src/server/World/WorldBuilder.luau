@@ -18,6 +18,7 @@ local Parts = require(script.Parent.Parts)
 local FarmArt = require(script.Parent.FarmArt)
 local YardArt = require(script.Parent.YardArt)
 local StoreArt = require(script.Parent.StoreArt)
+local AuctionArt = require(script.Parent.AuctionArt)
 local PoliceArt = require(script.Parent.PoliceArt)
 local FarmhouseArt = require(script.Parent.FarmhouseArt)
 local DefenceArt = require(script.Parent.DefenceArt)
@@ -136,6 +137,9 @@ local function buildTown(world: Instance)
 	for _, building in square.buildings do
 		if building.id == "Police" then
 			PoliceArt.build(town) -- (its front, porch and desk: World/PoliceArt)
+			continue
+		elseif building.id == "Auction" then
+			AuctionArt.build(town) -- (the hall you bid in: World/AuctionArt)
 			continue
 		end
 		local position = PlotLayout.polar(building.angle, building.radius, building.size.Y / 2)

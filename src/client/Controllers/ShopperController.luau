@@ -10,6 +10,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Format = require(Shared.Format)
 local PlotLayout = require(Shared.PlotLayout)
 local Remotes = require(Shared.Remotes)
 local Shop = require(Shared.Config.Shop)
@@ -133,7 +134,7 @@ end
 local function paid(event)
 	local shopper = shoppers[event.id]
 	if shopper and event.coins > 0 then
-		say(shopper, `+{event.coins}`, Color3.fromRGB(242, 179, 61))
+		say(shopper, `+{Format.number(event.coins)}`, Color3.fromRGB(242, 179, 61))
 	end
 end
 
