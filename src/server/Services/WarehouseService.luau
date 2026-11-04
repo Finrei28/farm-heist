@@ -44,6 +44,7 @@ local DataService = require(script.Parent.DataService)
 local MovementService = require(script.Parent.MovementService)
 local PlotService = require(script.Parent.PlotService)
 local StoreService = require(script.Parent.StoreService)
+local GuideService = require(script.Parent.GuideService)
 
 local WarehouseService = {}
 
@@ -275,6 +276,7 @@ function actions.Pack(player, data)
 		WarehouseService.hold(player, data, crate) -- (along the conveyor to the Cold Room)
 	end
 	Analytics.step(player, data, "FirstCrate")
+	GuideService.Record(player, "Pack")
 	DataService.NotifyState(player)
 	return nil, { grade = grade, units = crate.units, crop = crate.crop, to = if to == "Truck" and not shed then "ColdRoom" else to }
 end

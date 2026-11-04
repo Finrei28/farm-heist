@@ -49,6 +49,7 @@ local PlotService = require(script.Parent.PlotService)
 local StoreService = require(script.Parent.StoreService)
 local TruckService = require(script.Parent.TruckService)
 local WarehouseService = require(script.Parent.WarehouseService)
+local GuideService = require(script.Parent.GuideService)
 
 local WorkerService = {}
 
@@ -816,6 +817,7 @@ function actions.Hire(player, data, arg)
 	}
 	Notice.send(player, `👋 {candidate.name} the {Workers.TYPES[typeName].name} starts now!{if free then " (Your first hire is on the house.)" else ""}`, "Good")
 	Analytics.step(player, data, "FirstHire")
+	GuideService.Record(player, "Hire")
 	showCrew(player)
 	DataService.NotifyState(player)
 	return nil, { uid = uid }

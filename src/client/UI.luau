@@ -601,6 +601,9 @@ function UI.panel(title: string, options)
 		ZIndex = 21,
 		Parent = UI.screen,
 	}, { UI.corner(12), UI.stroke(C.soil, 3) })
+	-- (a tap on the window's own paper lands on this, not the backdrop
+	-- under it: only a tap outside the window closes it)
+	make("TextButton", { Name = "Paper", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, ZIndex = 21, Parent = frame })
 	if options.wood then
 		UI.wood(frame, 5, false)
 	end

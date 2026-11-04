@@ -38,6 +38,7 @@
 --   /quests Arrest Deposit Mutation   today's quests set to these (Harvest · Ship · Store · Mutation · Arrest · Deposit · Auction), at your level
 --   /weather Rain        that weather now, for its usual length (Clear · Rain · Thunderstorm · FrostNight · GoldenHour · HarvestMoon); /weather off back to the schedule; /weather says what's on
 --   /time night          the sky's clock to sunrise · noon · dusk · night · midnight or an hour (0–23), for everyone; /time off back to the real clock
+--   /guide               the Farm Guide from its first step again (its coins to earn again)
 --   /wipe                start your save over (in place)
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -73,6 +74,7 @@ local CrimeService = require(script.Parent.CrimeService)
 local DataService = require(script.Parent.DataService)
 local DefenceService = require(script.Parent.DefenceService)
 local FieldService = require(script.Parent.FieldService)
+local GuideService = require(script.Parent.GuideService)
 local LandService = require(script.Parent.LandService)
 local PlotService = require(script.Parent.PlotService)
 local StoreService = require(script.Parent.StoreService)
@@ -549,6 +551,11 @@ function DevCommandService.Start()
 		end
 		local t = WeatherRules.now()
 		reply(player, string.format("The clock says %02d:%02d%s", math.floor(WeatherRules.clock(t)), math.floor(WeatherRules.clock(t) % 1 * 60), if WeatherRules.isNight(t) then " (night)" else ""))
+	end)
+
+	register("DevGuide", "/guide", function(player)
+		GuideService.Reset(player)
+		reply(player, "The Farm Guide starts again (its coins to earn again)")
 	end)
 
 	register("DevWipe", "/wipe", function(player)

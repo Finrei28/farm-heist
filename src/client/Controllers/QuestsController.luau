@@ -152,12 +152,30 @@ local function bonusCard(state, order: number)
 	end
 end
 
+-- The Farm Guide's card, back if you closed it (or from the start once done).
+local function guideCard(state, order: number)
+	local guide = state.guide
+	if not (guide.hidden or guide.finished) then
+		return
+	end
+	local box = note(order, 52, Color3.fromRGB(240, 232, 214))
+	label(box, { Position = UDim2.fromOffset(14, 6), Size = UDim2.new(1, -180, 1, -12), Font = UI.HAND, TextSize = 19, TextWrapped = true,
+		Text = if guide.finished then "📋 The Farm Guide: all done. Read it again?" else "📋 The Farm Guide: you closed it. Bring it back?" })
+	local _, button = UI.button({ text = if guide.finished then "Read again" else "Show guide", kind = "blue", size = UDim2.fromOffset(150, 40),
+		anchor = Vector2.new(1, 0.5), position = UDim2.new(1, -12, 0.5, 2), textSize = 16, zIndex = 23, parent = box })
+	button.Activated:Connect(function()
+		require(script.Parent.GuideController).show()
+		UI.closePanels()
+	end)
+end
+
 local function todayTab(state)
 	streakCard(state, 0)
 	for index, quest in state.quests.list do
 		questCard(state, quest, index)
 	end
 	bonusCard(state, 10)
+	guideCard(state, 11)
 end
 
 ------------------------------------------------------------------------

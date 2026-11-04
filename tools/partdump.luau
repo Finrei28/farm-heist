@@ -6,7 +6,8 @@
 -- cleared, the rest overgrown; `defences`: every defence set out, the gate
 -- shut and locked, the Watchman's gatehouse; `dome`: those and a dome;
 -- `auction`: the Auction House instead of a farm, in its own frame;
--- `town`: the whole town and the ring road, in world space).
+-- `town`: the whole town and the ring road, in world space; `valley`: the
+-- countryside, roads and trail with farms 1, 2 and 8, in world space).
 local fs = require("@lune/fs")
 local process = require("@lune/process")
 local roblox = require("@lune/roblox")
@@ -87,9 +88,15 @@ if extras == "auction" then
 elseif extras == "town" then
 	sources = { world.Town, world.RingRoad, world.Sidewalk }
 	frame = roblox.CFrame.new()
+elseif extras == "valley" then
+	sources = { world.Countryside, world.RingRoad, world.Sidewalk, world.BackTrail, world.Highway, world.Plot1, world.Plot2, world.Plot8 }
+	frame = roblox.CFrame.new()
 end
 local all = {}
 for _, source in sources do
+	if source:IsA("BasePart") then
+		table.insert(all, source)
+	end
 	for _, part in source:GetDescendants() do
 		table.insert(all, part)
 	end

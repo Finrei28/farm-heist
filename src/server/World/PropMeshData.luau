@@ -36,6 +36,8 @@ return {
 		PineTree = { size = Vector3.new(12.393, 20.65, 12.228), centre = Vector3.new(0.035, 10.125, -0.445) },
 		Bush = { size = Vector3.new(4.916, 3.427, 4.814), centre = Vector3.new(-0.056, 1.727, -0.074) },
 		FlowerBed = { size = Vector3.new(7, 2.647, 7), centre = Vector3.new(0, 1.323, 0) },
+		HedgeSection = { size = Vector3.new(7.002, 13.784, 44.556), centre = Vector3.new(-0.15, 6.513, -0.117) },
+		TunnelArch = { size = Vector3.new(53.6, 36, 4.4), centre = Vector3.new(0, 18, 0.8) },
 	},
 	wild = {
 		obstacles = {

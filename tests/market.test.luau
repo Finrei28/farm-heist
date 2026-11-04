@@ -71,6 +71,21 @@ return function(spec, harness)
 			expect(MarketPrice.price("Carrot", t, MarketPrice.supply("Carrot", 48_000))).toBeLessThan(MarketPrice.price("Carrot", t))
 			expect(MarketPrice.price("Pumpkin", t, 1)).toBe(MarketPrice.price("Pumpkin", t))
 		end)
+		it("comes from supplyOf (MarketService, the clients) unless a price is given its own", function()
+			local t = T0
+			local plain = MarketPrice.price("Carrot", t)
+			MarketPrice.supplyOf = function(cropId)
+				return if cropId == "Carrot" then 0.8 else 1
+			end
+			local ok, err = pcall(function()
+				expect(MarketPrice.price("Carrot", t)).toBe(MarketPrice.price("Carrot", t, 0.8))
+				expect(MarketPrice.price("Carrot", t)).toBeLessThan(plain)
+				expect(MarketPrice.price("Carrot", t, 1)).toBe(plain)
+				expect(MarketPrice.price("Pumpkin", t)).toBe(MarketPrice.price("Pumpkin", t, 1))
+			end)
+			MarketPrice.supplyOf = nil
+			assert(ok, err)
+		end)
 	end)
 
 	describe("the price", function()

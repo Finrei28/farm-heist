@@ -3,12 +3,18 @@
 -- The wave and the hourly Hot Crop / Glut are worked out from the time and
 -- the crop id alone, so every server agrees without messaging. supply comes
 -- from MarketService (MemoryStore counters of units sold everywhere in the
--- last window, MarketPrice.supply); 1 when unknown.
+-- last window, MarketPrice.supply), through MarketPrice.supplyOf, which the
+-- server and the clients set (the clients read ReplicatedStorage.MarketSupply);
+-- 1 when unknown.
 -- tests/market.test.luau.
 local Config = require(script.Parent.Config.Market)
 local Crops = require(script.Parent.Config.Crops)
 
 local MarketPrice = {}
+
+-- Each crop's supply factor now (set by MarketService on the server and by
+-- MarketController on the clients); prices use it unless given one.
+MarketPrice.supplyOf = nil :: ((string) -> number)?
 
 -- FNV-1a, 32-bit (the multiply split so it stays exact in a double).
 local function hash(text: string): number
@@ -87,7 +93,8 @@ end
 
 -- The price as a share of base value (clamped).
 function MarketPrice.multiplier(cropId: string, t: number, supply: number?): number
-	local raw = MarketPrice.wave(cropId, t) * MarketPrice.eventMultiplier(cropId, t) * (supply or 1)
+	supply = supply or (MarketPrice.supplyOf and MarketPrice.supplyOf(cropId)) or 1
+	local raw = MarketPrice.wave(cropId, t) * MarketPrice.eventMultiplier(cropId, t) * supply
 	return math.clamp(raw, Config.CLAMP_MIN, Config.CLAMP_MAX)
 end
 

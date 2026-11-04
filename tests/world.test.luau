@@ -195,6 +195,92 @@ return function(spec, harness)
 			local nearest = from + along * math.clamp(-from:Dot(along), 0, (to - from).Magnitude)
 			expect(roblox.Vector3.new(nearest.X, 0, nearest.Z).Magnitude).toBeGreaterThan(7)
 		end)
+		it("puts up the four leaderboards (World/BoardArt) with the parts LeaderboardService writes on", function()
+			for _, def in harness.load("LeaderRules").BOARDS do
+				local board = world.Town:FindFirstChild(`Board_{def.id}`)
+				expect(board ~= nil).toBe(true)
+				local gui = board.Face:FindFirstChild("Board")
+				expect(gui:FindFirstChild("Rows") ~= nil).toBe(true)
+				expect(gui:FindFirstChild("Footer") ~= nil).toBe(true)
+				expect(gui:FindFirstChild("Photo") ~= nil).toBe(def.id == "Wanted")
+			end
+		end)
+	end)
+
+	describe("the valley (World/ValleyArt)", function()
+		local ok, world = pcall(build)
+		if not ok then
+			return
+		end
+		local countryside = world:FindFirstChild("Countryside")
+		local function hedgeDistance(p)
+			-- (the nearest hedge's outer face, across a farm's side)
+			local best = math.huge
+			for index = 1, PlotLayout.COUNT do
+				local q = PlotLayout.frame(index):PointToObjectSpace(p)
+				if q.Z > -2 and q.Z < PlotLayout.DEPTH + 2 then
+					best = math.min(best, math.abs(q.X) - (PlotLayout.WIDTH / 2 + 3))
+				end
+			end
+			return best
+		end
+		it("plants woods in every gap between farms, clear of the hedges, the highway and the roads", function()
+			local trees, gaps = 0, {}
+			for _, model in countryside.Woods:GetChildren() do
+				local trunk = model:FindFirstChild("TrunkBlock")
+				if trunk then
+					trees += 1
+					local p = trunk.CFrame.Position
+					expect(hedgeDistance(p) >= 12).toBe(true) -- (the way round to the back trail goes along the hedges)
+					expect(p.Z <= 0 or math.abs(p.X) > PlotLayout.HIGHWAY.width / 2 + 11).toBe(true)
+					local r = roblox.Vector3.new(p.X, 0, p.Z).Magnitude
+					expect(r > PlotLayout.SIDEWALK.radius + 10 and r < PlotLayout.BACK_TRAIL.radius - PlotLayout.BACK_TRAIL.width / 2).toBe(true)
+					gaps[math.floor((math.deg(math.atan2(p.X, p.Z)) + 22.5) % 360 / 45)] = true
+				end
+			end
+			expect(trees > 60).toBe(true)
+			for gap = 0, 7 do
+				expect(gaps[gap]).toBe(true)
+			end
+		end)
+		it("lines the back trail with cover and lamps off the trail itself", function()
+			local cover, lamps = 0, 0
+			for _, model in countryside.TrailCover:GetChildren() do
+				local anchor = model:FindFirstChild("LampBase") or model:FindFirstChild("CoverBlock") or model:FindFirstChildWhichIsA("BasePart")
+				local p = anchor.CFrame.Position
+				if model.Name == "Lamp" then
+					lamps += 1
+				else
+					cover += 1
+				end
+				local r = roblox.Vector3.new(p.X, 0, p.Z).Magnitude
+				expect(math.abs(r - PlotLayout.BACK_TRAIL.radius) > PlotLayout.BACK_TRAIL.width / 2).toBe(true)
+			end
+			expect(cover > 60).toBe(true)
+			expect(lamps > 40).toBe(true)
+		end)
+		it("leaves the trucks' way into the tunnel open", function()
+			local route = PlotLayout.truckRoute(1)
+			local inside = route[#route] -- (where trucks drive out of sight)
+			local mouth = countryside.TunnelMouth
+			for _, part in mouth:GetDescendants() do
+				if part:IsA("BasePart") and part.CanCollide and part.Name ~= "TunnelRoad" then
+					local q = part.CFrame:PointToObjectSpace(roblox.Vector3.new(0, 6, inside.Z))
+					local h = part.Size / 2
+					expect(math.abs(q.X) <= h.X and math.abs(q.Y) <= h.Y and math.abs(q.Z) <= h.Z).toBe(false)
+				end
+			end
+			expect(mouth.Tunnel.CanCollide).toBe(false)
+		end)
+		it("paints a zebra crossing where each farm's path crosses the ring road", function()
+			local zebras = 0
+			for _, part in countryside.RoadMarkings:GetChildren() do
+				if part.Name == "Zebra" then
+					zebras += 1
+				end
+			end
+			expect(zebras).toBe(PlotLayout.COUNT * 9)
+		end)
 	end)
 
 	describe("every store building on a plot (World/StoreArt)", function()

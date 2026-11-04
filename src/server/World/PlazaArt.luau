@@ -264,6 +264,8 @@ local function tree(kind: string, at: CFrame, scale: number, parent: Instance)
 	return model
 end
 
+PlazaArt.lamp, PlazaArt.streetLamp, PlazaArt.tree = lamp, streetLamp, tree -- (the valley's too: World/ValleyArt)
+
 local function flowerBed(at: CFrame, parent: Instance)
 	local model = Instance.new("Model")
 	model.Name = "FlowerBed"

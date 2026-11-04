@@ -127,8 +127,9 @@ local function cropRow(order: number, crop, t: number)
 	})
 	chalk({ Position = UDim2.fromOffset(10, 0), Size = UDim2.fromOffset(34, 46), Font = UI.HEAD, TextSize = 26, Text = crop.icon or "🌱", Parent = frame })
 	UI.fit(chalk({ Position = UDim2.fromOffset(48, 2), Size = UDim2.new(0.34, -50, 0, 24), TextSize = 22, Text = crop.name, Parent = frame }), 12)
-	chalk({ Position = UDim2.fromOffset(48, 24), Size = UDim2.new(0.34, -50, 0, 18), TextSize = 16, TextTransparency = 0.25,
+	local usual = chalk({ Position = UDim2.fromOffset(48, 24), Size = UDim2.new(0.34, -50, 0, 18), TextSize = 16, TextTransparency = 0.25,
 		Text = `usual {UI.formatNumber(crop.value)} · {crop.rarity}`, TextColor3 = Rarities.ById[crop.rarity].color:Lerp(C.chalk, 0.4), Parent = frame })
+	UI.fit(usual, 10)
 	local price = chalk({ Position = UDim2.new(0.34, 0, 0, 0), Size = UDim2.new(0.16, 0, 1, 0), Font = UI.HEAD, TextSize = 24,
 		TextXAlignment = Enum.TextXAlignment.Right, Text = "", Parent = frame })
 	local change = chalk({ Position = UDim2.new(0.5, 12, 0, 0), Size = UDim2.new(0.14, 0, 1, 0), TextSize = 20, Text = "", Parent = frame })
@@ -137,7 +138,7 @@ local function cropRow(order: number, crop, t: number)
 		BackgroundTransparency = 1, ZIndex = 23, Parent = frame,
 	})
 	sparkline(spark, crop.id, t)
-	rows[crop.id] = { price = price, change = change }
+	rows[crop.id] = { price = price, change = change, usual = usual, crop = crop }
 end
 
 -- Crops you have somewhere: barn, truck bed, dock, stockroom, shelves, seeds.
@@ -183,6 +184,10 @@ local function updateLive()
 		local text, color = trend(cropId, t)
 		row.change.Text = text
 		row.change.TextColor3 = color
+		-- (every server's trucks selling lots of it lately takes some off)
+		local supply = if MarketPrice.supplyOf then MarketPrice.supplyOf(cropId) else 1
+		row.usual.Text = if supply < 0.995 then `usual {UI.formatNumber(row.crop.value)} · lots sold lately −{math.floor((1 - supply) * 100 + 0.5)}%`
+			else `usual {UI.formatNumber(row.crop.value)} · {row.crop.rarity}`
 	end
 	local lines = eventLines(t)
 	for i, label in eventLabels do

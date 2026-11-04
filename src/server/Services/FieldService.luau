@@ -39,6 +39,7 @@ local DataService = require(script.Parent.DataService)
 local MovementService = require(script.Parent.MovementService)
 local PlotService = require(script.Parent.PlotService)
 local QuestService = require(script.Parent.QuestService)
+local GuideService = require(script.Parent.GuideService)
 
 local FieldService = {}
 
@@ -192,6 +193,7 @@ function actions.Plant(player, data, arg)
 	FarmArt.setTileOpen(part, true, false)
 	FarmArt.showTile(part, data.field[key], now())
 	Analytics.step(player, data, "FirstPlant")
+	GuideService.Planted(player, data)
 	return nil
 end
 
@@ -211,6 +213,9 @@ function actions.Water(player, data, arg)
 		return "NotNeeded"
 	end
 	FarmArt.showTile(tilePart(index, tile), planted, now())
+	if owner == player then
+		GuideService.Record(player, "Water")
+	end
 	return nil
 end
 
@@ -259,6 +264,7 @@ function actions.Harvest(player, data, arg)
 		DataService.NotifyState(owner)
 	else
 		Analytics.step(player, data, "FirstHarvest")
+		GuideService.Record(player, "Harvest")
 		DataService.AddXp(player, xp)
 	end
 	return nil, { crop = planted.crop, count = count, mutation = mutation, owner = if helping then owner.DisplayName else nil }

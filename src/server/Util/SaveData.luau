@@ -78,12 +78,14 @@ local TEMPLATE = {
 	auctionHeld = 0, -- coins held for the Auction House lot you lead (back on your next join if the server closed first)
 
 	onboarded = {}, -- [step] = true: onboarding steps logged to analytics (Util/Analytics)
-	guide = { done = {}, finished = false, hidden = false, rewarded = false },
+	guide = { done = {}, planted = 0, finished = false, hidden = false, rewarded = false }, -- the Farm Guide (shared/GuideRules)
 	cropdex = {},
 	quests = { day = 0, list = {}, bonusClaimed = false },
 	streak = { days = 0, lastClaimDay = 0 },
-	stats = { harvested = 0, arrestsMade = 0, timesArrested = 0, stolenValue = 0 },
+	stats = { harvested = 0, arrestsMade = 0, arrestsCounted = 0, timesArrested = 0, stolenValue = 0 }, -- (arrestsCounted: the Sheriff board's, all-time)
+	weekly = { week = 0, arrests = 0, stolen = 0, shoppers = 0 }, -- this week's numbers for the leaderboards (shared/LeaderRules)
 	settings = { music = true, sfx = true, flashing = 1, reducedMotion = false, trades = true, quiet = false },
+	tradeUndone = {}, -- ["tradeId"] = true: trades support has undone for this save (shared/TradeRules.reverse)
 	purchaseIds = {}, -- recent developer product receipts already granted (so none is granted twice)
 	lastOnline = 0, -- unix time of the last save, for offline growth and workers
 }

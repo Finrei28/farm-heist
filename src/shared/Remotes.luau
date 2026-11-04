@@ -41,6 +41,12 @@
 --   AuctionAction  C→S  ("Bid" amount) -> { ok, reason? } from inside the Auction House (server/Services/AuctionService;
 --                        the lot on the board is ReplicatedStorage.Auction's attributes)
 --   QuestAction    C→S  ("Claim" index | "Bonus") -> { ok, reason?, result = { coins } } (server/Services/QuestService)
+--   GuideAction    C→S  ("Hide" | "Show") -> { ok, reason? }   the Farm Guide's card (server/Services/GuideService)
+--   TradeAction    C→S  ("Request" userId | "Accept" userId | "Decline" userId | "Set" "kind|key|count" | "Coins" n
+--                        | "Ready" "1"/"0" | "Confirm" | "Cancel") -> { ok, reason? }   trading (server/Services/TradeService,
+--                        shared/TradeRules)
+--   TradeEvent     S→C  { kind = "invite", userId, name, seconds } · { kind = "state", trade } · { kind = "problem", text }
+--                        · { kind = "declined", name } · { kind = "closed", reason?, done?, with?, lines?, coins?, value? }
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
@@ -65,6 +71,9 @@ local DEFINITIONS = {
 	DefenceEvent = "RemoteEvent",
 	AuctionAction = "RemoteFunction",
 	QuestAction = "RemoteFunction",
+	GuideAction = "RemoteFunction",
+	TradeAction = "RemoteFunction",
+	TradeEvent = "RemoteEvent",
 }
 
 local IS_SERVER = RunService:IsServer()

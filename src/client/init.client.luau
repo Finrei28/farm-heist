@@ -58,12 +58,23 @@ end
 
 PlayerState.Start()
 
+-- Market prices take in every server's supply factor (the server's
+-- MarketService publishes it as ReplicatedStorage.MarketSupply's attributes).
+do
+	local ReplicatedStorage = game:GetService("ReplicatedStorage")
+	local MarketPrice = require(ReplicatedStorage:WaitForChild("Shared").MarketPrice)
+	MarketPrice.supplyOf = function(cropId: string): number
+		local folder = ReplicatedStorage:FindFirstChild("MarketSupply")
+		return folder and folder:GetAttribute(cropId) or 1
+	end
+end
+
 local Controllers = script.Controllers
 for _, name in {
 	"HudController", "HotbarController", "FieldController", "SeedRackController", "BarnController", "StoreController", "DecorateController",
 	"MarketController", "ShedController", "TruckController", "ShopperController", "PromptController", "SprintController", "RoofController",
 	"WarehouseController", "WorkersController", "WorkerController", "PoseController", "CrimeController", "PoliceController",
-	"GateController", "WatchController", "DefenceController", "SkyController", "AuctionController", "QuestsController",
+	"GateController", "WatchController", "DefenceController", "SkyController", "AuctionController", "QuestsController", "GuideController", "TradeController",
 } do
 	task.spawn(function() -- (one waiting on the world doesn't hold up the rest)
 		local ok, err = pcall(function()

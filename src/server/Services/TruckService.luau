@@ -27,6 +27,7 @@ local Notice = require(Server.Util.Notice)
 local YardArt = require(Server.World.YardArt)
 local DataService = require(script.Parent.DataService)
 local QuestService = require(script.Parent.QuestService)
+local GuideService = require(script.Parent.GuideService)
 local MarketService = require(script.Parent.MarketService)
 local MovementService = require(script.Parent.MovementService)
 local PlotService = require(script.Parent.PlotService)
@@ -167,6 +168,9 @@ function TruckService.Dispatch(player: Player, truck: number?, by: string?): str
 			local run, why = TruckRules.dispatch(data.warehouse, i, now(), MarketService.priceAt(), TruckService.tripFor(player, data, i))
 			if run then
 				sent += 1
+				for _, crate in run.crates do
+					MarketService.Sold(crate.crop, crate.units)
+				end
 				QuestService.Bump(player, "crates", #run.crates)
 				local lines = {}
 				for _, crate in run.crates do
@@ -192,6 +196,7 @@ function TruckService.Dispatch(player: Player, truck: number?, by: string?): str
 		return failure
 	end
 	Analytics.step(player, data, "FirstDispatch")
+	GuideService.Record(player, "Dispatch")
 	TruckService.Refresh(player)
 	DataService.NotifyState(player)
 	return nil

@@ -1,7 +1,8 @@
 -- Builds Cloverdale from shared/PlotLayout (docs/GameDesign.md §3): the
--- valley and hills (greybox until week 8), the town (World/PlazaArt, its
--- buildings: World/PoliceArt, AuctionArt, TownArt), the
--- ring road and its sidewalk, the highway and tunnel, the back trail, and the
+-- valley (its hills, the tunnel, the woods, the back trail's cover, the
+-- road's paint: World/ValleyArt), the town (World/PlazaArt, its
+-- buildings: World/PoliceArt, AuctionArt, TownArt; the leaderboards:
+-- World/BoardArt), the ring road and its sidewalk, the highway, the back trail, and the
 -- 8 farms with their hedges, picket fences, gate arch, store, Packing Shed,
 -- pickup, farmhouse and barn (World/FarmhouseArt) and 8×8 field (the start corner tilled, the rest
 -- overgrown: World/FarmArt; the selling side: World/YardArt; the store:
@@ -25,10 +26,13 @@ local FarmhouseArt = require(script.Parent.FarmhouseArt)
 local DefenceArt = require(script.Parent.DefenceArt)
 local PlazaArt = require(script.Parent.PlazaArt)
 local TownArt = require(script.Parent.TownArt)
+local BoardArt = require(script.Parent.BoardArt)
+local ValleyArt = require(script.Parent.ValleyArt)
+local Meshes = require(script.Parent.Meshes)
 
 local WorldBuilder = {}
 
-WorldBuilder.VERSION = 8
+WorldBuilder.VERSION = 9
 
 local COLORS = Parts.COLORS
 local part, plotBox = Parts.part, Parts.plotBox
@@ -90,23 +94,8 @@ end
 ------------------------------------------------------------------------
 
 local function buildValley(world: Instance)
-	disc("Valley", PlotLayout.VALLEY_RADIUS, 2, -1, COLORS.meadow, world)
-	-- Hills: a ring of tall blocks, open in the north for the highway tunnel.
-	local hills = Instance.new("Folder")
-	hills.Name = "Hills"
-	hills.Parent = world
-	local depth = PlotLayout.HILLS_RADIUS - PlotLayout.VALLEY_RADIUS
-	for i = 0, 35 do
-		local angle = i * 10 + 5
-		local radius = PlotLayout.VALLEY_RADIUS + depth / 2
-		local position = PlotLayout.polar(angle, radius, 20)
-		part({
-			Name = `Hill{i}`,
-			Size = Vector3.new(depth, 40, 2 * math.pi * radius / 36 + 4),
-			CFrame = CFrame.lookAt(position, Vector3.new(0, 20, 0)) * CFrame.Angles(0, math.rad(90), 0),
-			Color = COLORS.hill,
-		}, hills)
-	end
+	-- (out under the hills too, which are Terrain rising from it: World/ValleyArt)
+	disc("Valley", PlotLayout.HILLS_RADIUS + 260, 2, -1, COLORS.meadow, world)
 	-- (Nothing flat may sit at the same height as something it overlaps: the
 	-- two surfaces would fight over which one shows and flicker as the
 	-- camera moves. So the ground goes in layers: valley 0, lawn and town
@@ -120,14 +109,7 @@ local function buildValley(world: Instance)
 		CFrame = CFrame.new(0, 0.21, (highway.from + highway.to) / 2),
 		Color = COLORS.road,
 	}, world)
-	local tunnel = part({
-		Name = "Tunnel",
-		Size = Vector3.new(highway.width + 6, 18, 6),
-		CFrame = CFrame.new(0, 9, highway.to),
-		Color = COLORS.dark,
-		CanCollide = false,
-	}, world)
-	label("To the City", tunnel, 14, 5, 400)
+	-- (the tunnel at its end: World/ValleyArt)
 end
 
 local function buildTown(world: Instance)
@@ -143,6 +125,7 @@ local function buildTown(world: Instance)
 	PoliceArt.build(town) -- (its front, porch and desk)
 	AuctionArt.build(town) -- (the hall you bid in)
 	TownArt.build(town)
+	BoardArt.build(town) -- (the leaderboards by the Exchange and the Police Station)
 
 	-- The spawn stands on the medallion in the paving (PlazaArt), facing
 	-- the Exchange with the clocktower beside it (not the Police Station).
@@ -260,18 +243,33 @@ local function buildPlot(index: number, world: Instance)
 	local function pickets(name: string, fromX: number, toX: number)
 		Parts.picketFence(frame, Vector3.new(fromX, 0, -1), Vector3.new(toX, 0, 0), model, name, PlotLayout.FENCE_HEIGHT, PlotLayout.FENCE_BLOCK)
 	end
-	-- Hedges: tall, with a rounded top and a few flowers.
+	-- Hedges: leafy sections with flowers (meshes: HedgeSection, turned
+	-- every other one so they don't repeat), over the wall that really
+	-- stops you; until the props are imported, a rounded green wall.
 	local H = PlotLayout.HEDGE_HEIGHT
+	local sections = math.round(D / 42)
 	for _, side in { -1, 1 } do
 		local x = side * (W / 2 + 1.5)
-		plotBox(if side < 0 then "HedgeLeft" else "HedgeRight", frame, Vector3.new(x - 1.5, 0, 0), Vector3.new(x + 1.5, H, D), { Color = COLORS.hedge }, model)
-		part({ Name = "HedgeTop", Shape = Enum.PartType.Cylinder, Size = Vector3.new(D, 3, 3),
-			CFrame = frame * CFrame.new(x, H, D / 2) * CFrame.Angles(0, math.rad(90), 0), Color = COLORS.hedge }, model)
-		for i = 0, 11 do
-			local z = 8 + i * (D - 16) / 11
-			local inward = -side * (if i % 2 == 0 then 1.55 else 1.5)
-			Parts.ball("HedgeFlower", frame * CFrame.new(x + inward, 4 + (i * 37 % 7), z), 0.7,
-				{ Color = if i % 3 == 0 then COLORS.cream else COLORS.hay }, model)
+		local wall = plotBox(if side < 0 then "HedgeLeft" else "HedgeRight", frame, Vector3.new(x - 1.5, 0, 0), Vector3.new(x + 1.5, H, D), { Color = COLORS.hedge }, model)
+		local leafy = true
+		for i = 0, sections - 1 do
+			local at = frame * CFrame.new(x, 0, (i + 0.5) * D / sections) * CFrame.Angles(0, if (i + (side > 0 and 1 or 0)) % 2 == 0 then 0 else math.pi, 0)
+			if not Meshes.make("HedgeSection", at, Vector3.new(1, 1, D / sections / 42), model) then
+				leafy = false
+				break
+			end
+		end
+		if leafy then
+			wall.Transparency = 1
+		else
+			part({ Name = "HedgeTop", Shape = Enum.PartType.Cylinder, Size = Vector3.new(D, 3, 3),
+				CFrame = frame * CFrame.new(x, H, D / 2) * CFrame.Angles(0, math.rad(90), 0), Color = COLORS.hedge }, model)
+			for i = 0, 11 do
+				local z = 8 + i * (D - 16) / 11
+				local inward = -side * (if i % 2 == 0 then 1.55 else 1.5)
+				Parts.ball("HedgeFlower", frame * CFrame.new(x + inward, 4 + (i * 37 % 7), z), 0.7,
+					{ Color = if i % 3 == 0 then COLORS.cream else COLORS.hay }, model)
+			end
 		end
 	end
 	-- the back fence, the gate's leaves and the alarm light (World/DefenceArt:
@@ -360,6 +358,7 @@ function WorldBuilder.Build()
 	world:SetAttribute("Version", WorldBuilder.VERSION)
 	buildValley(world)
 	buildTown(world)
+	ValleyArt.build(world)
 	for index = 1, PlotLayout.COUNT do
 		buildPlot(index, world)
 	end

@@ -42,6 +42,8 @@ local StoreArt = require(Server.World.StoreArt)
 local StoreItems = require(Server.World.StoreItems)
 local DataService = require(script.Parent.DataService)
 local QuestService = require(script.Parent.QuestService)
+local GuideService = require(script.Parent.GuideService)
+local LeaderboardService = require(script.Parent.LeaderboardService)
 local MarketService = require(script.Parent.MarketService)
 local MovementService = require(script.Parent.MovementService)
 local PlotService = require(script.Parent.PlotService)
@@ -277,6 +279,7 @@ local function leave(st, shopper, startAt: number, say: string?, score: number?)
 	local data = DataService.Get(shopper.owner)
 	if data and score then
 		ShopRules.addScore(data.store, score)
+		LeaderboardService.Bump(shopper.owner, "shoppers", 1) -- (Top Store counts the shoppers who came)
 	end
 	local queue = shopper.checkout and st.queues[shopper.checkout]
 	local at = queue and table.find(queue, shopper)
@@ -783,6 +786,7 @@ function actions.Fill(player, data, arg)
 		st.soldOutTold = nil
 		drawDisplays(player)
 		drawStockroom(player)
+		GuideService.Record(player, "Store")
 		return nil
 	end
 	local entry = data.store.layout[arg or ""]
@@ -795,6 +799,9 @@ function actions.Fill(player, data, arg)
 		return "TooFar"
 	end
 	local failure = StoreService.Fill(player, arg)
+	if not failure then
+		GuideService.Record(player, "Store")
+	end
 	return if failure == "Empty" or failure == "Full" then nil else failure
 end
 

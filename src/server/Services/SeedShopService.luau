@@ -19,6 +19,7 @@ local Analytics = require(Server.Util.Analytics)
 local Notice = require(Server.Util.Notice)
 local DataService = require(script.Parent.DataService)
 local MovementService = require(script.Parent.MovementService)
+local GuideService = require(script.Parent.GuideService)
 
 local SeedShopService = {}
 
@@ -51,6 +52,7 @@ function actions.Buy(player, data, arg)
 	SeedStock.record(data, cropId, count)
 	BarnRules.addSeeds(data.inventory, cropId, count)
 	Analytics.step(player, data, "FirstSeedBuy")
+	GuideService.Record(player, "Seeds")
 	return nil
 end
 

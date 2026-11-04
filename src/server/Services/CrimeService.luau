@@ -58,6 +58,7 @@ local MarketService = require(script.Parent.MarketService)
 local MovementService = require(script.Parent.MovementService)
 local PlotService = require(script.Parent.PlotService)
 local TravelService = require(script.Parent.TravelService)
+local LeaderboardService = require(script.Parent.LeaderboardService)
 
 local CrimeEvent = Remotes.event("CrimeEvent")
 
@@ -595,6 +596,7 @@ local function fine(thief: Player, owner: Player, loot: number, fled: boolean)
 		if countsForBoard(ownerData, thief.UserId, loot) then
 			DataService.AddXp(owner, Crime.ARREST_XP)
 			QuestService.Bump(owner, "arrests", 1) -- (staged arrests don't count here either)
+			LeaderboardService.Bump(owner, "arrests", 1)
 		end
 	end
 	return result
@@ -725,7 +727,9 @@ local function deposit(player: Player, state)
 		QuestService.Record(player, item.crop, mutation)
 	end
 	QuestService.Bump(player, "deposits", 1)
-	data.stats.stolenValue += LootRules.value(items, priceOf)
+	local value = LootRules.value(items, priceOf)
+	data.stats.stolenValue += value
+	LeaderboardService.Bump(player, "stolen", value)
 	showCarried(player, state)
 	DataService.NotifyState(player)
 	CrimeEvent:FireClient(player, "Deposited", { text = `+{LootRules.summary(items)} (stolen) in your barn`, crop = items[1] and items[1].crop })
