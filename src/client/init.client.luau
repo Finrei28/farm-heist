@@ -71,7 +71,7 @@ end
 
 local Controllers = script.Controllers
 for _, name in {
-	"HudController", "HotbarController", "FieldController", "SeedRackController", "BarnController", "StoreController", "DecorateController",
+	"HudController", "HotbarController", "FieldController", "SeedRackController", "BarnController", "StoreController", "ShelfController", "DecorateController",
 	"MarketController", "ShedController", "TruckController", "ShopperController", "CheckoutController", "PromptController", "SprintController", "RoofController",
 	"WarehouseController", "WorkersController", "WorkerController", "PoseController", "CrimeController", "PoliceController",
 	"GateController", "WatchController", "DefenceController", "SkyController", "AuctionController", "QuestsController", "GuideController", "TradeController",

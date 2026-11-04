@@ -46,6 +46,7 @@ local REASONS = {
 	NotAtTill = "Stand behind the counter to serve (in by the staff door).",
 	NothingToFill = "Nothing to put out: the displays are full, or the stockroom has nothing they can hold.",
 	CantHold = "That display can't hold that crop.",
+	OutOfStock = "None of those in your stockroom: pack a crate of them for 🏪 Store at the Packing Shed bench.",
 	Building = "Your new building is still going up.",
 	MaxLevel = "Already at the top level.",
 	NeedLevel = "That needs a higher Farm Level.",

@@ -213,7 +213,7 @@ local function pricesTab(state)
 	end
 	table.sort(list)
 	if #list == 0 then
-		labelRow(1, 60, "🏪", "Nothing to sell yet", "At the Packing Shed bench, pick 🏪 Store for a crate: it comes to your stockroom. Then Fill a display.", C.kraft, true)
+		labelRow(1, 60, "🏪", "Nothing to sell yet", "At the Packing Shed bench, pick 🏪 Store for a crate: it comes to your stockroom. Then press E at a display and pick it.", C.kraft, true)
 	end
 	-- (shoppers a minute, and how many slots are stocked: each shopper picks
 	-- crops by their slots, so a crop's share is its slots of all of them)
@@ -323,7 +323,7 @@ local function stockTab(state)
 	local order = 1
 	-- Fill all
 	local fillRow = labelRow(order, 56, "🧺", "Fill your displays",
-		if inMyStore() then "Tops up every display from the stockroom." else "Walk into your store to Fill all, or hold E at a display.", C.green)
+		if inMyStore() then "Tops up every display from the stockroom." else "Walk into your store to Fill all, or press E at a display to pick what goes on it.", C.green)
 	local _, fillButton = UI.button({ text = "Fill all", kind = if inMyStore() then "green" else "cream", size = UDim2.fromOffset(120, 40),
 		anchor = Vector2.new(1, 0.5), position = UDim2.new(1, -10, 0.5, 2), textSize = 18, zIndex = 23, parent = fillRow })
 	fillButton.Activated:Connect(function()

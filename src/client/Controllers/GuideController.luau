@@ -274,19 +274,19 @@ local function target(step, state): (Vector3?, string, string, string?)
 		return PlotLayout.frontOf("Seeds", 4), "Barley", hint, nil
 	elseif where == "display" then
 		if #state.store.stockroom > 0 then
-			return firstDisplay(state), "Fill", "Your crate's in the store's stockroom: press Fill at a display.", nil
+			return firstDisplay(state), "Stock", "Your crate's in the store's stockroom: press Stock at a display and pick it.", nil
 		elseif BarnRules.units(state.inventory) == 0 then
 			local at, label, text = growMore(state, "pack a crate for 🏪 Store")
 			return at, label, text, nil
 		end
-		return benchWorld(state), "Pack here", "Pack a crate and pick 🏪 Store, then press Fill at a display.", nil
+		return benchWorld(state), "Pack here", "Pack a crate and pick 🏪 Store, then press Stock at a display.", nil
 	elseif where == "till" then
 		local at, stocked = tillSpot(state)
 		if not stocked then
 			if #state.store.stockroom > 0 then
-				return firstDisplay(state), "Fill", "Shoppers only come when something's out: press Fill at a display.", nil
+				return firstDisplay(state), "Stock", "Shoppers only come when something's out: press Stock at a display.", nil
 			end
-			return benchWorld(state), "Pack here", "Pack a crate and pick 🏪 Store, then press Fill at a display: shoppers come for it.", nil
+			return benchWorld(state), "Pack here", "Pack a crate and pick 🏪 Store, then press Stock at a display: shoppers come for it.", nil
 		end
 		return at, "Serve here", hint, nil
 	elseif where == "jobboard" then

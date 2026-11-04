@@ -296,6 +296,56 @@ function StoreLayout.staffOnly(layout)
 	return cells
 end
 
+-- Where the nth idle Stocker waits: a free cell near the staff door (the
+-- nearest first), so they never stand in the Cashier behind the Shop
+-- Counter, which is in the staff doorway in the start layout (seen in Studio
+-- on 2026-11-05: the old spot was 2 studs from the Cashier, their arms and
+-- name tags overlapping). Free: on the floor, nothing standing on it, not
+-- behind a till, not either door's cell, not where shoppers stand to use a
+-- display or queue at a checkout. Nudged a little away from the staff door.
+-- With nowhere free, they wait just outside the staff door. Returns the
+-- cell's x, y (fractions: a point between cells).
+function StoreLayout.stockerSpot(layout, levelNumber: number, nth: number): (number, number)
+	local level = StoreLayout.level(levelNumber)
+	local closed = StoreLayout.closedToShoppers(layout)
+	for _, entry in layout do
+		if not StoreLayout.isWall(entry) and StoreLayout.hasFront(entry) then
+			for _, cell in StoreLayout.fronts(entry) do
+				closed[key(cell[1], cell[2])] = "front"
+			end
+		end
+	end
+	for _, queue in StoreLayout.queues(layout, levelNumber) do
+		for _, cell in queue do
+			closed[key(cell[1], cell[2])] = "queue"
+		end
+	end
+	local doorX, doorY = StoreLayout.doorCell()
+	local staffX, staffY = StoreLayout.staffCell()
+	closed[key(doorX, doorY)] = "door"
+	closed[key(staffX, staffY)] = "staff"
+	local free = {}
+	for x = 1, level.floor[1] do
+		for y = 1, level.floor[2] do
+			local distance = (x - staffX) ^ 2 + (y - staffY) ^ 2
+			if not closed[key(x, y)] and distance <= 9 then
+				table.insert(free, { x, y, distance })
+			end
+		end
+	end
+	table.sort(free, function(a, b)
+		if a[3] ~= b[3] then
+			return a[3] < b[3]
+		end
+		return if a[1] ~= b[1] then a[1] < b[1] else a[2] < b[2]
+	end)
+	local cell = free[nth]
+	if not cell then
+		return staffX - 0.6 - (nth - 1) * 0.3, staffY + (nth - 1) * 0.6 - 0.3 -- (outside the staff door)
+	end
+	return cell[1] + (cell[1] - staffX) * 0.12, cell[2] + (cell[2] - staffY) * 0.12
+end
+
 -- Where shoppers can't go: what stands on the floor and the staff-only cells.
 function StoreLayout.closedToShoppers(layout)
 	local closed = StoreLayout.occupied(layout)

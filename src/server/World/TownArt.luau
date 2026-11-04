@@ -3,7 +3,8 @@
 --   * Barley's Seeds: a green general store with a tall false front and a
 --     painted sign, its two windows full of seed packets, a striped awning
 --     over the counter where Barley (straw hat, beard, a packet held out)
---     sells seeds; sacks, barrels and seedlings round the door, a chalk
+--     sells seeds (he and Patty are on the body everyone shares:
+--     shared/PeopleArt); sacks, barrels and seedlings round the door, a chalk
 --     board saying when the stock comes in.
 --   * The Hiring Hall: a yellow meeting hall, its gable to the square with
 --     the name in it, a porch with the job board (the Hire tab: WorkerService
@@ -23,6 +24,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local PlotLayout = require(ReplicatedStorage.Shared.PlotLayout)
 local Crops = require(ReplicatedStorage.Shared.Config.Crops)
+local PeopleArt = require(ReplicatedStorage.Shared.PeopleArt)
 local Parts = require(script.Parent.Parts)
 local Meshes = require(script.Parent.Meshes)
 
@@ -155,32 +157,26 @@ local function nameTag(text: string, adornee: BasePart, height: number)
 	gui.Parent = adornee
 end
 
--- A townsperson, as blocky as the workers on the farms (WorkerController):
--- standing on `feet`, looking along its look vector. `look`: shirt, legs,
--- and arm angles forward (degrees) for the left and right arm.
-local function person(name: string, feet: CFrame, look, parent: Instance): Model
-	local model = Instance.new("Model")
-	model.Name = name
-	local function piece(partName, size, cf, color, shape)
-		return Parts.prop({ Name = partName, Size = size, CFrame = feet * cf, Color = color, Shape = shape or Enum.PartType.Block }, model)
+-- A townsperson on the body everyone in the valley shares (shared/PeopleArt:
+-- the shoppers' and the farm crews', since 2026-11-05; they were blocky with
+-- a ball head): standing on `feet` in clothes `u` (PeopleArt.dress, with a
+-- hat), their hair { style, color }. Returns the model, its parts (stood in
+-- place by `stand`) and `add` for what they hold.
+local function person(name: string, u, hair)
+	local model, parts, add = PeopleArt.figure(name, 1, true)
+	PeopleArt.dress(add, u, SKIN)
+	PeopleArt.head(add, SKIN, hair.style, hair.color, u.hat ~= nil)
+	if u.hat then
+		PeopleArt.hat(add, u.hat, u.hatColor, u.hatTrim)
 	end
-	for _, x in { -0.5, 0.5 } do
-		piece("Leg", Vector3.new(0.9, 2.0, 0.9), CFrame.new(x, 1.2, 0), look.legs) -- (its foot inside the shoe)
-		piece("Shoe", Vector3.new(1.05, 0.4, 1.15), CFrame.new(x, 0.2, -0.2), look.shoes or COLORS.dark)
-	end
-	piece("Body", Vector3.new(2.1, 2.3, 1.1), CFrame.new(0, 3.35, 0), look.shirt)
-	for i, x in { -1.45, 1.45 } do
-		local raise = math.rad(look.arms[i])
-		local arm = CFrame.new(x, 4.45, 0) * CFrame.Angles(raise, 0, 0)
-		piece("Arm", Vector3.new(0.7, 2.1, 0.7), arm * CFrame.new(0, -1.05, 0), look.sleeves or look.shirt)
-		piece("Hand", Vector3.new(0.6, 0.5, 0.6), arm * CFrame.new(0, -2.3, 0), SKIN)
-	end
-	piece("Head", Vector3.new(1.6, 1.6, 1.6), CFrame.new(0, 5.3, 0), SKIN, Enum.PartType.Ball)
-	for _, x in { -0.32, 0.32 } do
-		piece("Eye", Vector3.new(0.22, 0.22, 0.22), CFrame.new(x, 5.42, -0.72), COLORS.dark, Enum.PartType.Ball)
-	end
-	model.Parent = parent
-	return model
+	return model, parts, add
+end
+
+-- Stands a townsperson at `feet`, arms raised forward (degrees: left, right).
+local function stand(parts, feet: CFrame, arms: { number })
+	PeopleArt.place(parts, feet, function(limb, side)
+		return if limb == "arm" then math.rad(arms[if side < 0 then 1 else 2]) else 0
+	end)
 end
 
 ------------------------------------------------------------------------
@@ -246,29 +242,23 @@ local function packets(glass: BasePart, seed: number)
 end
 
 local function barley(feet: CFrame, parent: Instance)
-	local model = person("Barley", feet, {
-		shirt = Color3.fromRGB(196, 72, 52), legs = Color3.fromRGB(70, 102, 156), shoes = Color3.fromRGB(96, 66, 42),
-		arms = { 0, 75 }, -- (his right hand holds a packet out over the counter)
-	}, parent)
-	local function piece(partName, size, cf, color, shape)
-		return Parts.prop({ Name = partName, Size = size, CFrame = feet * cf, Color = color, Shape = shape or Enum.PartType.Block }, model)
-	end
-	-- denim overalls: the bib and straps over his red shirt
-	piece("Bib", Vector3.new(1.5, 1.3, 0.14), CFrame.new(0, 3.55, -0.6), Color3.fromRGB(70, 102, 156))
+	local denim = Color3.fromRGB(70, 102, 156)
+	local model, parts, add = person("Barley", {
+		shirt = Color3.fromRGB(196, 72, 52), sleeves = "long", legs = denim, shoes = Color3.fromRGB(96, 66, 42), bib = denim,
+		hat = "sunhat", hatColor = STRAW, hatTrim = GREEN_DARK,
+	}, { style = "short", color = Color3.fromRGB(236, 236, 232) })
+	-- a white beard round his chin, under the face's smile (a beard over the
+	-- mouth read as a mask; a moustache sat on the smile in Studio, 2026-11-05)
+	local white = Color3.fromRGB(244, 240, 232)
+	add("Beard", Vector3.new(1.16, 0.46, 0.32), Vector3.new(0, 4.4, -0.56), white) -- (its sides clear of his straps')
+	add("BeardTip", Vector3.new(0.7, 0.3, 0.28), Vector3.new(0, 4.08, -0.6), white)
 	for _, x in { -0.62, 0.62 } do
-		piece("Strap", Vector3.new(0.3, 0.9, 1.22), CFrame.new(x, 4.2, 0), Color3.fromRGB(70, 102, 156))
+		add("Sideburn", Vector3.new(0.2, 0.62, 0.5), Vector3.new(x, 4.62, -0.3), white)
 	end
-	-- a white beard and moustache, a straw hat with a green band
-	-- (under his nose and chin, clear of his eyes: higher, it read as a mask)
-	piece("Beard", Vector3.new(1.2, 0.9, 0.45), CFrame.new(0, 4.3, -0.7), Color3.fromRGB(244, 240, 232))
-	piece("BeardTip", Vector3.new(0.7, 0.45, 0.4), CFrame.new(0, 3.75, -0.72), Color3.fromRGB(244, 240, 232))
-	piece("Moustache", Vector3.new(0.9, 0.22, 0.25), CFrame.new(0, 4.92, -0.82), Color3.fromRGB(244, 240, 232))
-	Parts.cylinder("HatBrim", feet * CFrame.new(0, 6.0, 0), 3.4, 0.22, { Color = STRAW }, model)
-	Parts.cylinder("HatCrown", feet * CFrame.new(0, 6.5, 0), 1.75, 1.0, { Color = STRAW }, model)
-	Parts.cylinder("HatBand", feet * CFrame.new(0, 6.2, 0), 1.8, 0.28, { Color = GREEN_DARK }, model)
-	-- the packet standing in his right hand
-	piece("SeedPacket", Vector3.new(0.9, 1.2, 0.08), CFrame.new(1.45, 4.55, -2.42), Color3.fromRGB(242, 145, 61))
-	piece("PacketLabel", Vector3.new(0.6, 0.5, 0.04), CFrame.new(1.45, 4.65, -2.5), Color3.fromRGB(255, 248, 230))
+	-- the packet standing in his right hand, held out over the counter
+	add("SeedPacket", Vector3.new(0.9, 1.2, 0.08), Vector3.new(1.5, 4.4, -2.28), Color3.fromRGB(242, 145, 61))
+	add("PacketLabel", Vector3.new(0.6, 0.5, 0.04), Vector3.new(1.5, 4.5, -2.35), Color3.fromRGB(255, 248, 230))
+	stand(parts, feet, { 0, 75 })
 	model.Parent = parent
 	nameTag("Barley", model.Head, 3.2)
 	return model
@@ -407,31 +397,25 @@ local DECK = Color3.fromRGB(176, 128, 82)
 local DECK_DARK = Color3.fromRGB(140, 98, 60)
 
 local function patty(feet: CFrame, parent: Instance)
-	local model = person("Patty", feet, {
-		shirt = TEAL, sleeves = TEAL, legs = Color3.fromRGB(58, 72, 110), shoes = Color3.fromRGB(120, 52, 44),
-		arms = { 50, 50 }, -- (her clipboard held up in both hands)
-	}, parent)
-	local function piece(partName, size, cf, color, shape)
-		return Parts.prop({ Name = partName, Size = size, CFrame = feet * cf, Color = color, Shape = shape or Enum.PartType.Block }, model)
-	end
-	-- a white blouse's collar at the cardigan's neck, buttons down it
-	piece("Collar", Vector3.new(1.0, 0.45, 0.2), CFrame.new(0, 4.35, -0.55), WHITE)
+	-- a teal cardigan over a white blouse (its collar and front), auburn hair in a bun
+	local model, parts, add = person("Patty", {
+		shirt = TEAL, sleeves = "long", legs = Color3.fromRGB(58, 72, 110), shoes = Color3.fromRGB(120, 52, 44), collar = WHITE,
+	}, { style = "bun", color = Color3.fromRGB(150, 70, 40) })
 	for i = 0, 2 do
-		piece("Button", Vector3.new(0.18, 0.18, 0.1), CFrame.new(0, 3.85 - i * 0.55, -0.6), GOLD)
+		add("Button", Vector3.new(0.16, 0.16, 0.08), Vector3.new(-0.3, 3.85 - i * 0.5, -0.53), GOLD)
 	end
-	-- auburn hair: a cap of it, a fringe and a bun at the back
-	local hair = Color3.fromRGB(150, 70, 40)
-	piece("Hair", Vector3.new(1.72, 1.0, 1.72), CFrame.new(0, 5.75, 0.05), hair, Enum.PartType.Ball)
-	piece("Fringe", Vector3.new(1.4, 0.35, 0.3), CFrame.new(0, 5.95, -0.68), hair)
-	piece("Bun", Vector3.new(0.9, 0.9, 0.9), CFrame.new(0, 6.2, 0.75), hair, Enum.PartType.Ball)
-	-- the clipboard, the list of jobs clipped to it
-	local held = CFrame.new(0, 3.6, -1.55) * CFrame.Angles(math.rad(-25), 0, 0)
-	piece("Clipboard", Vector3.new(1.5, 1.9, 0.12), held, Color3.fromRGB(150, 104, 62))
-	piece("Paper", Vector3.new(1.3, 1.6, 0.06), held * CFrame.new(0, -0.08, -0.08), WHITE)
-	piece("Clip", Vector3.new(0.7, 0.25, 0.14), held * CFrame.new(0, 0.85, -0.1), Color3.fromRGB(180, 186, 192))
+	-- the clipboard held up in both hands, the list of jobs clipped to it
+	local held = CFrame.new(0, 3.35, -1.62) * CFrame.Angles(math.rad(-25), 0, 0)
+	local function hold(partName, size, at: CFrame, color)
+		add(partName, size, at.Position, color, { turn = at - at.Position })
+	end
+	hold("Clipboard", Vector3.new(2.1, 2.2, 0.12), held, Color3.fromRGB(150, 104, 62))
+	hold("Paper", Vector3.new(1.86, 1.9, 0.06), held * CFrame.new(0, -0.1, -0.08), WHITE)
+	hold("Clip", Vector3.new(0.7, 0.25, 0.14), held * CFrame.new(0, 1.04, -0.1), Color3.fromRGB(180, 186, 192)) -- (its top over the board's)
 	for i = 0, 2 do
-		piece("Line", Vector3.new(1.0, 0.07, 0.04), held * CFrame.new(-0.05, 0.35 - i * 0.4, -0.15), Color3.fromRGB(90, 96, 110))
+		hold("Line", Vector3.new(1.4, 0.07, 0.04), held * CFrame.new(-0.05, 0.4 - i * 0.45, -0.13), Color3.fromRGB(90, 96, 110))
 	end
+	stand(parts, feet, { 50, 50 })
 	model.Parent = parent
 	nameTag("Patty", model.Head, 3.4)
 	return model

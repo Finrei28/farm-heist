@@ -83,6 +83,9 @@ local services = {
 		FindFirstChild = function(_, name)
 			return storageChildren[name]
 		end,
+		WaitForChild = function(self, name) -- (Shared, for client modules that wait for it)
+			return rawget(self, name) or storageChildren[name]
+		end,
 	},
 	Players = { LocalPlayer = nil },
 }
@@ -158,6 +161,7 @@ local function scan(path: string)
 end
 scan(ROOT)
 scan("src/server")
+scan("src/client")
 
 local loadModule
 
@@ -270,6 +274,16 @@ function Harness.loadServerWith(name: string, globals)
 	local current = node("src/server", "Server", nil)
 	for _, part in string.split(name, "/") do
 		current = child(current, part) or error(`[harness] no server module {name}`)
+	end
+	return loadModule(rawget(current, "__path"), current, globals)
+end
+
+-- Loads a client module with extra globals, uncached: e.g. client/People
+-- with real Instances, to render the NPCs (tools/peopledump).
+function Harness.loadClientWith(name: string, globals)
+	local current = node("src/client", "Client", nil)
+	for _, part in string.split(name, "/") do
+		current = child(current, part) or error(`[harness] no client module {name}`)
 	end
 	return loadModule(rawget(current, "__path"), current, globals)
 end

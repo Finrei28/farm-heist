@@ -189,7 +189,7 @@ local function finish(result)
 		UI.toast("Crate on the conveyor to the Cold Room ❄ Load the trucks at the docks (or let your Loaders).", "Good", 3)
 		showList()
 	else
-		UI.toast("Crate sent to your store's stockroom. Fill a display (hold E at it) to put it out!", "Good", 3)
+		UI.toast("Crate sent to your store's stockroom. Press E at a display and pick it to put it out!", "Good", 3)
 		showList()
 	end
 end

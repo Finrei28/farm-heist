@@ -267,6 +267,45 @@ return function(spec, harness)
 		end)
 	end)
 
+	describe("the Stockers' spot", function()
+		it("is clear of the Cashier, things, doors and where shoppers stand, by the staff door", function()
+			for _, layout in { starter(), {} } do
+				local closed = StoreLayout.closedToShoppers(layout)
+				local staffX, staffY = StoreLayout.staffCell()
+				local seen = {}
+				for nth = 1, 3 do
+					local x, y = StoreLayout.stockerSpot(layout, 1, nth)
+					local cx, cy = math.floor(x + 0.5), math.floor(y + 0.5)
+					-- (a whole cell from the Cashier inside the staff door, 4 studs: their arms don't meet)
+					expect(math.max(math.abs(x - staffX), math.abs(y - staffY)) >= 1).toBe(true)
+					expect(closed[StoreLayout.key(cx, cy)]).toBe(nil)
+					expect((cx == 3 and cy == 1)).toBe(false) -- (the front door's cell)
+					for _, entry in layout do
+						for _, cell in StoreLayout.fronts(entry) do
+							expect(cell[1] == cx and cell[2] == cy).toBe(false)
+						end
+					end
+					expect(seen[StoreLayout.key(cx, cy)]).toBe(nil)
+					seen[StoreLayout.key(cx, cy)] = true
+				end
+			end
+			-- the start layout's first Stocker waits in the corner by the front wall, beside the Cashier
+			local x, y = StoreLayout.stockerSpot(starter(), 1, 1)
+			expect(math.floor(x + 0.5)).toBe(1)
+			expect(math.floor(y + 0.5)).toBe(1)
+		end)
+		it("waits outside the staff door when the floor round it is full", function()
+			local layout = starter()
+			for x = 1, 6 do
+				for y = 1, 4 do
+					layout[`f{x}{y}`] = { item = "PottedPlant", x = x, y = y, rot = 0 }
+				end
+			end
+			local x = StoreLayout.stockerSpot(layout, 1, 1)
+			expect(x < 1).toBe(true)
+		end)
+	end)
+
 	describe("aisles", function()
 		it("find the shortest walk from the door, around things", function()
 			local path = StoreLayout.path(starter(), 1, { 3, 1 }, { 1, 3 })

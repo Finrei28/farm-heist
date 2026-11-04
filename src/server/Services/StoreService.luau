@@ -76,6 +76,8 @@ local lastId = 0
 --     the seconds they take a shopper; nil if none
 --   boost(player) → the Greeter's extra shoppers (a share)
 --   served(player, worker, seconds) → a Cashier served a shopper
+--   moved(player) → the layout or the building changed: the crew moves to
+--     their new spots (a Cashier to their till, the Stockers by the staff door)
 StoreService.crew = {
 	cashier = function(_player: Player, _checkout: string)
 		return nil, nil
@@ -84,6 +86,7 @@ StoreService.crew = {
 		return 0
 	end,
 	served = function(_player: Player, _worker, _seconds: number) end,
+	moved = function(_player: Player) end,
 }
 
 local function now(): number
@@ -98,6 +101,10 @@ function StoreService.nameOf(player: Player, store): string
 	return store.name or `{player.DisplayName}'s {StoreLayout.level(store.level).building.name}`
 end
 
+-- A display's prompt (the owner's): E opens the shelf panel on their screen
+-- (client ShelfController, the user, 2026-11-05: "players should be able to
+-- press E to open a panel that shows all the produce they have unlocked"),
+-- where they pick what each slot holds and fill it ("Stock" below).
 local function fillPrompt(player: Player, item: Model, id: string)
 	if item:FindFirstChild("FillPrompt", true) then
 		return
@@ -108,18 +115,14 @@ local function fillPrompt(player: Player, item: Model, id: string)
 	at.Parent = item.PrimaryPart
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.Name = "FillPrompt"
-	prompt.ActionText = "Fill"
+	prompt.ActionText = "Stock"
 	prompt.KeyboardKeyCode = Enum.KeyCode.E
-	prompt.HoldDuration = 0.3
+	prompt.HoldDuration = 0
 	prompt.MaxActivationDistance = 8
 	prompt.RequiresLineOfSight = false
 	prompt:SetAttribute("OwnerId", player.UserId)
+	prompt:SetAttribute("Display", id)
 	prompt.Parent = at
-	prompt.Triggered:Connect(function(who)
-		if who == player then
-			StoreService.Fill(player, id)
-		end
-	end)
 end
 
 -- Redraws each display's produce and price tags, and its prompt's note.
@@ -755,6 +758,7 @@ local function levelUp(player: Player, data, to: number)
 		end
 	end
 	redraw(player)
+	StoreService.crew.moved(player)
 	Notice.send(player, `Store Level {to}! {table.concat(StoreLayout.news(to), " · ")}`, "Good")
 	DataService.NotifyState(player)
 end
@@ -839,7 +843,7 @@ function StoreService.Fill(player: Player, id: string): string?
 	drawDisplays(player)
 	drawStockroom(player)
 	DataService.NotifyState(player)
-	return nil
+	return nil, moved
 end
 
 ------------------------------------------------------------------------
@@ -896,6 +900,45 @@ function actions.Fill(player, data, arg)
 		GuideService.Record(player, "Store")
 	end
 	return if failure == "Empty" or failure == "Full" then nil else failure
+end
+
+-- "id|slot|cropId" or "id|slot|Auto": from the shelf panel at a display
+-- (client ShelfController): that slot is kept to the crop (Auto: whatever
+-- the stockroom has most of; what was on it goes back to the stockroom if
+-- it changes), then the display is filled. A crop must be in the stockroom
+-- (the panel says "Out of stock" otherwise) and one this display holds.
+function actions.Stock(player, data, arg)
+	local st = stores[player]
+	if not st then
+		return "NoFarm"
+	end
+	local id, slotText, cropId = string.match(arg or "", "^(%w+)|(%d+)|(%w+)$")
+	local entry = id and data.store.layout[id]
+	local def = entry and Store.ITEMS[entry.item]
+	if not def or def.kind ~= "Display" or (cropId ~= "Auto" and not Crops.ById[cropId]) then
+		return "BadRequest"
+	end
+	local position = MovementService.positionOf(player)
+	local item = PlotService.model(st.index).Store.Items:FindFirstChild(id)
+	if not position or not item or (position - item:GetPivot().Position).Magnitude > StoreService.REACH then
+		return "TooFar"
+	end
+	if cropId ~= "Auto" and (ShopRules.stockroomUnits(data.store)[cropId] or 0) <= 0 then
+		return "OutOfStock"
+	end
+	local failure = ShopRules.setSlot(data.store, id, tonumber(slotText) :: number, if cropId == "Auto" then nil else cropId)
+	if failure then
+		return failure
+	end
+	local fillFailure, moved = StoreService.Fill(player, id)
+	if fillFailure then -- (the slot's new setting still shows)
+		drawDisplays(player)
+		drawStockroom(player)
+		DataService.NotifyState(player)
+		return if fillFailure == "Empty" or fillFailure == "Full" then nil else fillFailure
+	end
+	GuideService.Record(player, "Store")
+	return nil, { moved = moved }
 end
 
 -- "checkoutId": serving at your till (§4.8). Behind it, each press scans
@@ -1122,6 +1165,7 @@ function actions.Layout(player, data, arg)
 	st.decorating = false
 	clearOut(player, st, now())
 	redraw(player)
+	StoreService.crew.moved(player)
 	return nil, { cost = cost }
 end
 

@@ -141,9 +141,21 @@ for _, part in all do
 			local special = part:FindFirstChildOfClass("SpecialMesh")
 			if special and special.MeshType == roblox.Enum.MeshType.Sphere then
 				entry.shape = "Ellipsoid"
+			elseif special and special.MeshType == roblox.Enum.MeshType.Head then
+				entry.shape = "Head" -- (the townspeople: shared/PeopleArt)
 			end
 		end
 		table.insert(parts, entry)
+		if part:FindFirstChild("Face") then -- (the face decal's stand-in: two eyes and a smile)
+			local dark = { 0.16, 0.13, 0.12 }
+			local s = part.Size.X / 1.3
+			for _, x in { -0.2, 0.2 } do
+				local eye = cf * roblox.CFrame.new(x * s, 0.18 * s, -0.6 * s)
+				table.insert(parts, { name = "Eye", class = "Part", size = { 0.16, 0.22, 0.1 }, cframe = { eye:GetComponents() }, color = dark, shape = "Ball", transparency = 0 })
+			end
+			local smile = cf * roblox.CFrame.new(0, -0.1 * s, -0.6 * s)
+			table.insert(parts, { name = "Smile", class = "Part", size = { 0.4, 0.07, 0.1 }, cframe = { smile:GetComponents() }, color = dark, transparency = 0 })
+		end
 	end
 end
 fs.writeFile(out, serde.encode("json", parts))

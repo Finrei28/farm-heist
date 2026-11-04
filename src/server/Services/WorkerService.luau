@@ -138,8 +138,9 @@ local function spotOf(index: number, data, entry, nth: number): (Vector3, Vector
 		local across = layout.docks[math.min(nth, #layout.docks)]
 		local length = YardArt.TRUCK_LENGTH[info.truck]
 		return at(PlotLayout.truckParked(across, length) + Vector3.new(-6, 0.2, -length / 2 + 6), Vector3.new(1, 0, 0))
-	elseif t == "Stocker" then
-		return at(PlotLayout.storeLocal(1.3, Store.STAFF_Y + 0.5 + (nth - 1) * 0.8, PlotLayout.PLOT.store.floor), Vector3.new(-1, 0, 0))
+	elseif t == "Stocker" then -- (by the staff door, clear of the Cashier and the shoppers: StoreLayout.stockerSpot)
+		local cx, cy = StoreLayout.stockerSpot(data.store.layout, data.store.level, nth)
+		return at(PlotLayout.storeLocal(cx, cy, PlotLayout.PLOT.store.floor), Vector3.new(-1, 0, 0))
 	elseif t == "Cashier" then
 		local id = registers(data.store)[nth]
 		local entry_ = id and data.store.layout[id]
@@ -189,10 +190,12 @@ local function showCrew(player: Player, to: Player?)
 end
 WorkerService.ShowCrew = showCrew
 
--- A worker walks to a world point and back (a harvest, a load, a refill).
-local function walk(index: number, uid: string, from: Vector3, to: Vector3, carry: string?)
+-- A worker walks to a world point and back (a harvest, a load, a refill),
+-- carrying `carry` there (a crate to the truck) or, with `back`, on the way
+-- back (a harvested crop).
+local function walk(index: number, uid: string, from: Vector3, to: Vector3, carry: string?, back: boolean?)
 	local seconds = (to - from).Magnitude / WALK
-	WorkerEvent:FireAllClients("Do", { plot = index, id = uid, at = now(), to = to, seconds = math.clamp(seconds, 0.4, 6), carry = carry })
+	WorkerEvent:FireAllClients("Do", { plot = index, id = uid, at = now(), to = to, seconds = math.clamp(seconds, 0.4, 6), carry = carry, back = back })
 end
 
 ------------------------------------------------------------------------
@@ -280,7 +283,7 @@ function JOBS.Farmhand(player, data, st, entry, speed, index)
 				st.told[`seeds{cropId}`] = true
 				Notice.send(player, `🌱 Out of {Crops.ById[cropId].name} seeds: your Farmhands harvest but can't replant. Barley sells more in town.`, "Error")
 			end
-			walk(index, entry.uid, st.spots[entry.uid] or PlotLayout.tileWorld(index, tonumber(key) :: number), PlotLayout.tileWorld(index, tonumber(key) :: number), BarnRules.parse(key))
+			walk(index, entry.uid, st.spots[entry.uid] or PlotLayout.tileWorld(index, tonumber(key) :: number), PlotLayout.tileWorld(index, tonumber(key) :: number), BarnRules.parse(key), true)
 		end
 	end
 	st.budgets[entry.uid] = budget
@@ -973,6 +976,9 @@ function WorkerService.Start()
 		local data = DataService.Get(player)
 		local entry = data and not data.crew.strike and ofType(data, "Greeter")[1]
 		return if entry then WorkerRules.greeterBoost(entry.worker) else 0
+	end
+	StoreService.crew.moved = function(player: Player)
+		showCrew(player)
 	end
 	StoreService.crew.served = function(player: Player, entry, seconds: number)
 		if WorkerRules.addXp(entry.worker, XP_SECOND * seconds) then
