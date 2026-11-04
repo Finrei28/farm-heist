@@ -1,15 +1,17 @@
-"""Makes Farm Heist's Roblox page art from Studio screenshots: the game's
-icon (512 x 512) and its thumbnails (1920 x 1080), and the community's
-emblem (512 x 512, drawn) and cover photo (1440 x 456), in the Kraft & Crate
-look (docs/GameDesign.md §5.1): a painted wooden sign hung on two ropes
-for the title, wooden boards with cream lettering for each thumbnail's
-line, Fredoka One like the game's own headers.
+"""Makes Farm Heist's Roblox page art: the game's icon (512 x 512) and its
+thumbnails (1920 x 1080) from the scenes stage.py renders, and the
+community's emblem (512 x 512, drawn) and cover photo (1440 x 456, from a
+Studio shot), in the Kraft & Crate look (docs/GameDesign.md §5.1): a
+painted wooden sign hung on two ropes for the title, wooden boards with
+cream lettering for each thumbnail's line, Fredoka One like the game's own
+headers.
 
-    python tools/page_art/compose.py            every piece whose shot is there
+    python tools/page_art/compose.py            every piece whose picture is there
     python tools/page_art/compose.py icon raid  just these
 
-Shots go in art/page/shots/<name>.png (or .jpg), taken in Studio with the
-HUD hidden (docs/RobloxPage.md lists what each one shows). Writes
+Renders come from `python tools/page_art/stage.py` (art/page/renders/);
+Studio shots go in art/page/shots/<name>.png (or .jpg), taken with the HUD
+hidden (docs/RobloxPage.md lists what each one shows). Writes
 art/page/<name>.png, ready to upload (Creator Dashboard > the experience >
 Places > Thumbnails, and the icon under Basic Settings).
 
@@ -54,7 +56,16 @@ HAND = font_path("PatrickHand-Regular.ttf")
 TRIM = 6  # px off every edge of a shot (Studio's blue viewport border)
 
 
+RENDERS = os.path.join(ROOT, "art", "page", "renders")
+
+
 def shot(name):
+    """A picture to build on: "renders/<name>" (tools/page_art/stage.py,
+    used whole) or a Studio shot "<name>" (art/page/shots, its border
+    trimmed)."""
+    if name.startswith("renders/"):
+        path = os.path.join(RENDERS, name[len("renders/"):] + ".png")
+        return Image.open(path).convert("RGB") if os.path.exists(path) else None
     for ext in ("png", "jpg", "jpeg"):
         path = os.path.join(SHOTS, f"{name}.{ext}")
         if os.path.exists(path):
@@ -410,14 +421,21 @@ def community_cover(src):
     return canvas.convert("RGB")
 
 
-def thumb(line, tint=WOOD, title=False, top=False):
+def rendered_icon(src):
+    """512 x 512 from the staged render (stage.py's icon): no words, like
+    the top games' icons; the characters say what the game is."""
+    return vignette(cover(src, (512, 512)), 0.22)
+
+
+def thumb(line, tint=WOOD, title=False, top=False, title_w=820, board_w=1120):
     """top: the line's board hangs at the top (the shot's subject is low)."""
     def make(src):
         size = (1920, 1080)
         canvas = vignette(cover(src, size), 0.28).convert("RGBA")
         if title:
-            hang(canvas, title_sign(820), (960, 200))
-        board = banner(line, 1120, tint)
+            sign = title_sign(title_w)
+            hang(canvas, sign, (960, 50 + sign.height // 2))
+        board = banner(line, board_w, tint)
         if top:
             hang(canvas, board, (960, board.height // 2 + 90))
         else:
@@ -427,12 +445,14 @@ def thumb(line, tint=WOOD, title=False, top=False):
 
 
 PIECES = {
-    "icon": ("raid", icon),
-    "farm": ("farm", thumb("GROW CROPS · RUN YOUR FARM", GREEN, title=True)),
-    "raid": ("raid", thumb("STEAL CROPS · BONK THIEVES!", RED, top=True)),
+    # the game's icon and thumbnails: staged renders (stage.py) of Sly the
+    # thief and Farmer Hank, made up for the page
+    "icon": ("renders/icon", rendered_icon),
+    "farm": ("renders/farm", thumb("GROW CROPS · RUN YOUR FARM", GREEN, title=True, title_w=700, board_w=1000)),
+    "raid": ("renders/raid", thumb("STEAL CROPS · BONK THIEVES!", RED, top=True)),
     "store": ("store", thumb("BUILD YOUR OWN STORE", WOOD)),
-    "auction": ("auction", thumb("BID ON RARE SEEDS", GOLD)),
-    "trucks": ("trucks", thumb("SHIP TO THE CITY", WOOD)),
+    "auction": ("renders/auction", thumb("BID ON RARE SEEDS", GOLD)),
+    "trucks": ("renders/trucks", thumb("SHIP TO THE CITY", WOOD)),
     # the community (Roblox's Communities > Configure > Information)
     "community_emblem": (None, emblem),
     "community_cover": ("farm", community_cover),

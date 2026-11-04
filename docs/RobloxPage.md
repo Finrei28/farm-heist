@@ -36,22 +36,27 @@ Farm Heist is published by a community (Roblox's new name for a group), so the p
 
 **Maturity questionnaire** (§11 step 7): cartoon bonks with no blood or injury, and a cartoon arrest. Aim for *Mild*.
 
-## The art (`tools/page_art/compose.py`)
+## The art (`tools/page_art/stage.py`, then `compose.py`)
 
-Take each shot in Studio (Play, graphics quality at its highest, the HUD hidden: with the command bar on the client, `game.Players.LocalPlayer.PlayerGui.FarmHeistHUD.Enabled = false`), save it as `art/page/shots/<name>.png`, then run `python tools/page_art/compose.py`. It writes `art/page/icon.png` (512 × 512) and the thumbnails (1920 × 1080).
+The icon and thumbnails are staged renders in the style of the top Roblox games' page art: big characters in the middle of the action, a bright sky, the background out of focus, dark outlines and a rim light. They star two characters made up for the page, in Roblox's blocky shape:
 
-| Piece | The shot | Its line |
+- **Sly**, the thief: a black beanie and mask, a striped shirt, a cheeky grin (or a sly smirk).
+- **Farmer Hank**: a straw hat, a red plaid shirt, blue overalls and a big moustache; shouting, gritting his teeth or beaming.
+
+`python tools/page_art/stage.py` renders each scene into `art/page/renders/` from the game's own parts and meshes (`lune run tools/partdump` dumps the farm, the Auction House, and the farm with its Level 20 warehouse; the dumps are made for you and git-ignored), with the faces and clothes drawn as pictures on the characters' blocks. Then `python tools/page_art/compose.py` hangs the signs and writes `art/page/icon.png` (512 × 512) and the thumbnails (1920 × 1080). Each scene's camera, poses and touches (sparkles, glow, sweat, the bat's swing) are in `stage.py`'s `SCENES`.
+
+| Piece | The scene | Its line |
 |---|---|---|
-| `icon` | Made from the `raid` shot, cropped to the two characters | the FARM HEIST sign |
-| `farm` | A full farm at Golden Hour from above the gate: the field ripe, the farmhouse and barn, the store and the warehouse | the FARM HEIST sign, "GROW CROPS · RUN YOUR FARM" |
-| `raid` | Two players (Server & Clients): the thief holding a stolen pumpkin up, the red ! over them, the farmer behind with the bat, ripe pumpkins round them | "STEAL CROPS · BONK THIEVES!" (at the top) |
-| `store` | Inside a Supermarket full of displays and shoppers queueing at the checkouts | "BUILD YOUR OWN STORE" |
-| `auction` | The Auction House during a lot: Goldie Gavel, the lot over its pedestal, the board | "BID ON RARE SEEDS" |
-| `trucks` | A semi leaving the warehouse's dock, crates in the Cold Room, workers at the line | "SHIP TO THE CITY" |
+| `icon` | Sly running at the camera with a glowing pumpkin held up on his head, sweating, eyes on Hank; Hank behind him in the field, bat raised. No words, like the top games' icons: the characters say what the game is | none |
+| `farm` | Hank in his field hoisting a giant carrot, beaming, the barn and farmhouse behind him; Sly peeking out of the corn | the FARM HEIST sign, "GROW CROPS · RUN YOUR FARM" |
+| `raid` | The icon's chase, wider, with the farm round them | "STEAL CROPS · BONK THIEVES!" (at the top) |
+| `store` | (Not made yet: a Supermarket full of displays and shoppers queueing at the checkouts) | "BUILD YOUR OWN STORE" |
+| `auction` | Sly (paddle 13, smirking) and Hank (paddle 7, teeth set) bidding against each other across the aisle; the Mythic Dragon's Eye Pumpkin glowing on the pedestal, Goldie Gavel at her podium | "BID ON RARE SEEDS" |
+| `trucks` | Hank carrying a crate of carrots out past the semis' red cabs, lined up at the Distribution Center | "SHIP TO THE CITY" |
 | `community_emblem` | None: drawn by the script (512 × 512). The plain bat and a carrot crossed, outlined like stickers, on barn-red planks with a stitched cream edge and a gold sparkle; no words, so it still reads at the 40-odd pixels Roblox shows emblems at in lists | none |
 | `community_cover` | The `farm` shot's right three quarters (1440 × 456, the 60:19 Roblox asks for, about 1:1 from the shot): the barn and farmhouse in the top half on the left. Roblox fades the cover's bottom into the page and puts the emblem and the name over its lower left, so nothing that matters is there | the FARM HEIST sign, hung on the right |
 
-Made on 2026-11-04 (in `art/page/`, shots in `art/page/shots/`): `icon.png`, `farm.png`, `raid.png`, `auction.png`, `trucks.png`, `community_emblem.png`, `community_cover.png` (the community's two judged on a mock of the community page, light and dark, desktop and phone: the cover photo's size is from a DevForum answer, Dec 2025, as Roblox's docs don't give one). Still to take: `store` (a Supermarket full of displays and shoppers takes a long staging run). Studio's game view is 1920 × 822 at most on this screen, so each shot is taken in four quarters and stitched, and thumbnails are scaled up from about 1460 × 820.
+Made on 2026-11-04 (in `art/page/`): `icon.png`, `farm.png`, `raid.png`, `auction.png`, `trucks.png` (staged renders, each judged at full size and at the sizes Roblox shows them: the icon at 150 and 64 px, the thumbnails at 240 px), `community_emblem.png`, `community_cover.png` (the community's two judged on a mock of the community page, light and dark, desktop and phone: the cover photo's size is from a DevForum answer, Dec 2025, as Roblox's docs don't give one). The cover photo is still from a Studio shot (`art/page/shots/farm.jpg`), as are the first icon and thumbnails' shots kept there. Still to make: `store` (its scene needs a Supermarket laid out with displays and shoppers: a `store` mode for `tools/partdump`, like `warehouse`).
 
 Upload: Creator Dashboard > the experience > Places > the start place > Thumbnails (the farm first); the icon under the experience's Basic Settings.
 

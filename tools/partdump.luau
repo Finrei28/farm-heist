@@ -6,6 +6,7 @@
 -- cleared, the rest overgrown; `defences`: every defence set out, the gate
 -- shut and locked, the Watchman's gatehouse; `dome`: those and a dome;
 -- `auction`: the Auction House instead of a farm, in its own frame;
+-- `warehouse`: the farm with its warehouse at Level 20 and its semis;
 -- `town`: the whole town and the ring road, in world space; `valley`: the
 -- countryside, roads and trail with farms 1, 2 and 8, in world space).
 local fs = require("@lune/fs")
@@ -79,6 +80,12 @@ if extras == "defences" or extras == "dome" then
 	if extras == "dome" then
 		DefenceArt.dome(plot, frame, "Shield", 100)
 	end
+end
+
+if extras == "warehouse" then
+	-- the biggest warehouse (Warehouse Level 20) and its semis at the docks
+	local YardArt = Harness.loadServerWith("World/YardArt", globals)
+	YardArt.setLevel(plot, 20)
 end
 
 local sources = { plot }
