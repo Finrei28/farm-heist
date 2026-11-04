@@ -151,6 +151,95 @@ local function goldie(feet: CFrame, parent: Instance): Model
 	return model
 end
 
+-- A place to sit on a bench: an invisible Seat on the bench's top, facing
+-- the stage (`at`'s -Z), that only seats you through its Sit prompt (it
+-- doesn't take touches: walking along a row doesn't sit you down).
+AuctionArt.BENCH_SPOTS = 5
+local BENCH_SPOTS = AuctionArt.BENCH_SPOTS
+local function bench(at: CFrame, parent: Instance): Seat
+	local seat = Instance.new("Seat")
+	seat.Name = "BenchSpot"
+	seat.Size = Vector3.new(2, 0.2, 1.6)
+	seat.CFrame = at
+	seat.Anchored = true
+	seat.CanCollide = false
+	seat.CanTouch = false
+	seat.CanQuery = false
+	seat.Transparency = 1
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = "SitPrompt"
+	prompt.ActionText = "Sit"
+	prompt.ObjectText = "Bench"
+	prompt.KeyboardKeyCode = Enum.KeyCode.E
+	prompt.HoldDuration = 0
+	prompt.MaxActivationDistance = 6
+	prompt.RequiresLineOfSight = false
+	prompt.Exclusivity = Enum.ProximityPromptExclusivity.OneGlobally -- (just the nearest of the thirty)
+	prompt:SetAttribute("Sits", true)
+	prompt.Parent = seat
+	seat.Parent = parent
+	return seat
+end
+
+-- A bidder's paddle (AuctionService puts one in the right hand of everyone
+-- in the hall): a wooden handle and a cream disc with the bidder's number
+-- in red on both faces. Its parts are placed in the hand's own space (the
+-- handle runs out of the fist along the hand's -Z, the way PoseController
+-- points a held thing; the disc's faces are ±X, the number upright along
+-- the handle), for the service to weld to the hand as they are.
+function AuctionArt.paddle(number: number): Model
+	local model = Instance.new("Model")
+	model.Name = "BidderPaddle"
+	model:SetAttribute("Number", number)
+	local function piece(props)
+		local part = Parts.prop(props, model)
+		part.Anchored = false
+		part.Massless = true
+		part.CanCollide = false
+		part.CanTouch = false
+		part.CanQuery = false
+		part:SetAttribute("Grip", part.CFrame) -- (where it sits in the grip's space: PoseController aims the paddle from it)
+		return part
+	end
+	piece({ Name = "Handle", Shape = Enum.PartType.Cylinder, Size = Vector3.new(1.6, 0.2, 0.2),
+		CFrame = CFrame.new(0, 0, -0.5) * CFrame.Angles(0, math.rad(90), 0), Color = WOOD })
+	local disc = piece({ Name = "Disc", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.12, 1.7, 1.7),
+		CFrame = CFrame.new(0, 0, -2.1) * CFrame.Angles(math.rad(-90), 0, 0), Color = Color3.fromRGB(250, 240, 214) })
+	for _, face in { Enum.NormalId.Right, Enum.NormalId.Left } do
+		local gui = Instance.new("SurfaceGui")
+		gui.Name = `Number{face.Name}`
+		gui.Face = face
+		gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+		gui.PixelsPerStud = 60
+		gui.LightInfluence = 0.4
+		local ring = Instance.new("Frame")
+		ring.AnchorPoint = Vector2.new(0.5, 0.5)
+		ring.Position = UDim2.fromScale(0.5, 0.5)
+		ring.Size = UDim2.fromScale(0.86, 0.86)
+		ring.BackgroundTransparency = 1
+		local corner = Instance.new("UICorner")
+		corner.CornerRadius = UDim.new(0.5, 0)
+		corner.Parent = ring
+		local stroke = Instance.new("UIStroke")
+		stroke.Color = Color3.fromRGB(200, 69, 45)
+		stroke.Thickness = 6
+		stroke.Parent = ring
+		ring.Parent = gui
+		local label = Instance.new("TextLabel")
+		label.AnchorPoint = Vector2.new(0.5, 0.5)
+		label.Position = UDim2.fromScale(0.5, 0.52)
+		label.Size = UDim2.fromScale(0.7, 0.6)
+		label.BackgroundTransparency = 1
+		label.Font = Enum.Font.FredokaOne
+		label.TextScaled = true
+		label.TextColor3 = Color3.fromRGB(200, 69, 45)
+		label.Text = tostring(number)
+		label.Parent = gui
+		gui.Parent = disc
+	end
+	return model
+end
+
 function AuctionArt.build(town: Instance): Model
 	local building = PlotLayout.building("Auction")
 	local W, H, D = building.size.X, building.size.Y, building.size.Z
@@ -371,7 +460,9 @@ function AuctionArt.build(town: Instance): Model
 	local plate = deco("PodiumPlate", f, 7.5, STAGE + 1.0, S0 + 7.4, 10.5, STAGE + 2.8, S0 + 7.5, GOLD, model)
 	words(plate, "GOLDIE GAVEL\nauctioneer", WOOD)
 	goldie(f * CFrame.new(9, STAGE, S0 + 3.8), model)
-	-- the benches: three rows each side of the aisle, facing the stage
+	-- the benches: three rows each side of the aisle, facing the stage, five
+	-- places to sit on each (AuctionService seats you: Sit, then bid from
+	-- your seat; jump to stand)
 	for _, z in { S1 + 4, S1 + 9, S1 + 14 } do
 		for _, side in { -1, 1 } do
 			local x0, x1 = side * 3.2, side * 16.5
@@ -380,6 +471,9 @@ function AuctionArt.build(town: Instance): Model
 			deco("BenchBack", f, lo, F + 2.0, z + 1.8, hi, F + 3.8, z + 2.2, WOOD, model)
 			for _, x in { lo + 0.6, (lo + hi) / 2, hi - 0.6 } do
 				deco("BenchLeg", f, x - 0.2, F, z + 0.2, x + 0.2, F + 1.6, z + 1.6, FLOOR_DARK, model)
+			end
+			for k = 0, BENCH_SPOTS - 1 do
+				bench(f * CFrame.new(lo + (k + 0.5) * (hi - lo) / BENCH_SPOTS, F + 2.1, z + 0.85), model)
 			end
 		end
 	end

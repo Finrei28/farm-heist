@@ -3,7 +3,8 @@
 -- player, worked out from the time (so the client shows the stock and the
 -- countdown without asking). Commons are always in, with no limit; every
 -- other seed rolls its rarity's chance, then 1–maxPacks packs of packSeeds
--- seeds. Players don't share stock: buying never takes any from someone
+-- seeds. Mythic seeds are never in (Rarities `atBarleys = false`): they
+-- only come from the Auction House. Players don't share stock: buying never takes any from someone
 -- else. What a player bought is kept in their save for that restock
 -- (data.seedStock), so rejoining or hopping servers doesn't refill it.
 --
@@ -43,7 +44,9 @@ function SeedStock.stock(index: number): { [string]: number }
 		-- (rolled for every crop, so each one's luck doesn't depend on the others')
 		local roll = rng:NextNumber()
 		local packs = rng:NextInteger(1, math.max(1, rarity.maxPacks))
-		if rarity.unlimited then
+		if rarity.atBarleys == false then
+			stock[crop.id] = 0 -- (auction only: Mythics)
+		elseif rarity.unlimited then
 			stock[crop.id] = SeedStock.UNLIMITED
 		elseif full then
 			stock[crop.id] = rarity.maxPacks * rarity.packSeeds
@@ -75,6 +78,9 @@ function SeedStock.canBuy(data, cropId: string, count: number, level: number, no
 		return false, "BadRequest"
 	end
 	local rarity = Rarities.ById[crop.rarity]
+	if rarity.atBarleys == false then
+		return false, "AuctionOnly"
+	end
 	if level < rarity.seedLevel then
 		return false, "Locked" -- (auction lots have no level lock; planting a Mythic still needs Lv 20)
 	end

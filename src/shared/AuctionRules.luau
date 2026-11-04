@@ -1,5 +1,5 @@
 -- The Cloverdale Auction House (docs/GameDesign.md §4.4): an auction every
--- 8 minutes on the clock, 3 lots of about a minute each. Bids are escrowed
+-- 8 minutes on the clock, 5 lots of about a minute each. Bids are escrowed
 -- by AuctionService (taken from the wallet, given back when outbid); these
 -- rules decide what's a valid bid, the anti-snipe clock, and who leads when
 -- the leader leaves the server. tests/auction.test.luau.
@@ -10,14 +10,42 @@ local Config = require(script.Parent.Config.Auction)
 local Crops = require(script.Parent.Config.Crops)
 local DefenceRules = require(script.Parent.DefenceRules)
 local Defences = require(script.Parent.Config.Defences)
+local Format = require(script.Parent.Format)
 local Rarities = require(script.Parent.Config.Rarities)
 local WorkerRules = require(script.Parent.WorkerRules)
 local Workers = require(script.Parent.Config.Workers)
 
 local AuctionRules = {}
 
+-- The bid step for an amount this size (Config.STEPS).
+function AuctionRules.step(amount: number): number
+	for _, entry in Config.STEPS do
+		if not entry.below or amount < entry.below then
+			return entry.step
+		end
+	end
+	return Config.STEPS[#Config.STEPS].step
+end
+
 local function roundUp(amount: number): number
-	return math.ceil(amount / Config.ROUND_TO) * Config.ROUND_TO
+	local step = AuctionRules.step(amount)
+	return math.ceil(amount / step) * step
+end
+
+-- One of `options` by their weights (each 1 if it has none).
+local function weighted(rng, options)
+	local total = 0
+	for _, option in options do
+		total += option.weight or 1
+	end
+	local pick = rng:NextNumber() * total
+	for _, option in options do
+		pick -= option.weight or 1
+		if pick < 0 then
+			return option
+		end
+	end
+	return options[#options]
 end
 
 -- The auction that's on (or last started) and when the next one starts.
@@ -33,10 +61,6 @@ end
 -- server and the auction index); estimates are what the lot is worth.
 function AuctionRules.rollLots(seed: number)
 	local rng = Random.new(seed)
-	local total = 0
-	for _, entry in Config.POOL do
-		total += entry.weight
-	end
 	local lots = {}
 	local function taken(kind: string, id: string): boolean
 		for _, lot in lots do
@@ -47,15 +71,7 @@ function AuctionRules.rollLots(seed: number)
 		return false
 	end
 	for _ = 1, Config.LOTS do
-		local pick = rng:NextNumber() * total
-		local chosen = Config.POOL[#Config.POOL]
-		for _, entry in Config.POOL do
-			pick -= entry.weight
-			if pick < 0 then
-				chosen = entry
-				break
-			end
-		end
+		local chosen = weighted(rng, Config.POOL)
 		if chosen.kind == "Seed" then
 			local options = {}
 			for _, crop in Crops.List do
@@ -74,12 +90,12 @@ function AuctionRules.rollLots(seed: number)
 			table.insert(lots, { kind = "Seed", id = crop.id, rarity = crop.rarity, estimate = crop.seed })
 		else
 			local options = Config.ITEMS[chosen.kind]
-			local item = options[rng:NextInteger(1, #options)]
+			local item = weighted(rng, options)
 			for _ = 1, 4 do
 				if not taken(chosen.kind, item.id) then
 					break
 				end
-				item = options[rng:NextInteger(1, #options)]
+				item = weighted(rng, options)
 			end
 			table.insert(lots, { kind = chosen.kind, id = item.id, estimate = item.estimate })
 		end
@@ -91,6 +107,7 @@ end
 function AuctionRules.open(lot, now: number)
 	lot.opening = roundUp(lot.estimate * Config.OPENING)
 	lot.bids = {}
+	lot.openedAt = now
 	lot.endsAt = now + Config.LOT_SECONDS
 	lot.sold = false
 	return lot
@@ -107,7 +124,7 @@ function AuctionRules.minBid(lot): number
 	if not top then
 		return lot.opening
 	end
-	return math.max(math.ceil(top.amount * (1 + Config.MIN_RAISE)), top.amount + Config.MIN_STEP)
+	return math.max(math.ceil(top.amount * (1 + Config.MIN_RAISE)), top.amount + AuctionRules.step(top.amount))
 end
 
 -- The +5% / +10% / +25% buttons.
@@ -208,6 +225,69 @@ function AuctionRules.canWin(lot, ctx): (boolean, string?)
 		end
 	end
 	return true, nil
+end
+
+------------------------------------------------------------------------
+-- The room: bidder paddles and Goldie's patter
+
+-- The bidder numbers a server hands out, in the order it hands them out:
+-- 10 to 99, shuffled (the server's seed), so they look like a real
+-- auction's and nobody can tell who came first. Past 90 bidders: 100 on.
+function AuctionRules.paddleNumbers(seed: number): { number }
+	local rng = Random.new(seed)
+	local numbers = {}
+	for n = 10, 99 do
+		table.insert(numbers, n)
+	end
+	for i = #numbers, 2, -1 do
+		local j = rng:NextInteger(1, i)
+		numbers[i], numbers[j] = numbers[j], numbers[i]
+	end
+	return numbers
+end
+
+-- What Goldie Gavel says now, like a real auctioneer (her speech bubble;
+-- "" for nothing). room = { k (the lot's number), name (what it is),
+-- paddleOf(userId) -> number?, last = { at, userId, previous? } (the last
+-- bid: when, whose, and whom it outbid) }. Returns the call and whether
+-- she brings the gavel down with it ("Going once", "Going twice").
+function AuctionRules.patter(lot, t: number, room): (string, boolean)
+	local n = Format.number
+	local left = lot.endsAt - t
+	local top = AuctionRules.leader(lot)
+	local function paddle(userId: number?): string
+		local number = userId and room.paddleOf(userId)
+		return if number then `paddle {number}` else "the bidder at the back"
+	end
+	if not top then
+		if left <= 5 then
+			return "Any bids? Anyone at all?", false
+		end
+		local since = t - (lot.openedAt or t)
+		if since < 5 then
+			return `Lot {room.k}: {room.name}! Who'll start me at {n(lot.opening)}?`, false
+		elseif since % 12 < 4 then
+			return `{n(lot.opening)}, anyone? It's worth {n(lot.estimate)}!`, false
+		end
+		return "", false
+	end
+	if left <= 2.5 then
+		return `Going twice at {n(top.amount)}...`, true
+	elseif left <= 5 then
+		return `Going once at {n(top.amount)}...`, true
+	end
+	local ask = n(AuctionRules.quickBid(lot, Config.QUICK[1]))
+	local last = room.last
+	local since = if last then t - last.at else math.huge
+	if since < 4 then
+		if last.previous and last.previous ~= top.userId then
+			return `{n(top.amount)} from {paddle(top.userId)}! Back to you, {paddle(last.previous)}: {ask}?`, false
+		end
+		return `{n(top.amount)} from {paddle(top.userId)}! Do I hear {ask}?`, false
+	elseif since % 10 < 4 then
+		return `I have {n(top.amount)} from {paddle(top.userId)}. {ask}, anyone?`, false
+	end
+	return "", false
 end
 
 -- Closes a lot once its clock runs out. Returns the winning bid (or nil:

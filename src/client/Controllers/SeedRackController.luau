@@ -30,10 +30,13 @@ local SeedRackController = {}
 
 local WALK_AWAY = 26 -- studs from the counter that close the rack
 
+-- a tab for each rarity Barley sells (not Mythic: auction only)
 local tabs, tabColors = {}, {}
 for _, rarity in Rarities.List do
-	table.insert(tabs, rarity.id)
-	table.insert(tabColors, rarity.color:Lerp(Color3.new(1, 1, 1), 0.45))
+	if rarity.atBarleys ~= false then
+		table.insert(tabs, rarity.id)
+		table.insert(tabColors, rarity.color:Lerp(Color3.new(1, 1, 1), 0.45))
+	end
 end
 
 local panel = UI.panel("Barley's Seeds", { tabs = tabs, tabColors = tabColors, tabWidth = 86, accent = C.green, toolbar = true, wood = true, width = 640, height = 430 })
@@ -104,13 +107,18 @@ local function packet(crop, order: number, state)
 		Text = `⏱ {minutes(crop.grow)}{if crop.regrow then ` · {GrowthRules.harvests(crop.id)} picks` else ""}\n`
 			.. `{crop.icon}×{crop.perPatch} a {if crop.regrow then "pick" else "patch"} · ~{UI.formatNumber(crop.value)} each`,
 	}), 11)
-	-- the price tag on its string, and the stock
-	UI.tag({ text = UI.formatNumber(crop.seed), coin = true, color = C.gold, size = UDim2.fromOffset(92, 26), position = UDim2.fromOffset(6, 76),
-		textSize = 15, zIndex = 23, parent = card })
+	-- the price tag on its string (as wide as its price: 250,000 is wider
+	-- than 900), and the stock beside it
+	local row = make("Frame", {
+		Name = "PriceRow", Position = UDim2.fromOffset(6, 76), Size = UDim2.new(1, -10, 0, 26), BackgroundTransparency = 1, ZIndex = 23, Parent = card,
+	}, { make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6), VerticalAlignment = Enum.VerticalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder }) })
+	local tag = UI.tag({ text = UI.formatNumber(crop.seed), coin = true, color = C.gold, autoWidth = true, size = UDim2.fromOffset(0, 26),
+		textSize = 15, zIndex = 23, parent = row })
+	tag.LayoutOrder = 1
 	UI.label({
-		Position = UDim2.new(0, 104, 0, 76), Size = UDim2.new(1, -108, 0, 26), Font = UI.HAND, TextSize = 18,
+		Size = UDim2.fromOffset(0, 26), AutomaticSize = Enum.AutomaticSize.X, Font = UI.HAND, TextSize = 18, LayoutOrder = 2,
 		Text = if left == SeedStock.UNLIMITED then "always in" elseif left > 0 then `{left} left` else "sold out",
-		TextColor3 = if left > 0 then C.green else C.red, ZIndex = 23, Parent = card,
+		TextColor3 = if left > 0 then C.green else C.red, ZIndex = 23, Parent = row,
 	})
 	if locked then
 		UI.chalkboard({ text = `🔒 Farm Level {rarity.seedLevel}`, size = UDim2.new(1, -16, 0, 32), position = UDim2.fromOffset(8, 110),

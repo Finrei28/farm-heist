@@ -11,6 +11,12 @@
 --     right shoulder; a swing (PoseController.swing for your own, at once;
 --     the character's SwingAt for everyone else's) lifts it back behind the
 --     head, brings it round in front and down across to the left, and back.
+--   * The bidder paddle in the Auction House (BidderPaddle, AuctionService):
+--     held up in front of the chest, the number facing out. A bid
+--     (PoseController.raisePaddle for your own, at once; PaddleUp for
+--     everyone else's) snaps it up over the head with a shake, holds it
+--     there while the bid's called, and brings it down. Winning a lot
+--     (Cheer) waves it overhead, the other arm up too.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
@@ -41,6 +47,15 @@ local SWING = {
 }
 local SWING_LENGTH = SWING[#SWING].t
 local SEEN_AT = 0.1 -- (someone else's swing is seen from here: the server hears of it at the hit)
+
+-- The bidder paddle's poses (as the bat's: the paddle points along `bat`;
+-- the elbow out to the side turns the number to face forward).
+-- (at rest it leans out beside the head, so the face and the number both show)
+local PADDLE_REST = { hand = Vector3.new(1.0, -0.8, -0.6), bat = Vector3.new(0.45, 1, -0.15), arm = Vector3.new(0.6, -0.7, 0.4) }
+local PADDLE_UP = { hand = Vector3.new(1.25, 1.7, 0.05), bat = Vector3.new(0.15, 1, 0), arm = Vector3.new(0.9, -0.6, 0.1) } -- (up beside the head, not across the face)
+local RAISE_IN, RAISE_HOLD, RAISE_OUT = 0.14, 1.3, 0.35 -- seconds: up, held while the bid's called, down
+local CHEER = 1.8 -- seconds of waving after winning a lot
+local CHEER_LEFT = Vector3.new(-0.95, 1.65, -0.3) -- (the other hand, up)
 local SHOULDER = Vector3.new(1, 0.56, 0) -- (a standard R15 right shoulder, and its arm's reach)
 local REACH = 2.3
 
@@ -83,9 +98,41 @@ local function batPose(t: number?): (Vector3, Vector3, Vector3)
 	return batPose(nil)
 end
 
+-- How far up the paddle is (0 held in front, 1 overhead) and how far it's
+-- shaken to the side, at `clock`.
+local function paddleLift(rig, clock: number): (number, number)
+	local up, shake = 0, 0
+	local slow = if tuning then workspace:GetAttribute("Pose_slow") or 1 else 1
+	if rig.paddleUpAt then
+		local t = (clock - rig.paddleUpAt) / slow
+		if t < RAISE_IN then
+			up = smooth(t / RAISE_IN)
+		elseif t < RAISE_IN + RAISE_HOLD then
+			up = 1
+		elseif t < RAISE_IN + RAISE_HOLD + RAISE_OUT then
+			up = 1 - smooth((t - RAISE_IN - RAISE_HOLD) / RAISE_OUT)
+		else
+			rig.paddleUpAt = nil
+		end
+		if t < RAISE_IN + 0.6 then -- (a shake as it goes up: "here!")
+			shake = math.sin(t * 22) * 0.14 * (1 - t / (RAISE_IN + 0.6))
+		end
+	end
+	if rig.cheerAt then
+		local t = (clock - rig.cheerAt) / slow
+		if t < CHEER then
+			up = math.max(up, if t < 0.15 then smooth(t / 0.15) elseif t > CHEER - 0.3 then smooth((CHEER - t) / 0.3) else 1)
+			shake = math.sin(t * 11) * 0.3
+		else
+			rig.cheerAt = nil
+		end
+	end
+	return up, shake
+end
+
 ------------------------------------------------------------------------
 
-local rigs = {} -- [character] = { humanoid, torso, shoulder, reach, swingAt, holding, iks, bat = { ik, target, pole } }
+local rigs = {} -- [character] = { humanoid, torso, shoulder, reach, swingAt, holding, iks, bat = { ik, target, pole }, paddle = { ik, target, pole, left? } }
 
 -- An IKControl moving one arm's hand to `target`, the elbow toward `pole`.
 local function armIK(rig, character: Model, side: string, kind: Enum.IKControlType, target: Attachment, pole: Attachment): IKControl?
@@ -181,6 +228,90 @@ local function dropBat(rig)
 	rig.swingAt = nil
 end
 
+-- The bidder paddle in hand: a spot the right hand goes to (where the hand
+-- is only: an arm overhead can't turn its wrist far enough to point a
+-- paddle up, so aimPaddle points the paddle itself from the fist).
+local function takePaddle(character: Model, rig)
+	local target = Instance.new("Attachment")
+	target.Name = "PaddleHand"
+	target.Parent = rig.torso
+	local pole = newPole(rig, "PaddlePole", Vector3.new(2.6, -0.6, 0.2)) -- (the elbow out to the side)
+	local ik = armIK(rig, character, "Right", Enum.IKControlType.Position, target, pole)
+	rig.paddle = { ik = ik, target = target, pole = pole }
+end
+
+-- The paddle runs out of the fist along `dir` with its number facing
+-- forward, however the wrist ended up turned: on this screen each of its
+-- welds (the server's, to the hand) is hung from the upper torso instead,
+-- at the spot the hand is sent to, each part at its Grip (the paddle's own
+-- grip space: the handle along -Z, the disc's faces ±X). (Aiming it from
+-- the hand read the hand a frame before its IK, so the paddle pointed out
+-- in front; and the Grip is read each time, as a cache of the server's C0
+-- keyed by the weld lost entries and piled offsets up.)
+local function aimPaddle(character: Model, rig, at: Vector3, dir: Vector3)
+	local paddle = character:FindFirstChild("BidderPaddle")
+	if not paddle then
+		return
+	end
+	local forward = Vector3.new(0, 0, -1) -- (torso space)
+	local facing = forward - dir * forward:Dot(dir)
+	if facing.Magnitude < 1e-3 then
+		return
+	end
+	local z = -dir
+	local x = facing.Unit
+	local y = z:Cross(x)
+	local grip = CFrame.fromMatrix(at, x, y, z)
+	for _, part in paddle:GetChildren() do
+		local weld = part:FindFirstChildOfClass("Weld")
+		local base = part:GetAttribute("Grip")
+		if weld and typeof(base) == "CFrame" then
+			if weld.Part0 ~= rig.torso then
+				weld.Part0 = rig.torso
+			end
+			weld.C0 = grip * base
+		end
+	end
+end
+
+-- The other arm up while cheering (made when the cheer starts, gone after).
+local function cheerLeft(character: Model, rig, on: boolean)
+	local paddle = rig.paddle
+	if on and not paddle.left then
+		local target = Instance.new("Attachment")
+		target.Name = "CheerHand"
+		target.Position = rig.shoulder * Vector3.new(-1, 1, 1) + (CHEER_LEFT - SHOULDER * Vector3.new(-1, 1, 1)) * (rig.reach / REACH)
+		target.Parent = rig.torso
+		local pole = newPole(rig, "CheerPole", Vector3.new(-2.6, 0.6, -0.2))
+		paddle.left = { target = target, pole = pole, ik = armIK(rig, character, "Left", Enum.IKControlType.Position, target, pole) }
+	elseif not on and paddle.left then
+		for _, thing in { paddle.left.ik, paddle.left.target, paddle.left.pole } do
+			if thing then
+				thing:Destroy()
+			end
+		end
+		paddle.left = nil
+	end
+end
+
+local function dropPaddle(rig)
+	if rig.paddle then
+		if rig.paddle.left then
+			for _, thing in { rig.paddle.left.ik, rig.paddle.left.target, rig.paddle.left.pole } do
+				if thing then
+					thing:Destroy()
+				end
+			end
+		end
+		for _, thing in { rig.paddle.ik, rig.paddle.target, rig.paddle.pole } do
+			if thing then
+				thing:Destroy()
+			end
+		end
+		rig.paddle = nil
+	end
+end
+
 -- Where the right hand goes (torso space) for a pose: scaled to this
 -- character's arm, the hand turned so the bat runs along its -Z and its +Y
 -- (toward the wrist) points the way the forearm comes in.
@@ -227,13 +358,33 @@ local function track(character: Model)
 		rig.swingAt = os.clock() - SEEN_AT
 		Sfx.play("Swing", torso)
 	end)
+	rig.ownPaddleAt = -math.huge
+	character:GetAttributeChangedSignal("PaddleUp"):Connect(function()
+		if os.clock() - rig.ownPaddleAt < 1 then
+			return -- (your own bid: already up)
+		end
+		rig.paddleUpAt = os.clock()
+	end)
+	character:GetAttributeChangedSignal("Cheer"):Connect(function()
+		rig.cheerAt = os.clock()
+	end)
 	character.AncestryChanged:Connect(function()
 		if not character:IsDescendantOf(workspace) then
 			letGo(rig)
 			dropBat(rig)
+			dropPaddle(rig)
 			rigs[character] = nil
 		end
 	end)
+end
+
+-- Your own bid: your paddle goes up at once (the server tells everyone else).
+function PoseController.raisePaddle(character: Model)
+	local rig = rigs[character]
+	if rig then
+		rig.paddleUpAt = os.clock()
+		rig.ownPaddleAt = os.clock()
+	end
 end
 
 -- Your own swing, at once (the server tells everyone else).
@@ -257,6 +408,25 @@ local function step()
 			if held then
 				hold(character, rig, held)
 			end
+		end
+		-- the bidder paddle: held in front, raised to bid, waved to cheer
+		local paddle = character:FindFirstChild("BidderPaddle")
+		if paddle and not held and not rig.humanoid.PlatformStand then
+			if not rig.paddle then
+				takePaddle(character, rig)
+			end
+			local up, shake = paddleLift(rig, clock)
+			local rest, raised = PADDLE_REST, PADDLE_UP
+			local hand = tuned(rest, "paddle_rest", "hand"):Lerp(tuned(raised, "paddle_up", "hand"), up) + Vector3.new(shake, 0, 0)
+			local point = tuned(rest, "paddle_rest", "bat").Unit:Lerp(tuned(raised, "paddle_up", "bat").Unit, up) + Vector3.new(shake * 0.9, 0, 0)
+			local arm = tuned(rest, "paddle_rest", "arm").Unit:Lerp(tuned(raised, "paddle_up", "arm").Unit, up)
+			local frame = handFrame(rig, hand, point.Unit, arm.Unit)
+			rig.paddle.target.CFrame = frame
+			aimPaddle(character, rig, frame.Position, point.Unit)
+			cheerLeft(character, rig, rig.cheerAt ~= nil)
+			continue
+		elseif rig.paddle then
+			dropPaddle(rig)
 		end
 		-- the bat: over the shoulder, or swinging
 		local tool = character:FindFirstChild("Bat")

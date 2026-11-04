@@ -1,6 +1,6 @@
 -- Every crop (docs/GameDesign.md §6.1). seed = Barley's price for one
 -- seed, which plants a whole patch (for Mythics, the auction estimate:
--- Barley stocks them only 2% of restocks); grow = seconds to ripen online;
+-- Barley never stocks them, they only come from the auction); grow = seconds to ripen online;
 -- perPatch = how many a patch gives at Field Level 1 (a picking, for crops
 -- that regrow), drawn on the ripe patch so you harvest what you see; value
 -- = base market value of one of them; crate = how many fit in a crate

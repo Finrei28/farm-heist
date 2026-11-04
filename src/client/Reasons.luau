@@ -14,6 +14,7 @@ local REASONS = {
 	BarnFull = nil, -- (the server sends its own note)
 	TooPoor = "Not enough coins.",
 	SoldOut = "Sold out until Barley's next restock.",
+	AuctionOnly = "Barley doesn't sell Mythic seeds: they only come up at the Auction House.",
 	NoPermit = "You need a Land Permit: they come with Farm Levels.",
 	NotTouching = "Clear land next to land you've already cleared.",
 	Busy = "Finish clearing the block you started first.",

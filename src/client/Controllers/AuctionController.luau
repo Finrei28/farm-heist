@@ -7,15 +7,21 @@
 --     the bell swinging when an auction starts and confetti when a lot sells;
 --   * the bid card (red velvet in a gold frame, right of the screen) while
 --     you're inside the hall during a lot: the lot, its estimate, the top
---     bid, a clock that flashes when a late bid puts it back, +5% / +10% /
---     +25% buttons with what each bids (one Bid button for the opening
---     bid), whether you lead, your coins, and what comes next;
+--     bid, a clock that flashes when a late bid puts it back, a big RAISE
+--     PADDLE button for what Goldie's asking and +10% / +25% jump bids,
+--     your paddle number, whether you lead, your coins, what comes next;
+--   * the room, like a real auction: a bidder's call in a speech bubble
+--     over their head ("52,000!") as their paddle goes up (PoseController
+--     raises it), Goldie turning to look at whoever just bid and nodding
+--     as she talks, her gavel coming down on "Going once", "Going twice"
+--     and SOLD, the winner hopping for joy;
 --   * a note a minute before each auction (with a Town button), and one when
 --     it starts saying what's up.
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Auction = require(Shared.Config.Auction)
@@ -29,6 +35,7 @@ local PlayerState = require(script.Parent.Parent.PlayerState)
 local Reasons = require(script.Parent.Parent.Reasons)
 local UI = require(script.Parent.Parent.UI)
 local HudController = require(script.Parent.HudController)
+local PoseController = require(script.Parent.PoseController)
 local Sfx = require(script.Parent.Parent.Sfx)
 
 local C = UI.C
@@ -119,12 +126,15 @@ UI.fit(bidLabel, 11)
 local estimateLabel = UI.label({
 	Position = UDim2.fromOffset(16, 124), Size = UDim2.new(1, -32, 0, 18), Font = UI.HAND, TextSize = 17, TextColor3 = Color3.fromRGB(246, 222, 200), Text = "", Parent = card,
 })
+-- Like a real auction: the big button raises your paddle for what Goldie's
+-- asking (the next step up); the two small ones jump the bid.
 local buttons = {}
 for i, share in Auction.QUICK do
-	local holder, button = UI.button({ text = "", kind = "gold", size = UDim2.fromOffset(98, 46), position = UDim2.fromOffset(16 + (i - 1) * 104, 146),
-		textSize = 16, parent = card })
+	local holder, button = UI.button({ text = "", kind = "gold", size = UDim2.fromOffset(if i == 1 then 136 else 80, 46),
+		position = UDim2.fromOffset(if i == 1 then 16 else 16 + 142 + (i - 2) * 86, 146), textSize = 16, parent = card })
 	buttons[i] = { holder = holder, button = button, share = share }
 end
+local raiseScale = make("UIScale", { Parent = buttons[1].holder }) -- (it pulses when you've been outbid: "back to you!")
 local statusLabel = UI.label({
 	Position = UDim2.fromOffset(16, 196), Size = UDim2.new(1, -32, 0, 18), Font = UI.HAND, TextSize = 17, TextColor3 = C.cream, Text = "", Parent = card,
 })
@@ -145,14 +155,19 @@ UI.onLayout(function()
 end)
 
 local bidding = false
+local myBid = nil -- "auction:lot" you last bid on (the paddle button pulses if you're outbid on it)
 local function bid(amount: number)
 	if bidding then
 		return
 	end
 	bidding = true
+	if player.Character then
+		PoseController.raisePaddle(player.Character) -- (up at once: the server tells everyone else)
+	end
 	local result = AuctionAction:InvokeServer("Bid", tostring(amount))
 	bidding = false
 	if result.ok then
+		myBid = `{board:GetAttribute("Index")}:{board:GetAttribute("Lot")}`
 		UI.float(`🔨 {UI.formatNumber(amount)}!`, UDim2.new(1, -180, 0.5, -60), GOLD)
 	else
 		local text = Reasons(result.reason)
@@ -200,7 +215,8 @@ local function updateCard()
 	end
 	local what = AuctionRules.describe(lot)
 	local count = #lots()
-	header.Text = `🔨 LOT {k} OF {count}`
+	local paddleNo = player:GetAttribute("Paddle")
+	header.Text = `🔨 LOT {k} OF {count}{if paddleNo then `  ·  PADDLE {paddleNo}` else ""}`
 	iconLabel.Text = what.icon
 	nameLabel.Text = what.name
 	nameLabel.TextColor3 = if what.color then what.color:Lerp(C.cream, 0.35) else C.cream
@@ -218,7 +234,8 @@ local function updateCard()
 		local amount = board:GetAttribute("SoldFor") or 0
 		bidLabel.Text = if to ~= "" then `SOLD to {if to == player.DisplayName then "you" else to} for {UI.formatNumber(amount)}!` else "No bids: back to the vault"
 		clockLabel.Text = "🔨"
-		statusLabel.Text = if k < count then "The next lot is coming up..." else "That's all for this auction: the next one is in 8 minutes."
+		statusLabel.Text = if k < count then "The next lot is coming up..."
+			else `That's all for this auction: the next one is in {UI.formatTime(AuctionRules.nextAt(now()) - now())}.`
 		for _, entry in buttons do
 			entry.holder.Visible = false
 		end
@@ -248,12 +265,15 @@ local function updateCard()
 	for i, entry in buttons do
 		local amount = AuctionRules.quickBid(rules, entry.share)
 		entry.amount = amount
-		-- (before anyone bids, one button bids the opening price)
+		-- (before anyone bids, only the paddle: for the opening price)
 		entry.holder.Visible = not leading and not why and (top > 0 or i == 1)
-		entry.holder.Size = UDim2.fromOffset(if top > 0 then 98 else 200, 46)
-		entry.button.Text = if top > 0 then `+{math.floor(entry.share * 100)}%\n{UI.formatShort(amount)}` else `BID {UI.formatNumber(amount)}`
+		entry.holder.Size = UDim2.fromOffset(if i > 1 then 80 elseif top > 0 then 136 else 200, 46)
+		entry.button.Text = if i == 1 then `🙋 RAISE PADDLE\n{UI.formatNumber(amount)}` else `+{math.floor(entry.share * 100)}%\n{UI.formatShort(amount)}`
 		UI.setButtonKind(entry.holder, if coins >= amount then "gold" else "cream")
 	end
+	-- outbid on this lot: the paddle button pulses ("back to you!")
+	local outbid = not leading and myBid == `{board:GetAttribute("Index")}:{k}` and not UI.calm
+	raiseScale.Scale = if outbid then 1 + 0.05 * math.sin(os.clock() * 9) else 1
 	if leading then
 		statusLabel.Text = "🎉 You're the top bid! Your coins are held until someone outbids you."
 	elseif coins < AuctionRules.quickBid(rules, Auction.QUICK[1]) then
@@ -310,15 +330,30 @@ local function buildHall(house: Model)
 		Name = "Lot", Size = UDim2.fromScale(2.2, 2.2), LightInfluence = 0, MaxDistance = 80, Adornee = over, Parent = pedestal,
 	})
 	local floatIcon = make("TextLabel", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, TextScaled = true, Font = UI.HEAD, Text = "", Parent = float })
-	local bubble = make("BillboardGui", { -- (up and to her right, off the lot board)
-		Name = "Call", Size = UDim2.fromScale(7, 1.6), StudsOffset = Vector3.new(3.2, 1.8, 0), MaxDistance = 80, Enabled = false,
+	local bubble = make("BillboardGui", { -- (up and to her right, off the lot board; two lines for her patter)
+		Name = "Call", Size = UDim2.fromScale(9, 2.4), StudsOffset = Vector3.new(4.2, 2.2, 0), MaxDistance = 80, Enabled = false,
 		Adornee = goldie:FindFirstChild("Head"), Parent = goldie,
 	})
 	local bubbleCard = make("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = C.cream, Parent = bubble }, { UI.corner(12), UI.stroke(C.ink, 2) })
 	local bubbleText = make("TextLabel", {
-		Size = UDim2.new(1, -12, 1, -6), Position = UDim2.fromOffset(6, 3), BackgroundTransparency = 1, TextScaled = true, Font = UI.HEAD,
+		Size = UDim2.new(1, -14, 1, -8), Position = UDim2.fromOffset(7, 4), BackgroundTransparency = 1, TextScaled = true, TextWrapped = true, Font = UI.HEAD,
 		TextColor3 = C.ink, Text = "", Parent = bubbleCard,
 	})
+	-- Goldie's moving parts: her head (turns to the bidder, nods as she
+	-- talks) and her gavel (comes down round her grip)
+	local head = goldie:FindFirstChild("Head")
+	local headParts, gavelParts = {}, {}
+	for _, part in goldie:GetChildren() do
+		if part:IsA("BasePart") then
+			if table.find({ "Head", "Beak", "Wattle", "Eye", "Comb", "BowTie", "BowKnot" }, part.Name) then
+				headParts[part] = part.CFrame
+			elseif string.match(part.Name, "^Gavel") then
+				gavelParts[part] = part.CFrame
+			end
+		end
+	end
+	local handle = goldie:FindFirstChild("GavelHandle")
+	local grip = handle and handle.CFrame * CFrame.Angles(0, 0, math.rad(-90)) * CFrame.new(0, -0.6, 0) -- (World/AuctionArt.goldie's grip)
 	-- confetti from the pedestal when a lot sells: four bursts in solid
 	-- colours (one colour each: an emitter's colour changes over a flake's
 	-- life, not per flake), tumbling as they fall
@@ -335,7 +370,9 @@ local function buildHall(house: Model)
 	end
 	local pivot = bell:GetAttribute("Pivot")
 	hall = { view = view, float = floatIcon, over = over, overAt = over.WorldCFrame, bubble = bubble, bubbleText = bubbleText, confetti = confetti,
-		bell = { model = bell, base = bell:GetPivot(), pivot = pivot, axis = PlotLayout.buildingFrame("Auction").XVector } }
+		bell = { model = bell, base = bell:GetPivot(), pivot = pivot, axis = PlotLayout.buildingFrame("Auction").XVector },
+		goldie = { head = head and head.CFrame, headParts = headParts, gavelParts = gavelParts, grip = grip, yaw = 0, nodAt = -math.huge, bangAt = -math.huge,
+			gavelHead = goldie:FindFirstChild("GavelHead") } }
 end
 
 local function updateHall(t: number)
@@ -350,7 +387,7 @@ local function updateHall(t: number)
 		view.lot.Text = ""
 		view.icon.Text = "🔨"
 		view.name.Text = "Cloverdale Auction House"
-		view.detail.Text = "Mythic seeds, rare workers and defences: 3 lots every 8 minutes"
+		view.detail.Text = `Rare seeds, rare workers and defences: {Auction.LOTS} lots every {Auction.INTERVAL // 60} minutes`
 		view.bid.Text = `Next auction in {UI.formatTime(nextAt - t)}`
 		view.clock.Text = ""
 		view.foot.Text = "Bid from inside the hall. Outbid? Your coins come straight back."
@@ -368,20 +405,122 @@ local function updateHall(t: number)
 			view.clock.Text = ""
 		else
 			local top = board:GetAttribute("Bid") or 0
-			view.bid.Text = if top > 0 then `Top bid: {UI.formatNumber(top)} · {board:GetAttribute("Leader")}` else `Opening bid: {UI.formatNumber(board:GetAttribute("Opening") or 0)}`
+			local paddleNo = board:GetAttribute("LeaderPaddle") or 0
+			view.bid.Text = if top > 0 then `Top bid: {UI.formatNumber(top)} · paddle {paddleNo} ({board:GetAttribute("Leader")})`
+				else `Opening bid: {UI.formatNumber(board:GetAttribute("Opening") or 0)}`
 			view.clock.Text = `{math.ceil(math.max(0, (board:GetAttribute("EndsAt") or t) - t))}s`
 		end
-		view.foot.Text = "Bid with the card on your screen: +5%, +10% or +25%. A bid in the last 10 s puts the clock back to 10."
+		view.foot.Text = "Raise your paddle with the card on your screen. A bid in the last 10 s puts the clock back to 10."
 	end
-	-- Goldie's call
+	-- Goldie's call (AuctionService's: her patter, by paddle number)
 	local call = board:GetAttribute("Call") or ""
-	if phase == "Sold" and (board:GetAttribute("SoldTo") or "") ~= "" then
-		call = `SOLD to {board:GetAttribute("SoldTo")}!`
-	end
 	hall.bubble.Enabled = call ~= ""
 	hall.bubbleText.Text = call
 	-- the lot bobs over its pedestal
 	hall.over.WorldCFrame = hall.overAt + Vector3.new(0, if UI.calm then 0 else math.sin(os.clock() * 2) * 0.25, 0)
+end
+
+local function smooth01(x: number): number
+	return x * x * (3 - 2 * x)
+end
+
+-- Goldie: her head turns to whoever just bid (and back to the room), nods
+-- as she talks; her gavel comes down when she calls it.
+local function animateGoldie(dt: number)
+	local g = hall and hall.goldie
+	if not g or not g.head then
+		return
+	end
+	local clock = os.clock()
+	local target = 0
+	local bidder = Players:GetPlayerByUserId(board:GetAttribute("BidderId") or 0)
+	local root = bidder and bidder.Character and bidder.Character:FindFirstChild("HumanoidRootPart")
+	if root and (board:GetAttribute("Phase") or "") ~= "" then
+		local v = g.head:VectorToObjectSpace(root.Position - g.head.Position)
+		target = math.clamp(math.atan2(v.X, v.Z), math.rad(-50), math.rad(50))
+	end
+	g.yaw += (target - g.yaw) * (1 - math.exp(-dt * 5))
+	local nodT = clock - g.nodAt
+	local nod = if nodT < 0.35 and not UI.calm then math.sin(math.pi * nodT / 0.35) * 0.18 else 0
+	local turn = g.head * CFrame.Angles(0, g.yaw, 0) * CFrame.Angles(nod, 0, 0) * g.head:Inverse()
+	for part, base in g.headParts do
+		part.CFrame = turn * base
+	end
+	if g.grip then
+		local t = clock - g.bangAt
+		local a = if t < 0.08 then t / 0.08 elseif t < 0.14 then 1 elseif t < 0.4 then 1 - smooth01((t - 0.14) / 0.26) else 0
+		local swing = g.grip * CFrame.Angles(math.rad(75) * a, 0, 0) * g.grip:Inverse()
+		for part, base in g.gavelParts do
+			part.CFrame = swing * base
+		end
+	end
+end
+
+-- A bidder's call: "52,000!" in a speech bubble over their head, popping
+-- in as their paddle goes up, gone after a couple of seconds.
+local function showCall(character: Model, amount: number)
+	local head = character:FindFirstChild("Head")
+	if not head then
+		return
+	end
+	local old = head:FindFirstChild("BidCall")
+	if old then
+		old:Destroy()
+	end
+	-- (beside the head on the bidder's left: their paddle goes up on the right,
+	-- and a bubble over the head hid it. StudsOffsetWorldSpace is in the
+	-- head's own frame, so it stays on that side whichever way they face.)
+	local gui = make("BillboardGui", {
+		Name = "BidCall", Size = UDim2.fromScale(4.6, 1.7), StudsOffsetWorldSpace = Vector3.new(-3.1, 1.6, 0), MaxDistance = 90, AlwaysOnTop = false,
+		Adornee = head, Parent = head,
+	})
+	local group = make("CanvasGroup", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Parent = gui })
+	local scale = make("UIScale", { Scale = 0.2, Parent = group })
+	make("Frame", { -- (the bubble's tail, pointing down at the bidder)
+		AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.78, 0), Size = UDim2.fromScale(0.13, 0.32), SizeConstraint = Enum.SizeConstraint.RelativeYY,
+		Rotation = 45, BackgroundColor3 = C.cream, Parent = group,
+	}, { UI.stroke(C.ink, 2) })
+	local cardFrame = make("Frame", { Size = UDim2.fromScale(1, 0.8), BackgroundColor3 = C.cream, Parent = group }, { UI.corner(14), UI.stroke(C.ink, 2.5) })
+	make("TextLabel", {
+		Size = UDim2.new(1, -12, 1, -6), Position = UDim2.fromOffset(6, 3), BackgroundTransparency = 1, TextScaled = true, Font = UI.HEAD,
+		TextColor3 = Color3.fromRGB(200, 69, 45), Text = `{UI.formatNumber(amount)}!`, Parent = cardFrame,
+	})
+	TweenService:Create(scale, TweenInfo.new(if UI.calm then 0 else 0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+	Sfx.play("Pop", head)
+	task.delay(1.8, function()
+		if gui.Parent then
+			TweenService:Create(group, TweenInfo.new(0.35), { GroupTransparency = 1 }):Play()
+			task.delay(0.4, function()
+				gui:Destroy()
+			end)
+		end
+	end)
+end
+
+-- Every character's calls (and your own hop when you win a lot, and a
+-- word the first time you sit on a bench).
+local toldSeat = false
+local function watchCharacter(character: Model)
+	character:GetAttributeChangedSignal("PaddleUp"):Connect(function()
+		showCall(character, character:GetAttribute("PaddleCall") or 0)
+	end)
+	if character == player.Character then
+		local humanoid = character:WaitForChild("Humanoid", 10)
+		if humanoid and humanoid:IsA("Humanoid") then
+			humanoid.Seated:Connect(function(active, seat)
+				if active and seat and seat.Name == "BenchSpot" and not toldSeat then
+					toldSeat = true
+					UI.toast("🪑 Take a seat! Raise your paddle from the card to bid. Jump to stand up.", "Good", 6)
+				end
+			end)
+		end
+		character:GetAttributeChangedSignal("Cheer"):Connect(function()
+			local humanoid = character:FindFirstChildOfClass("Humanoid")
+			if humanoid and not UI.calm then
+				humanoid.Jump = true
+			end
+		end)
+	end
 end
 
 local ringUntil = 0
@@ -420,15 +559,19 @@ function AuctionController.Start()
 		if hall and hall.bell.model then
 			Sfx.play("AuctionBell", hall.bell.model:IsA("BasePart") and hall.bell.model or hall.bell.model:FindFirstChildWhichIsA("BasePart", true))
 		end
-		local names = {}
+		-- every lot's icon, and the star lot (the one worth most) by name
+		local icons, star = {}, nil
 		for _, lot in lots() do
-			local what = AuctionRules.describe(lot)
-			table.insert(names, `{what.icon} {what.name}`)
+			table.insert(icons, AuctionRules.describe(lot).icon)
+			if not star or lot.estimate > star.estimate then
+				star = lot
+			end
 		end
 		if UI.quiet and not inHall() then
 			return -- (Quiet mode: the call is news for everyone)
 		end
-		UI.toast(`🔔 The auction's on! {table.concat(names, " · ")}`, "Announce", 8, if inHall() then nil else {
+		local starText = if star then `  ·  the star lot: {AuctionRules.describe(star).icon} {AuctionRules.describe(star).name}` else ""
+		UI.toast(`🔔 The auction's on! {#icons} lots: {table.concat(icons, " ")}{starText}`, "Announce", 8, if inHall() then nil else {
 			text = "TOWN 🏘️",
 			press = function()
 				HudController.travel("Town", "Heading to town... (stand still)")
@@ -437,25 +580,52 @@ function AuctionController.Start()
 	end)
 	-- a sale: confetti over the pedestal
 	board:GetAttributeChangedSignal("Phase"):Connect(function()
-		if board:GetAttribute("Phase") == "Sold" and (board:GetAttribute("SoldTo") or "") ~= "" and hall then
-			Sfx.play("Gavel", hall.over) -- (the attachment over the pedestal)
-		end
 		if board:GetAttribute("Phase") == "Sold" and (board:GetAttribute("SoldTo") or "") ~= "" and hall and not UI.calm then
 			for _, emitter in hall.confetti do
 				emitter:Emit(18)
 			end
 		end
 	end)
+	-- Goldie's gavel comes down ("Going once", "Going twice", SOLD), and she
+	-- nods with each new call
+	board:GetAttributeChangedSignal("Bang"):Connect(function()
+		if hall and hall.goldie then
+			hall.goldie.bangAt = os.clock()
+			if hall.goldie.gavelHead then
+				Sfx.play("Gavel", hall.goldie.gavelHead)
+			end
+		end
+	end)
+	board:GetAttributeChangedSignal("Call"):Connect(function()
+		if hall and hall.goldie and (board:GetAttribute("Call") or "") ~= "" then
+			hall.goldie.nodAt = os.clock()
+		end
+	end)
+	-- every character's paddle calls
+	local function watchPlayer(other: Player)
+		other.CharacterAdded:Connect(watchCharacter)
+		if other.Character then
+			task.spawn(watchCharacter, other.Character) -- (it waits for your Humanoid)
+		end
+	end
+	Players.PlayerAdded:Connect(watchPlayer)
+	for _, other in Players:GetPlayers() do
+		watchPlayer(other)
+	end
 
 	local warned = nil
+	local last = os.clock()
 	RunService.RenderStepped:Connect(function()
 		local t = now()
+		local dt = os.clock() - last
+		last = os.clock()
+		animateGoldie(dt)
 		-- the minute's warning before each auction
 		local nextAt = AuctionRules.nextAt(t)
 		if nextAt - t <= Auction.WARNING and warned ~= nextAt then
 			warned = nextAt
 			if not inHall() and not UI.quiet then
-				UI.toast("🔨 The auction starts in 1 minute at the Auction House: Mythic seeds, rare workers, defences!", "Announce", 8, {
+				UI.toast("🔨 The auction starts in 1 minute at the Auction House: rare seeds, rare workers, defences!", "Announce", 8, {
 					text = "TOWN 🏘️",
 					press = function()
 						HudController.travel("Town", "Heading to town... (stand still)")

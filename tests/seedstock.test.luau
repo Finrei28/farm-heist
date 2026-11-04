@@ -78,13 +78,31 @@ return function(spec, harness)
 			SeedStock.record(data, "Carrot", 10_000, harness.getTime())
 			expect(SeedStock.canBuy(data, "Carrot", 500, 1, harness.getTime())).toBe(true)
 		end)
-		it("locks seeds above your Farm Level, Mythics until Lv 20", function()
+		it("locks seeds above your Farm Level, Legendaries until Lv 16", function()
 			local now = findRestockWith("Pumpkin")
 			local _, reason = SeedStock.canBuy({ coins = 1e9 }, "Pumpkin", 1, 4, now)
 			expect(reason).toBe("Locked")
-			local mythicAt = findRestockWith("CrystalRose")
-			expect(select(2, SeedStock.canBuy({ coins = 1e9 }, "CrystalRose", 1, 19, mythicAt))).toBe("Locked")
-			expect(SeedStock.canBuy({ coins = 1e9 }, "CrystalRose", 1, 20, mythicAt)).toBe(true)
+			local legendaryAt = findRestockWith("Moonmelon")
+			expect(select(2, SeedStock.canBuy({ coins = 1e9 }, "Moonmelon", 1, 15, legendaryAt))).toBe("Locked")
+			expect(SeedStock.canBuy({ coins = 1e9 }, "Moonmelon", 1, 16, legendaryAt)).toBe(true)
+		end)
+		it("never sells Mythic seeds: they only come from the Auction House", function()
+			for index = 1, 5000 do
+				local stock = SeedStock.stock(index)
+				for _, crop in Crops.List do
+					if crop.rarity == "Mythic" then
+						expect(stock[crop.id]).toBe(0)
+					end
+				end
+			end
+			-- (not even with the dev switch that puts everything in)
+			harness.setStorageAttribute("SeedStockFull", 7)
+			expect(SeedStock.stock(7).CrystalRose).toBe(0)
+			expect(SeedStock.stock(7).Moonmelon).toBeGreaterThan(0)
+			harness.setStorageAttribute("SeedStockFull", nil)
+			for _, level in { 1, 20, 50 } do
+				expect(select(2, SeedStock.canBuy({ coins = 1e9 }, "DragonsEyePumpkin", 1, level))).toBe("AuctionOnly")
+			end
 		end)
 		it("needs the coins", function()
 			local _, reason = SeedStock.canBuy({ coins = 999 }, "Carrot", 10, 1, harness.getTime())

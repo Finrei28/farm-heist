@@ -1,7 +1,8 @@
 -- The Cloverdale Auction House (docs/GameDesign.md §4.4; the rules in
 -- shared/AuctionRules, the hall in World/AuctionArt). An auction starts
--- every 8 minutes on the clock: three lots, one after another, about a
--- minute each and 10 s between them. Every server rolls its own lots.
+-- every 8 minutes on the clock: five lots (Config/Auction.LOTS), one after
+-- another, about a minute each and 10 s between them. Every server rolls
+-- its own lots.
 --
 -- Bids come through the AuctionAction remote ("Bid" amount) and are only
 -- taken from inside the hall (trusted position, PlotLayout.insideBuilding).
@@ -14,15 +15,25 @@
 -- The coins a lead holds are written in the save too (auctionHeld), so a
 -- server that closes mid-lot (an update) can't lose them: they come back
 -- on the next join.
--- Goldie Gavel calls "Going once... going twice... SOLD!" in the last
--- seconds.
+-- Like a real auction room: everyone in the hall holds a numbered bidder
+-- paddle (World/AuctionArt.paddle, in the right hand; the number is theirs
+-- for the server's life). A bid raises it and calls the amount out
+-- (PoseController and AuctionController animate it on every screen from
+-- the character's PaddleUp / PaddleCall), and Goldie Gavel works the room
+-- by paddle number (AuctionRules.patter): "52,000 from paddle 47! Back to
+-- you, paddle 12: 54,600?" ... "Going once... going twice... SOLD!", her
+-- gavel coming down each time (Bang), the winner cheering (Cheer).
 --
 -- Clients see it on ReplicatedStorage.Auction's attributes:
---   Index    the auction's number (AuctionRules.index), Lot 1–3 (0: none on)
+--   Index    the auction's number (AuctionRules.index), Lot 1–5 (0: none on)
 --   Lots     JSON: { { kind, id, estimate } } for this auction
 --   Phase    "Open" (bidding) · "Sold" (the 10 s after a lot) · "" between auctions
---   Bid, Leader (name), LeaderId, MinBid, Opening, EndsAt (server time), Snipe (a late bid's count)
---   Call     Goldie's call now ("Going once..."), SoldTo, SoldFor (the last lot)
+--   Bid, Leader (name), LeaderId, LeaderPaddle, MinBid, Opening, EndsAt (server time), Snipe (a late bid's count)
+--   BidderId the last bidder (Goldie looks at them)
+--   Call     Goldie's call now, Bang (counts her gavel coming down), SoldTo, SoldFor (the last lot)
+-- and on each player: Paddle (their bidder number); on a character:
+-- PaddleUp (server time of their last bid), PaddleCall (its amount), Cheer
+-- (server time they won a lot).
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -39,6 +50,7 @@ local Remotes = require(Shared.Remotes)
 local WorkerRules = require(Shared.WorkerRules)
 
 local Server = ServerScriptService.Server
+local AuctionArt = require(Server.World.AuctionArt)
 local ActionRemote = require(Server.Util.ActionRemote)
 local Analytics = require(Server.Util.Analytics)
 local Notice = require(Server.Util.Notice)
@@ -56,8 +68,24 @@ local board = Instance.new("Folder")
 board.Name = "Auction"
 
 local serverSeed = math.random(1, 2 ^ 30) -- (each server rolls its own lots)
-local current = nil -- { index, lots, k, phase = "Open" | "Sold" | "Done", gapUntil }
+local current = nil -- { index, lots, k, phase = "Open" | "Sold" | "Done", gapUntil, last = { at, userId, previous } }
 local wonCallbacks = {}
+
+-- Bidder numbers: each player's, for the server's life (AuctionRules.paddleNumbers).
+local paddleOrder = AuctionRules.paddleNumbers(serverSeed)
+local paddleOf = {} -- [userId] = number
+local handedOut = 0
+
+local function paddleNumber(player: Player): number
+	local number = paddleOf[player.UserId]
+	if not number then
+		handedOut += 1
+		number = paddleOrder[handedOut] or (99 + handedOut - #paddleOrder)
+		paddleOf[player.UserId] = number
+		player:SetAttribute("Paddle", number)
+	end
+	return number
+end
 
 -- The auction clock: server time, plus the dev shift (/auction soon sets
 -- ReplicatedStorage's AuctionShift; AuctionController adds it too).
@@ -92,6 +120,7 @@ local function publish()
 	board:SetAttribute("LeaderId", if top then top.userId else 0)
 	local leader = top and playerOf(top.userId)
 	board:SetAttribute("Leader", if leader then leader.DisplayName else "")
+	board:SetAttribute("LeaderPaddle", if top then paddleOf[top.userId] or 0 else 0)
 	board:SetAttribute("Opening", if lot then lot.opening else 0)
 	board:SetAttribute("MinBid", if lot and current.phase == "Open" then AuctionRules.minBid(lot) else 0)
 	board:SetAttribute("EndsAt", if lot then lot.endsAt else 0)
@@ -159,10 +188,91 @@ local function whereItGoes(lot): string
 		else "they've joined your crew"
 end
 
+-- Goldie's gavel comes down (every screen animates it and hears it).
+local function bang()
+	board:SetAttribute("Bang", (board:GetAttribute("Bang") or 0) + 1)
+end
+
+-- Everyone in the hall holds their bidder paddle in their right hand; it
+-- goes when they leave (or carry something, which takes both hands).
+local function updatePaddles()
+	for _, player in Players:GetPlayers() do
+		local character = player.Character
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		local hand = character and (character:FindFirstChild("RightHand") or character:FindFirstChild("Right Arm"))
+		local paddle = character and character:FindFirstChild("BidderPaddle")
+		local position = MovementService.positionOf(player)
+		local inHall = position ~= nil and PlotLayout.insideBuilding("Auction", position, 0)
+		local busy = character ~= nil and (character:FindFirstChild("CarriedCrop") or character:FindFirstChild("CarriedCrate")) ~= nil
+		local wanted = inHall and not busy and hand ~= nil and humanoid ~= nil and humanoid.Health > 0
+		if wanted and not paddle then
+			paddle = AuctionArt.paddle(paddleNumber(player))
+			-- (R6: the arm's a single part; its fist is at the bottom)
+			local fist = if hand.Name == "Right Arm" then CFrame.new(0, -1, 0) else CFrame.new()
+			for _, part in paddle:GetChildren() do
+				if part:IsA("BasePart") then
+					local weld = Instance.new("Weld")
+					weld.Part0 = hand
+					weld.Part1 = part
+					weld.C0 = fist * part.CFrame
+					weld.Parent = part
+				end
+			end
+			paddle.Parent = character
+		elseif paddle and not wanted then
+			paddle:Destroy()
+		end
+	end
+end
+
+-- The benches (World/AuctionArt's BenchSpots): Sit seats you, to watch and
+-- bid from there (your paddle comes too); jump to stand up (Roblox's own).
+-- Not with your hands full. A taken place hides its prompt.
+local function sitDown(player: Player, seat: Seat)
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not humanoid or humanoid.Health <= 0 or seat.Occupant ~= nil or humanoid.SeatPart == seat then
+		return
+	end
+	if character:FindFirstChild("CarriedCrop") or character:FindFirstChild("CarriedCrate") then
+		Notice.send(player, "Your hands are full: take it home first.", "Error")
+		return
+	end
+	if humanoid.SeatPart then -- (moving along the row: off the old place first)
+		humanoid.Sit = false
+		task.wait(0.1)
+	end
+	seat:Sit(humanoid)
+end
+
+local function setUpBenches()
+	local world = workspace:FindFirstChild("World")
+	local house = world and world:FindFirstChild("Town") and world.Town:FindFirstChild("AuctionHouse")
+	if not house then
+		warn("[AuctionService] no Auction House to put the benches' seats in")
+		return
+	end
+	for _, seat in house:GetDescendants() do
+		if seat:IsA("Seat") and seat.Name == "BenchSpot" then
+			local prompt = seat:FindFirstChild("SitPrompt")
+			if prompt and prompt:IsA("ProximityPrompt") then
+				prompt.Triggered:Connect(function(player)
+					sitDown(player, seat)
+				end)
+				seat:GetPropertyChangedSignal("Occupant"):Connect(function()
+					prompt.Enabled = seat.Occupant == nil
+				end)
+			end
+		end
+	end
+end
+
 local function openLot(t: number)
 	AuctionRules.open(current.lots[current.k], t)
 	current.phase = "Open"
 	current.called = 0
+	current.last = nil
+	board:SetAttribute("BidderId", 0)
 	board:SetAttribute("Call", "")
 	board:SetAttribute("SoldTo", "")
 	board:SetAttribute("SoldFor", 0)
@@ -187,8 +297,17 @@ local function closeLot(t: number)
 	local what = AuctionRules.describe(lot)
 	current.phase = "Sold"
 	current.gapUntil = t + Auction.GAP
-	board:SetAttribute("Call", if top then "SOLD!" else "No bids: back to the vault!")
 	local winner = top and playerOf(top.userId)
+	local number = top and paddleOf[top.userId]
+	board:SetAttribute("Call", if not top then "No bids? Back to the vault it goes!"
+		elseif winner then `SOLD! To paddle {number}, {winner.DisplayName}, for {coins(top.amount)}!`
+		else "SOLD!")
+	if top then
+		bang()
+		if winner and winner.Character then
+			winner.Character:SetAttribute("Cheer", t)
+		end
+	end
 	board:SetAttribute("SoldTo", if winner then winner.DisplayName else "")
 	board:SetAttribute("SoldFor", if top then top.amount else 0)
 	if top and winner then
@@ -216,6 +335,7 @@ end
 
 local function tick()
 	local t = now()
+	updatePaddles()
 	local index = AuctionRules.index(t)
 	if (not current or current.phase == "Done") and (not current or current.index < index) then
 		if t - index * Auction.INTERVAL <= START_LATE then
@@ -229,13 +349,18 @@ local function tick()
 	if current.phase == "Open" then
 		local lot = current.lots[current.k]
 		local left = lot.endsAt - t
-		-- Goldie's calls in the last seconds (a late bid puts the clock back)
-		local call = if left <= 2.5 then Auction.CALLS[2] elseif left <= 5 then Auction.CALLS[1] else ""
-		if #lot.bids == 0 then
-			call = if left <= 5 then "Any bids? Anyone?" else ""
-		end
+		-- Goldie works the room (a late bid puts the clock back)
+		local call, gavel = AuctionRules.patter(lot, t, {
+			k = current.k, name = AuctionRules.describe(lot).name, last = current.last,
+			paddleOf = function(userId)
+				return paddleOf[userId]
+			end,
+		})
 		if board:GetAttribute("Call") ~= call then
 			board:SetAttribute("Call", call)
+			if gavel then
+				bang()
+			end
 		end
 		if left <= 0 then
 			closeLot(t)
@@ -243,6 +368,7 @@ local function tick()
 	elseif current.phase == "Sold" and t >= current.gapUntil then
 		if current.k >= #current.lots then
 			current.phase = "Done"
+			board:SetAttribute("Call", "")
 			publish()
 		else
 			current.k += 1
@@ -289,6 +415,14 @@ function actions.Bid(player, data, arg)
 	end
 	hold(player, data, amount)
 	Analytics.event(player, "AuctionBid", amount)
+	-- the paddle goes up and the bid's called out; Goldie takes it
+	paddleNumber(player)
+	current.last = { at = t, userId = player.UserId, previous = previous and previous.userId }
+	board:SetAttribute("BidderId", player.UserId)
+	if player.Character then
+		player.Character:SetAttribute("PaddleCall", amount)
+		player.Character:SetAttribute("PaddleUp", t)
+	end
 	if previous then
 		refund(previous.userId, previous.amount)
 		local outbid = playerOf(previous.userId)
@@ -330,6 +464,7 @@ function AuctionService.Start()
 	board:SetAttribute("Lot", 0)
 	board:SetAttribute("Phase", "")
 	ActionRemote(Remotes.func("AuctionAction"), actions, DataService, 0.25)
+	setUpBenches()
 
 	-- Leaving: your bids go; if you led, your coins go back into your save
 	-- before it closes, and the next bidder who can still pay leads (their

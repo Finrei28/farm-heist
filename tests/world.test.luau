@@ -205,6 +205,45 @@ return function(spec, harness)
 				expect(gui:FindFirstChild("Photo") ~= nil).toBe(def.id == "Wanted")
 			end
 		end)
+		it("puts places to sit on the Auction House's benches: on a bench, facing the stage, only by their Sit prompt", function()
+			local house = world.Town.AuctionHouse
+			local stage = house.Pedestal.CFrame.Position
+			local benches, seats = {}, {}
+			for _, part in house:GetDescendants() do
+				if part.Name == "BenchSeat" then
+					table.insert(benches, part)
+				elseif part.Name == "BenchSpot" then
+					table.insert(seats, part)
+				end
+			end
+			expect(#seats).toBe(#benches * 5)
+			-- (the hall's way: from the middle of the seats to the pedestal)
+			local middle = roblox.Vector3.new(0, 0, 0)
+			for _, seat in seats do
+				middle += seat.CFrame.Position / #seats
+			end
+			local toStage = roblox.Vector3.new(stage.X - middle.X, 0, stage.Z - middle.Z).Unit
+			for _, seat in seats do
+				expect(seat.ClassName).toBe("Seat")
+				expect(seat.Transparency).toBe(1)
+				expect(seat.CanTouch).toBe(false) -- (walking along a row doesn't sit you down)
+				expect(seat.CanCollide).toBe(false)
+				local prompt = seat:FindFirstChild("SitPrompt")
+				expect(prompt ~= nil and prompt.ActionText == "Sit").toBe(true)
+				-- facing the stage
+				expect(seat.CFrame.LookVector:Dot(toStage)).toBeGreaterThan(0.95)
+				-- resting on a bench's top
+				local onOne = false
+				for _, bench in benches do
+					local p = bench.CFrame:PointToObjectSpace(seat.CFrame.Position)
+					if math.abs(p.X) <= bench.Size.X / 2 and math.abs(p.Z) <= bench.Size.Z / 2
+						and math.abs(p.Y - (bench.Size.Y / 2 + seat.Size.Y / 2)) < 0.05 then
+						onOne = true
+					end
+				end
+				expect(onOne).toBe(true)
+			end
+		end)
 	end)
 
 	describe("the valley (World/ValleyArt)", function()

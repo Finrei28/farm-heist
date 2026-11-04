@@ -33,7 +33,7 @@
 --   /shield off · on     end your Sprout Shield and arrival grace now · start them again (as a new player)
 --   /defences all · none one of every defence, set out round your field (4 mud patches, 4 cloches) · none at all
 --   /trust Name          put a player in this server on your Trusted list (/trust none empties it)
---   /auction now        an auction starts this moment (three lots, off the 8-minute clock)
+--   /auction now        an auction starts this moment (five lots, off the 8-minute clock)
 --   /auction soon       the auction clock moves so the next one starts in 70 s (its 1-minute note, the bell); /auction off back to the real clock
 --   /quests Arrest Deposit Mutation   today's quests set to these (Harvest · Ship · Store · Mutation · Arrest · Deposit · Auction), at your level
 --   /weather Rain        that weather now, for its usual length (Clear · Rain · Thunderstorm · FrostNight · GoldenHour · HarvestMoon); /weather off back to the schedule; /weather says what's on
