@@ -10,7 +10,8 @@
 --
 -- Dev: ReplicatedStorage attribute ClockShift moves the clock by that many
 -- seconds (`/time`); WeatherForce = a weather id puts it on until
--- WeatherForceUntil (`/weather`).
+-- WeatherForceUntil (`/weather`, and a weather bought with Robux:
+-- MonetizationService, which also sets WeatherForceFrom and WeatherBoughtBy).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Weather = require(script.Parent.Config.Weather)
@@ -96,7 +97,8 @@ function WeatherRules.weather(t: number)
 	local forced = ReplicatedStorage:GetAttribute("WeatherForce")
 	local forcedUntil = ReplicatedStorage:GetAttribute("WeatherForceUntil") or 0
 	if forced and TYPES[forced] and t < forcedUntil then
-		return { id = forced, startsAt = forcedUntil - (TYPES[forced].length or Weather.SLOT), endsAt = forcedUntil, forced = true }
+		local from = ReplicatedStorage:GetAttribute("WeatherForceFrom") or forcedUntil - (TYPES[forced].length or Weather.SLOT)
+		return { id = forced, startsAt = from, endsAt = forcedUntil, forced = true, boughtBy = ReplicatedStorage:GetAttribute("WeatherBoughtBy") }
 	end
 	local moon = moonAt(t)
 	if moon then
@@ -188,6 +190,14 @@ end
 function WeatherRules.value(mutation: string?): number
 	local entry = mutation and Weather.MUTATIONS[mutation]
 	return if entry then entry.value else 1
+end
+
+-- Whether a ripe crop with `current` (nil: plain) takes the mutation it
+-- just rolled: only one worth more. A mutated crop left out keeps rolling,
+-- so a Wet one can still turn Moonlit (the user, 2026-11-04: harvest now,
+-- or wait for better and risk a thief).
+function WeatherRules.better(current: string?, rolled: string?): boolean
+	return rolled ~= nil and WeatherRules.value(rolled) > WeatherRules.value(current)
 end
 
 -- The chance a crop left out through `seconds` of `weatherId` mutates.

@@ -144,6 +144,24 @@ return function(spec, harness)
 			expect(WeatherRules.mutate("GoldenHour", 0.049)).toBe("Golden")
 			expect(WeatherRules.mutate("GoldenHour", 0.0502)).toBe("Rainbow")
 		end)
+		it("upgrade a mutated crop only to one worth more", function()
+			expect(WeatherRules.better(nil, "Wet")).toBe(true) -- (a plain crop takes any)
+			expect(WeatherRules.better("Wet", "Moonlit")).toBe(true)
+			expect(WeatherRules.better("Golden", "Shocked")).toBe(true)
+			expect(WeatherRules.better("Shocked", "Golden")).toBe(false) -- (Golden Hour can't spoil a Shocked crop)
+			expect(WeatherRules.better("Wet", "Wet")).toBe(false)
+			expect(WeatherRules.better("Moonlit", nil)).toBe(false) -- (a roll with nothing changes nothing)
+			expect(WeatherRules.better("Rainbow", "Moonlit")).toBe(false)
+		end)
+		it("climb the ladder for a crop left out (Wet, then Shocked, then Moonlit; never back down)", function()
+			local mutation = nil
+			for _, rolled in { "Wet", "Golden", "Wet", "Shocked", "Golden", "Moonlit", "Frosted" } do
+				if WeatherRules.better(mutation, rolled) then
+					mutation = rolled
+				end
+			end
+			expect(mutation).toBe("Moonlit")
+		end)
 		it("come about 1 time in 5 for a crop left out through a whole Rain or Harvest Moon", function()
 			expect(WeatherRules.chanceOver("Rain", 240)).toBeNear(0.25, 0.05)
 			expect(WeatherRules.chanceOver("HarvestMoon", 360)).toBeNear(0.25, 0.05)

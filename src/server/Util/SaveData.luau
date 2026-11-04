@@ -84,9 +84,13 @@ local TEMPLATE = {
 	streak = { days = 0, lastClaimDay = 0 },
 	stats = { harvested = 0, arrestsMade = 0, arrestsCounted = 0, timesArrested = 0, stolenValue = 0 }, -- (arrestsCounted: the Sheriff board's, all-time)
 	weekly = { week = 0, arrests = 0, stolen = 0, shoppers = 0 }, -- this week's numbers for the leaderboards (shared/LeaderRules)
-	settings = { music = true, sfx = true, flashing = 1, reducedMotion = false, trades = true, quiet = false },
+	settings = { music = true, sfx = true, ambience = true, flashing = 1, reducedMotion = false, textSize = 1, trades = true, quiet = false }, -- (shared/SettingsRules)
 	tradeUndone = {}, -- ["tradeId"] = true: trades support has undone for this save (shared/TradeRules.reverse)
 	purchaseIds = {}, -- recent developer product receipts already granted (so none is granted twice)
+	passes = {}, -- [passId] = true: game passes owned, as last checked (MonetizationService; BarnRules reads BiggerBarn)
+	weatherTokens = {}, -- [weatherId] = n: weathers bought with Robux, not started yet (shared/RobuxRules)
+	boostLeft = 0, -- seconds of Growth Boost still to play
+	cosmetics = { owned = {}, bat = nil, truck = nil }, -- looks bought with Robux and the ones worn (Config/Cosmetics)
 	lastOnline = 0, -- unix time of the last save, for offline growth and workers
 }
 

@@ -29,6 +29,7 @@ local PlayerState = require(script.Parent.Parent.PlayerState)
 local Reasons = require(script.Parent.Parent.Reasons)
 local UI = require(script.Parent.Parent.UI)
 local HudController = require(script.Parent.HudController)
+local Sfx = require(script.Parent.Parent.Sfx)
 
 local C = UI.C
 local make = UI.make
@@ -50,6 +51,8 @@ local function now(): number
 	return workspace:GetServerTimeNow()
 end
 
+local SPENDS = { Upgrade = true } -- (actions that spend coins: the Buy sound)
+
 local function send(remote: RemoteFunction, action: string, arg: string?)
 	task.spawn(function()
 		local result = remote:InvokeServer(action, arg)
@@ -58,6 +61,8 @@ local function send(remote: RemoteFunction, action: string, arg: string?)
 			if text then
 				UI.toast(text, "Error", 3)
 			end
+		elseif SPENDS[action] then
+			Sfx.play("Buy") -- (coins spent)
 		end
 	end)
 end

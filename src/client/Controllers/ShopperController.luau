@@ -6,6 +6,7 @@
 -- bubble ("🥕×3", "Too dear!"), their basket fills up, and a coin pop shows
 -- when they pay. Blocky people in varied colours, made of local parts:
 -- nothing here matters to the game.
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
@@ -14,6 +15,7 @@ local Format = require(Shared.Format)
 local PlotLayout = require(Shared.PlotLayout)
 local Remotes = require(Shared.Remotes)
 local Shop = require(Shared.Config.Shop)
+local Sfx = require(script.Parent.Parent.Sfx)
 
 local ShopperController = {}
 
@@ -135,6 +137,9 @@ local function paid(event)
 	local shopper = shoppers[event.id]
 	if shopper and event.coins > 0 then
 		say(shopper, `+{Format.number(event.coins)}`, Color3.fromRGB(242, 179, 61))
+		if event.plot == Players.LocalPlayer:GetAttribute("Plot") then -- (your own store's sales)
+			Sfx.play("Coins", shopper.model.PrimaryPart or shopper.model:FindFirstChildWhichIsA("BasePart"))
+		end
 	end
 end
 

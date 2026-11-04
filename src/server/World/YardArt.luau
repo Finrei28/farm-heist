@@ -385,6 +385,13 @@ local function buildTruck(kind: string, paint: Color3, parked: CFrame, name: str
 	end
 	truck.WorldPivot = parked
 	truck.Parent = parent
+	-- (the parts in the farm's colour: a truck paint repaints just these,
+	-- YardArt.paintTrucks)
+	for _, part in truck:GetDescendants() do
+		if part:IsA("BasePart") and math.abs(part.Color.R - paint.R) + math.abs(part.Color.G - paint.G) + math.abs(part.Color.B - paint.B) < 0.02 then
+			part:SetAttribute("Painted", part.Material.Name) -- (its own material, for a paint that changes it back)
+		end
+	end
 	return truck
 end
 
@@ -899,6 +906,26 @@ end
 
 ------------------------------------------------------------------------
 
+-- Repaints a farm's trucks: the plot's TruckPaint and TruckMaterial (a
+-- truck paint worn: Config/Cosmetics, MonetizationService), or the farm's
+-- colour.
+function YardArt.paintTrucks(model: Model)
+	local color = model:GetAttribute("TruckPaint") or Parts.farmColor(model:GetAttribute("PlotIndex") or 1)
+	local material = model:GetAttribute("TruckMaterial")
+	local warehouse = model:FindFirstChild("Warehouse")
+	local trucks = warehouse and warehouse:FindFirstChild("Trucks")
+	if not trucks then
+		return
+	end
+	for _, part in trucks:GetDescendants() do
+		local own = part:IsA("BasePart") and part:GetAttribute("Painted")
+		if own then
+			part.Color = color
+			part.Material = Enum.Material[material or own] or part.Material
+		end
+	end
+end
+
 -- (Re)builds a farm's warehouse side for a Warehouse Level: the building,
 -- docks, lanes and trucks (empty: the services draw crates). paint: the
 -- farm's colour.
@@ -940,6 +967,7 @@ function YardArt.setLevel(model: Model, level: number)
 		end
 	end
 	warehouse.Parent = model
+	YardArt.paintTrucks(model) -- (in a truck paint, if one's worn)
 	return warehouse
 end
 

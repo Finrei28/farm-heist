@@ -852,8 +852,10 @@ function FarmArt.showTile(tilePart: BasePart, tile, now: number)
 	tilePart:SetAttribute("Crop", tile and tile.crop)
 	tilePart:SetAttribute("Stage", stage)
 	tilePart:SetAttribute("Yield", yield)
-	-- (at the weather's growth now: FieldService redraws when it changes)
-	tilePart:SetAttribute("RipeAt", tile and now + GrowthRules.secondsLeft(tile, WeatherRules.growth(WeatherRules.now(now))))
+	-- (at the weather's growth now, and the Growth Boost's: FieldService
+	-- redraws when either changes)
+	local boost = tilePart.Parent and tilePart.Parent:GetAttribute("Boost") or 1
+	tilePart:SetAttribute("RipeAt", tile and now + GrowthRules.secondsLeft(tile, WeatherRules.growth(WeatherRules.now(now)) * boost))
 	tilePart:SetAttribute("Mutation", tile and tile.mutation)
 	showAura(tilePart, tileBase(tilePart, number), tile and tile.mutation)
 	tilePart:SetAttribute("Watered", tile and tile.watered or nil)

@@ -225,11 +225,11 @@ local function settle(player: Player, live: boolean)
 	local due = TruckRules.collect(warehouse, t)
 	local paid = 0
 	for _, run in due do
-		paid += run.coins
-		DataService.Earn(player, run.coins, "TruckSale", live)
+		paid += DataService.Earn(player, run.coins, "TruckSale", live)
 	end
 	if paid > 0 and live then
-		Notice.send(player, `🚚 Your {truckName(data)} reached the City: +{Format.number(paid)} coins`, "Good")
+		local vip = if player:GetAttribute("Pass_VIP") == true then " (⭐ VIP +10%)" else ""
+		Notice.send(player, `🚚 Your {truckName(data)} reached the City: +{Format.number(paid)} coins{vip}`, "Good")
 	end
 	local back = TruckRules.tidy(warehouse, t)
 	if #due > 0 or back > 0 then

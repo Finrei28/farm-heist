@@ -214,7 +214,7 @@ function TradeRules.check(a, b): (string?, string?)
 		local side, other, name = pair[1], pair[2], pair[3]
 		local incoming, outgoing = cropUnits(other.offer), cropUnits(side.offer)
 		local after = BarnRules.units(side.data.inventory) - outgoing + incoming
-		if incoming > outgoing and after > BarnRules.capacity(side.data.silo) then
+		if incoming > outgoing and after > BarnRules.capacityOf(side.data) then
 			return "BarnFull", name
 		end
 	end

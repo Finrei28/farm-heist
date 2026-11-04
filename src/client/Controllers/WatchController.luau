@@ -20,6 +20,7 @@ local PlotLayout = require(Shared.PlotLayout)
 local Remotes = require(Shared.Remotes)
 
 local UI = require(script.Parent.Parent.UI)
+local Sfx = require(script.Parent.Parent.Sfx)
 
 local C = UI.C
 local WatchController = {}
@@ -323,6 +324,7 @@ local function ringBell(index: number)
 		bell:SetAttribute("Rest", rest)
 	end
 	popText(rest.Position + Vector3.new(0, 2.5, 0), "DING DING!", C.gold)
+	Sfx.play("AlarmBell", bell)
 	task.spawn(function()
 		local started = os.clock()
 		local top = bell.Size.Y / 2
@@ -348,6 +350,7 @@ function WatchController.Start()
 				local model = plotModel(info.plot)
 				if model and dog:IsDescendantOf(model) then
 					popText(state.pivot.Position + Vector3.new(0, 3, 0), "WOOF!", C.cream)
+					Sfx.at("Bark", state.pivot.Position)
 				end
 			end
 		end

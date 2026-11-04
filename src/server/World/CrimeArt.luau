@@ -3,6 +3,9 @@
 -- over their head (World/ProduceArt), or drops when they're bonked. All made by the server
 -- (CrimeService), so everyone sees the same thing; how arms hold them is
 -- each client's (client/PoseController).
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Cosmetics = require(ReplicatedStorage.Shared.Config.Cosmetics)
 local Parts = require(script.Parent.Parts)
 local ProduceArt = require(script.Parent.ProduceArt)
 
@@ -33,29 +36,58 @@ end
 -- The bat: a Tool (CrimeService gives it while you're in your own farm and
 -- takes it away when you step out). A taped grip with a knob, a long wooden
 -- barrel with a rounded end. The barrel points up the handle's +Y.
-function CrimeArt.bat(): Tool
+-- skin: a bat skin's id (Config/Cosmetics; nil: the plain bat). Every skin
+-- is the same size and swings the same: only its look changes.
+function CrimeArt.bat(skin: string?): Tool
+	local item = skin and Cosmetics.ById[skin]
+	local look = item and item.kind == "bat" and item.look or {}
+	local wood, dark = look.wood or WOOD, look.dark or WOOD_DARK
+	local material = look.material or Enum.Material.SmoothPlastic
 	local tool = Instance.new("Tool")
 	tool.Name = "Bat"
 	tool.CanBeDropped = false
 	tool.RequiresHandle = true
-	tool.ToolTip = "Bonk thieves in your farm"
+	tool.ToolTip = if item then `{item.name}: bonk thieves in your farm` else "Bonk thieves in your farm"
 	tool.Grip = CFrame.new(0, -0.55, 0)
-	local handle = loose({ Name = "Handle", Size = Vector3.new(0.38, 1.9, 0.38), Color = TAPE }, tool)
+	tool:SetAttribute("Skin", skin)
+	local handle = loose({ Name = "Handle", Size = Vector3.new(0.38, 1.9, 0.38), Color = look.grip or TAPE }, tool)
 	handle.Shape = Enum.PartType.Block
 	local base = handle.CFrame
 	local function rod(name: string, y: number, length: number, diameter: number, color: Color3)
 		local p = loose({ Name = name, Shape = Enum.PartType.Cylinder, Size = Vector3.new(length, diameter, diameter),
-			CFrame = base * CFrame.new(0, y, 0) * CFrame.Angles(0, 0, math.rad(90)), Color = color }, tool)
+			CFrame = base * CFrame.new(0, y, 0) * CFrame.Angles(0, 0, math.rad(90)), Color = color, Material = material }, tool)
 		weld(handle, p)
 		return p
 	end
-	local knob = loose({ Name = "Knob", Shape = Enum.PartType.Ball, Size = Vector3.new(0.6, 0.6, 0.6), CFrame = base * CFrame.new(0, -1.0, 0), Color = WOOD_DARK }, tool)
+	local knob = loose({ Name = "Knob", Shape = Enum.PartType.Ball, Size = Vector3.new(0.6, 0.6, 0.6), CFrame = base * CFrame.new(0, -1.0, 0),
+		Color = dark, Material = material }, tool)
 	weld(handle, knob)
-	rod("Neck", 1.2, 0.6, 0.5, WOOD)
-	rod("Barrel", 2.4, 1.9, 0.78, WOOD)
-	rod("Band", 1.85, 0.12, 0.8, WOOD_DARK)
-	local tip = loose({ Name = "Tip", Shape = Enum.PartType.Ball, Size = Vector3.new(0.78, 0.78, 0.78), CFrame = base * CFrame.new(0, 3.35, 0), Color = WOOD }, tool)
+	rod("Neck", 1.2, 0.6, 0.5, wood)
+	rod("Barrel", 2.4, 1.9, 0.78, wood)
+	if look.band ~= false then
+		rod("Band", 1.85, 0.12, 0.88, dark) -- (0.05 proud of the barrel: no flicker)
+	end
+	local tip = loose({ Name = "Tip", Shape = Enum.PartType.Ball, Size = Vector3.new(0.78, 0.78, 0.78), CFrame = base * CFrame.new(0, 3.35, 0),
+		Color = wood, Material = material }, tool)
 	weld(handle, tip)
+	if look.extra == "scores" then
+		-- a baguette's three slashes: pale crumb showing through the crust
+		for i, y in { 1.75, 2.4, 3.05 } do
+			local score = loose({ Name = `Score{i}`, Size = Vector3.new(0.5, 0.12, 0.18), Color = Color3.fromRGB(240, 214, 160), Material = material,
+				CFrame = base * CFrame.new(0, y, -0.36) * CFrame.Angles(0, 0, math.rad(32)) }, tool)
+			weld(handle, score)
+		end
+	elseif look.extra == "leaves" then
+		-- a carrot's rings and its leafy top, sprouting from the tip
+		for i, y in { 1.85, 2.45, 2.95 } do
+			rod(`Ring{i}`, y, 0.08, 0.9, dark)
+		end
+		for i = 1, 3 do
+			local leaf = loose({ Name = `Leaf{i}`, Size = Vector3.new(0.14, 0.95, 0.42), Color = Color3.fromRGB(78, 159, 61),
+				CFrame = base * CFrame.new(0, 3.75, 0) * CFrame.Angles(0, math.rad(i * 120), math.rad(18)) * CFrame.new(0, 0.3, 0) }, tool)
+			weld(handle, leaf)
+		end
+	end
 	return tool
 end
 

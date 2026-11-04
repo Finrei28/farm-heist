@@ -24,6 +24,7 @@ local TravelRules = require(Shared.TravelRules)
 local PlayerState = require(script.Parent.Parent.PlayerState)
 local Reasons = require(script.Parent.Parent.Reasons)
 local UI = require(script.Parent.Parent.UI)
+local Sfx = require(script.Parent.Parent.Sfx)
 
 local C = UI.C
 local make = UI.make
@@ -117,7 +118,7 @@ local function updateChip()
 		text, color, textColor = "Your Farm", C.green, C.cream
 	elseif inFarm > 0 and (player:GetAttribute("SuspectOf") or 0) == inFarm then
 		-- a Suspect here (§4.12): red, pulsing
-		local pulse = math.floor(os.clock() * 2) % 2 == 0
+		local pulse = UI.flashing < 0.5 or math.floor(os.clock() * 2) % 2 == 0 -- (Settings: low flashing keeps it red)
 		text, color, textColor = "🔴 TRESPASSING", if pulse then C.alarm else UI.darker(C.alarm, 0.8), C.cream
 	elseif inFarm > 0 then
 		local owner = workspace.World[`Plot{inFarm}`]:GetAttribute("OwnerName")
@@ -200,6 +201,54 @@ function HudController.sideButton(icon: string, name: string, order: number)
 end
 
 UI.onLayout(layoutSide)
+
+------------------------------------------------------------------------
+-- The top bar: small wooden signs at the right end of Roblox's own row
+-- (where players look for a shop and settings; the purse hangs from the
+-- middle): Robux and Settings. Out of the side bar, so a phone's side bar stays two crates
+-- wide above the thumbstick (a third column covered the sky dial; Studio
+-- check 2026-11-04).
+
+local topBar = make("ScreenGui", {
+	Name = "FarmHeistTopBar",
+	ResetOnSpawn = false,
+	IgnoreGuiInset = true,
+	ScreenInsets = Enum.ScreenInsets.TopbarSafeInsets,
+	ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+	DisplayOrder = 2,
+	Parent = player:WaitForChild("PlayerGui"),
+})
+local topRow = make("Frame", {
+	Name = "Row", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Parent = topBar,
+}, {
+	make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder,
+		VerticalAlignment = Enum.VerticalAlignment.Center, HorizontalAlignment = Enum.HorizontalAlignment.Right }),
+	make("UIPadding", { PaddingRight = UDim.new(0, 8), PaddingTop = UDim.new(0, 2), PaddingBottom = UDim.new(0, 2) }),
+})
+
+-- A sign in the top bar: the icon and the name. Returns its button.
+function HudController.topButton(icon: string, name: string, order: number): TextButton
+	local sign = make("TextButton", {
+		Name = name, Size = UDim2.new(0, 104, 1, -10), Text = "", AutoButtonColor = false, LayoutOrder = order, Parent = topRow,
+	}, { UI.corner(8), UI.stroke(UI.SEAM, 2.5) })
+	UI.wood(sign, 2, false)
+	UI.label({ Size = UDim2.new(0, 30, 1, 0), Position = UDim2.fromOffset(6, 0), Font = UI.HEAD, Text = icon, TextSize = 20,
+		TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 3, Parent = sign })
+	UI.fit(UI.label({ Size = UDim2.new(1, -42, 1, -6), Position = UDim2.fromOffset(36, 3), Font = UI.HEAD, Text = string.upper(name), TextSize = 15,
+		TextColor3 = C.cream, TextStrokeColor3 = UI.SEAM, TextStrokeTransparency = 0, ZIndex = 3, Parent = sign }), 9)
+	sign.MouseButton1Down:Connect(function()
+		sign.Rotation = -3
+	end)
+	local function release()
+		sign.Rotation = 0
+	end
+	sign.MouseButton1Up:Connect(release)
+	sign.MouseLeave:Connect(release)
+	sign.Activated:Connect(function()
+		Sfx.play("UiClick")
+	end)
+	return sign
+end
 
 ------------------------------------------------------------------------
 -- Travel: Home and Town signposts
@@ -374,6 +423,7 @@ local function showLevelUp(notice)
 		task.delay(wait + 0.2, showLevelUp, notice)
 		return
 	end
+	Sfx.play("LevelUp")
 	cardToken += 1
 	local token = cardToken
 	shownLevel = notice
@@ -449,6 +499,7 @@ local function rule(order: number)
 end
 
 local function showReceipt(notice)
+	Sfx.play("CashRegister")
 	receiptToken += 1
 	local token = receiptToken
 	for _, child in receipt:GetChildren() do
@@ -501,6 +552,8 @@ function HudController.Start()
 			showReceipt(notice)
 		elseif notice.kind == "Welcome" then
 			return -- (WorkersController's Welcome back card)
+		elseif notice.everyone and UI.quiet then
+			return -- (Quiet mode: news for everyone isn't shown; Settings)
 		else
 			UI.toast(notice.text, notice.kind)
 		end

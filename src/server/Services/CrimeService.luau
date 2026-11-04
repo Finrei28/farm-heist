@@ -32,6 +32,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local Shared = ReplicatedStorage.Shared
+local RobuxRules = require(Shared.RobuxRules)
 local BarnRules = require(Shared.BarnRules)
 local Crime = require(Shared.Config.Crime)
 local CrimeRules = require(Shared.CrimeRules)
@@ -704,12 +705,30 @@ local function updateBat(player: Player, state)
 	local backpack = player:FindFirstChildOfClass("Backpack")
 	local tool = state.bat
 	if want and not (tool and tool.Parent) and backpack then
-		tool = CrimeArt.bat()
+		local data = DataService.Get(player)
+		tool = CrimeArt.bat(data and RobuxRules.worn(data, "bat", player:GetAttribute("Pass_VIP") == true)) -- (its skin: Config/Cosmetics)
 		tool.Parent = backpack
 		state.bat = tool
 	elseif not want and tool then
 		tool:Destroy()
 		state.bat = nil
+	end
+end
+
+-- A new bat skin worn: the bat in hand (or in the backpack) is swapped for it.
+function CrimeService.RefreshBat(player: Player)
+	local state = states[player]
+	local data = DataService.Get(player)
+	local skin = data and RobuxRules.worn(data, "bat", player:GetAttribute("Pass_VIP") == true)
+	if state and state.bat and state.bat:GetAttribute("Skin") ~= skin then
+		local equipped = state.bat.Parent == player.Character
+		state.bat:Destroy()
+		state.bat = nil
+		updateBat(player, state)
+		local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+		if equipped and state.bat and humanoid then
+			humanoid:EquipTool(state.bat)
+		end
 	end
 end
 

@@ -29,6 +29,7 @@ local Reasons = require(script.Parent.Parent.Reasons)
 local UI = require(script.Parent.Parent.UI)
 local HudController = require(script.Parent.HudController)
 local DecorateController = require(script.Parent.DecorateController)
+local Sfx = require(script.Parent.Parent.Sfx)
 
 local C = UI.C
 local make = UI.make
@@ -68,6 +69,8 @@ local function now(): number
 	return workspace:GetServerTimeNow()
 end
 
+local SPENDS = { Upgrade = true } -- (actions that spend coins: the Buy sound)
+
 local function send(action: string, arg: string?, onDone: ((any) -> ())?)
 	task.spawn(function()
 		local result = StoreAction:InvokeServer(action, arg)
@@ -76,8 +79,13 @@ local function send(action: string, arg: string?, onDone: ((any) -> ())?)
 			if text then
 				UI.toast(text, "Error", 3)
 			end
-		elseif onDone then
-			onDone(result.result)
+		else
+			if SPENDS[action] then
+				Sfx.play("Buy") -- (coins spent)
+			end
+			if onDone then
+				onDone(result.result)
+			end
 		end
 	end)
 end

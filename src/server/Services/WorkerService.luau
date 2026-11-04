@@ -258,7 +258,7 @@ function JOBS.Farmhand(player, data, st, entry, speed, index)
 		rest(st, entry.uid)
 		return false
 	end
-	if not BarnRules.hasRoom(data.inventory, data.silo, 1) then
+	if not BarnRules.hasRoom(data, 1) then
 		rest(st, entry.uid)
 		if not st.told.barnFull then
 			st.told.barnFull = true
@@ -560,7 +560,7 @@ local function pipelineState(player: Player, data)
 			state.barn[cropId] = units
 		end
 	end
-	state.barnRoom = math.max(0, BarnRules.capacity(data.silo) - BarnRules.units(data.inventory))
+	state.barnRoom = math.max(0, BarnRules.capacityOf(data) - BarnRules.units(data.inventory))
 	for _, batch in data.warehouse.sorted do
 		state.sorted[batch.crop] = (state.sorted[batch.crop] or 0) + batch.units
 	end
@@ -838,7 +838,7 @@ function actions.Train(player, data, uid)
 	end
 	WorkerRules.train(worker)
 	Notice.send(player, `🎓 {worker.name} is Level {worker.level}: {math.floor(WorkerRules.efficiency(worker.level) * 100 + 0.5)}% speed.`, "Good")
-	Analytics.step(player, data, "FirstTrain")
+	Analytics.event(player, "WorkerTrained", worker.level)
 	showCrew(player)
 	DataService.NotifyState(player)
 	return nil

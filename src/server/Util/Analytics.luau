@@ -3,7 +3,11 @@
 --     each step logged once per player, ever (data.onboarded);
 --   * the coin economy: where coins come from and go (Economy), logged by
 --     DataService.AddCoins / SpendCoins from the reason each caller gives;
---   * custom events (Custom): raids, knockouts, arrests, rejected hits.
+--   * progression (Progression): Farm, Warehouse and Store Levels reached;
+--   * funnels (Funnels > Custom): the Robux shop (opened → a tab → the
+--     purchase prompt → bought);
+--   * custom events (Custom): raids, knockouts, arrests, rejected hits,
+--     trades, auctions, weather bought, settings switched off.
 -- Robux purchases are tracked by Roblox already. Events from Studio aren't
 -- recorded. Every call is pcall'd: analytics must never break the game.
 local AnalyticsService = game:GetService("AnalyticsService")
@@ -57,6 +61,29 @@ function Analytics.coins(player: Player, amount: number, balance: number, kind: 
 	local flow = if amount > 0 then Enum.AnalyticsEconomyFlowType.Source else Enum.AnalyticsEconomyFlowType.Sink
 	pcall(AnalyticsService.LogEconomyEvent, AnalyticsService, player, flow, "Coins", math.abs(amount), math.max(0, balance),
 		kind or Analytics.GAMEPLAY, sku or "Other")
+end
+
+-- A level reached on a ladder: "FarmLevel", "WarehouseLevel", "StoreLevel".
+function Analytics.progress(player: Player, path: string, level: number)
+	pcall(function()
+		AnalyticsService:LogProgressionCompleteEvent(player, path, level)
+	end)
+end
+
+-- A step of a custom funnel (Funnels in Creator Analytics), e.g. the Robux
+-- shop: 1 Opened · 2 Looked (a tab) · 3 Prompted · 4 Bought. Each visit to
+-- the shop is one funnel session per player (a new one each time step 1 is
+-- logged). item: what the step was about, as a custom field.
+local funnelSessions = {} -- ["userId|funnel"] = session id
+function Analytics.funnel(player: Player, funnel: string, step: number, stepName: string, item: string?)
+	local key = `{player.UserId}|{funnel}`
+	if step == 1 or not funnelSessions[key] then
+		funnelSessions[key] = `{player.UserId}-{os.time()}-{math.random(1, 1e6)}`
+	end
+	pcall(function()
+		local fields = if item then { [Enum.AnalyticsCustomFieldKeys.CustomField01.Name] = item } else nil
+		AnalyticsService:LogFunnelStepEvent(player, funnel, funnelSessions[key], step, stepName, fields)
+	end)
 end
 
 -- A one-off event worth counting (value: optional number to sum or average).

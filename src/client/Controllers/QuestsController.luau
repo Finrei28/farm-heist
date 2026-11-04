@@ -23,6 +23,7 @@ local PlayerState = require(script.Parent.Parent.PlayerState)
 local Reasons = require(script.Parent.Parent.Reasons)
 local UI = require(script.Parent.Parent.UI)
 local HudController = require(script.Parent.HudController)
+local Sfx = require(script.Parent.Parent.Sfx)
 
 local C = UI.C
 local make = UI.make
@@ -38,6 +39,7 @@ local function send(action: string, arg: string?)
 	task.spawn(function()
 		local result = QuestAction:InvokeServer(action, arg)
 		if result.ok then
+			Sfx.play("QuestReward")
 			UI.float(`+{UI.formatNumber(result.result.coins)} 🪙`, UDim2.fromScale(0.5, 0.45), C.gold)
 		else
 			local text = Reasons(result.reason)

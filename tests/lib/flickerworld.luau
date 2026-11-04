@@ -85,8 +85,16 @@ return function(harness)
 		move(item, origin * roblox.CFrame.new(i * 20, 0, -60))
 		item.Parent = gallery
 	end
-	local bat = CrimeArt.bat()
-	bat.Parent = gallery
+	-- the bat, and each of its skins (Config/Cosmetics), apart
+	for i, skin in { false, "GoldenBat", "Baguette", "CarrotClub" } do
+		local bat = CrimeArt.bat(skin or nil)
+		for _, part in bat:GetDescendants() do
+			if part:IsA("BasePart") then
+				part.CFrame = roblox.CFrame.new(i * 10, 40, -80) * part.CFrame
+			end
+		end
+		bat.Parent = gallery
+	end
 
 	-- every defence on Plot 8 (cloches over its first open tiles), its gate
 	-- shut and locked, the gatehouse, a dome; Plot 7's gate shut, unlocked

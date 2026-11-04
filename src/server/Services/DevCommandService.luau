@@ -40,6 +40,9 @@
 --   /time night          the sky's clock to sunrise · noon · dusk · night · midnight or an hour (0–23), for everyone; /time off back to the real clock
 --   /guide               the Farm Guide from its first step again (its coins to earn again)
 --   /wipe                start your save over (in place)
+--   /pass VIP on · off   pretend to own a game pass or not (VIP · BiggerBarn)
+--   /buy RainDance       a product's reward without a purchase (RainDance · Thunderstorm · GoldenHour · HarvestMoon
+--                        · GrowthBoost · Cosmetic_GoldenBat ...)
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -76,6 +79,7 @@ local DefenceService = require(script.Parent.DefenceService)
 local FieldService = require(script.Parent.FieldService)
 local GuideService = require(script.Parent.GuideService)
 local LandService = require(script.Parent.LandService)
+local MonetizationService = require(script.Parent.MonetizationService)
 local PlotService = require(script.Parent.PlotService)
 local StoreService = require(script.Parent.StoreService)
 local TravelService = require(script.Parent.TravelService)
@@ -513,8 +517,9 @@ function DevCommandService.Start()
 	register("DevWeather", "/weather", function(player, _data, args)
 		local wanted = string.lower(args[2] or "")
 		if wanted == "off" then
-			ReplicatedStorage:SetAttribute("WeatherForce", nil)
-			ReplicatedStorage:SetAttribute("WeatherForceUntil", nil)
+			for _, key in { "WeatherForce", "WeatherForceUntil", "WeatherForceFrom", "WeatherBoughtBy" } do
+				ReplicatedStorage:SetAttribute(key, nil)
+			end
 		elseif wanted ~= "" then
 			local id = nil
 			for key in Weather.TYPES do
@@ -528,6 +533,8 @@ function DevCommandService.Start()
 			end
 			ReplicatedStorage:SetAttribute("WeatherForce", id)
 			ReplicatedStorage:SetAttribute("WeatherForceUntil", WeatherRules.now() + (Weather.TYPES[id].length or Weather.SLOT))
+			ReplicatedStorage:SetAttribute("WeatherForceFrom", nil)
+			ReplicatedStorage:SetAttribute("WeatherBoughtBy", nil)
 		end
 		local t = WeatherRules.now()
 		local w = WeatherRules.weather(t)
@@ -556,6 +563,23 @@ function DevCommandService.Start()
 	register("DevGuide", "/guide", function(player)
 		GuideService.Reset(player)
 		reply(player, "The Farm Guide starts again (its coins to earn again)")
+	end)
+
+	register("DevPass", "/pass", function(player, _data, args)
+		local passId, state = args[2] or "", string.lower(args[3] or "on")
+		if MonetizationService.DevSetPass(player, passId, state ~= "off") then
+			reply(player, `{passId}: {if state ~= "off" then "owned" else "not owned"}`)
+		else
+			reply(player, "Passes: VIP · BiggerBarn (then on or off)")
+		end
+	end)
+
+	register("DevBuy", "/buy", function(player, _data, args)
+		if MonetizationService.DevGrant(player, args[2] or "") then
+			reply(player, `Granted {args[2]} (no purchase)`)
+		else
+			reply(player, "Products: RainDance · Thunderstorm · GoldenHour · HarvestMoon · GrowthBoost · Cosmetic_GoldenBat · Cosmetic_Baguette · Cosmetic_CarrotClub · Cosmetic_CherryPaint · Cosmetic_MintPaint · Cosmetic_MidnightPaint")
+		end
 	end)
 
 	register("DevWipe", "/wipe", function(player)

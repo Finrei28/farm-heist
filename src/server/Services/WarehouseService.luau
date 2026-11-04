@@ -190,7 +190,7 @@ local function reached(player: Player, data, before: number)
 		Notice.send(player, `🏭 Your {info.building.name} is ready!`, "Good")
 	end
 	Notice.send(player, `Warehouse Level {after}! {table.concat(WarehouseRules.news(after), " · ")}`, "Good")
-	Analytics.step(player, data, `Warehouse{after}`)
+	Analytics.progress(player, "WarehouseLevel", after)
 	DataService.NotifyState(player)
 end
 

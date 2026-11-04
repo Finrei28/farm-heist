@@ -417,12 +417,12 @@ function GuideController.Start()
 	RunService.RenderStepped:Connect(function()
 		updateEdge()
 		local t = os.clock()
-		bob.Position = UDim2.fromOffset(0, math.sin(t * 4) * 6)
+		bob.Position = UDim2.fromOffset(0, if UI.calm then 0 else math.sin(t * 4) * 6)
 		if pulsing then
 			local scale = pulsing:FindFirstChild("GuidePulse")
 			if scale then
-				local beat = 0.5 + 0.5 * math.sin(t * 6)
-				scale.Scale = 1 + 0.14 * beat
+				local beat = if UI.calm then 1 else 0.5 + 0.5 * math.sin(t * 6) -- (Reduced motion: the ring stays, nothing throbs)
+				scale.Scale = if UI.calm then 1 else 1 + 0.14 * beat
 				local ring = pulsing:FindFirstChild("GuideRing")
 				if ring then
 					ring.UIStroke.Transparency = 0.7 * (1 - beat)

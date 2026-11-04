@@ -29,6 +29,7 @@ local PlayerState = require(script.Parent.Parent.PlayerState)
 local Reasons = require(script.Parent.Parent.Reasons)
 local UI = require(script.Parent.Parent.UI)
 local HudController = require(script.Parent.HudController)
+local Sfx = require(script.Parent.Parent.Sfx)
 
 local C = UI.C
 local make = UI.make
@@ -232,7 +233,7 @@ local function updateCard()
 		lastSnipe = snipe
 		flashUntil = os.clock() + 1.2
 	end
-	local flashing = os.clock() < flashUntil and math.floor(os.clock() * 6) % 2 == 0
+	local flashing = os.clock() < flashUntil and (if UI.flashing >= 0.5 then math.floor(os.clock() * 6) % 2 == 0 else true) -- (Settings: steady red)
 	clock.BackgroundColor3 = if flashing then C.alarm elseif left <= 10 then Color3.fromRGB(255, 226, 160) else C.cream
 	clockStroke.Color = if left <= 10 then C.alarm else GOLD
 
@@ -380,7 +381,7 @@ local function updateHall(t: number)
 	hall.bubble.Enabled = call ~= ""
 	hall.bubbleText.Text = call
 	-- the lot bobs over its pedestal
-	hall.over.WorldCFrame = hall.overAt + Vector3.new(0, math.sin(os.clock() * 2) * 0.25, 0)
+	hall.over.WorldCFrame = hall.overAt + Vector3.new(0, if UI.calm then 0 else math.sin(os.clock() * 2) * 0.25, 0)
 end
 
 local ringUntil = 0
@@ -416,10 +417,16 @@ function AuctionController.Start()
 		end
 		lastStart = started
 		ringUntil = os.clock() + 4
+		if hall and hall.bell.model then
+			Sfx.play("AuctionBell", hall.bell.model:IsA("BasePart") and hall.bell.model or hall.bell.model:FindFirstChildWhichIsA("BasePart", true))
+		end
 		local names = {}
 		for _, lot in lots() do
 			local what = AuctionRules.describe(lot)
 			table.insert(names, `{what.icon} {what.name}`)
+		end
+		if UI.quiet and not inHall() then
+			return -- (Quiet mode: the call is news for everyone)
 		end
 		UI.toast(`🔔 The auction's on! {table.concat(names, " · ")}`, "Announce", 8, if inHall() then nil else {
 			text = "TOWN 🏘️",
@@ -431,6 +438,9 @@ function AuctionController.Start()
 	-- a sale: confetti over the pedestal
 	board:GetAttributeChangedSignal("Phase"):Connect(function()
 		if board:GetAttribute("Phase") == "Sold" and (board:GetAttribute("SoldTo") or "") ~= "" and hall then
+			Sfx.play("Gavel", hall.over) -- (the attachment over the pedestal)
+		end
+		if board:GetAttribute("Phase") == "Sold" and (board:GetAttribute("SoldTo") or "") ~= "" and hall and not UI.calm then
 			for _, emitter in hall.confetti do
 				emitter:Emit(18)
 			end
@@ -444,7 +454,7 @@ function AuctionController.Start()
 		local nextAt = AuctionRules.nextAt(t)
 		if nextAt - t <= Auction.WARNING and warned ~= nextAt then
 			warned = nextAt
-			if not inHall() then
+			if not inHall() and not UI.quiet then
 				UI.toast("🔨 The auction starts in 1 minute at the Auction House: Mythic seeds, rare workers, defences!", "Announce", 8, {
 					text = "TOWN 🏘️",
 					press = function()

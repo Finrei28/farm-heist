@@ -91,6 +91,21 @@ elseif extras == "town" then
 elseif extras == "valley" then
 	sources = { world.Countryside, world.RingRoad, world.Sidewalk, world.BackTrail, world.Highway, world.Plot1, world.Plot2, world.Plot8 }
 	frame = roblox.CFrame.new()
+elseif extras == "bats" then
+	-- the bat and its skins (Config/Cosmetics), standing in a row
+	local CrimeArt = Harness.loadServerWith("World/CrimeArt", { Instance = roblox.Instance, workspace = game:GetService("Workspace") })
+	local row = roblox.Instance.new("Model")
+	for i, skin in { false, "GoldenBat", "Baguette", "CarrotClub" } do
+		local bat = CrimeArt.bat(skin or nil)
+		for _, part in bat:GetDescendants() do
+			if part:IsA("BasePart") then
+				part.CFrame = roblox.CFrame.new(i * 2.5, 1.5, 0) * part.CFrame
+			end
+		end
+		bat.Parent = row
+	end
+	sources = { row }
+	frame = roblox.CFrame.new()
 end
 local all = {}
 for _, source in sources do

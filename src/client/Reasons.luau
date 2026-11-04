@@ -2,6 +2,8 @@
 -- nil: say nothing (they'll see why, or it doesn't matter).
 local REASONS = {
 	TooFar = "Get closer.",
+	NoWeather = "You don't have that weather in your barn.",
+	NotOwned = "You don't have that one yet.",
 	NoFarm = "You don't have a farm in this server.",
 	NotHome = "Go to your own farm first.",
 	Overgrown = "That land is overgrown. Clear it with a Land Permit.",

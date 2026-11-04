@@ -26,6 +26,7 @@ local Reasons = require(script.Parent.Parent.Reasons)
 local UI = require(script.Parent.Parent.UI)
 local WorkerLooks = require(script.Parent.Parent.WorkerLooks)
 local HudController = require(script.Parent.HudController)
+local Sfx = require(script.Parent.Parent.Sfx)
 
 local C = UI.C
 local make = UI.make
@@ -47,6 +48,8 @@ local function now(): number
 	return workspace:GetServerTimeNow()
 end
 
+local SPENDS = { Hire = true, Train = true } -- (actions that spend coins: the Buy sound)
+
 local function send(action: string, arg: string?)
 	task.spawn(function()
 		local result = WorkerAction:InvokeServer(action, arg)
@@ -55,6 +58,8 @@ local function send(action: string, arg: string?)
 			if text then
 				UI.toast(text, "Error", 3)
 			end
+		elseif SPENDS[action] then
+			Sfx.play("Buy") -- (coins spent)
 		end
 	end)
 end

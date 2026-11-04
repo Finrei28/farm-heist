@@ -40,6 +40,7 @@ local Remotes = require(Shared.Remotes)
 local WeatherRules = require(Shared.WeatherRules)
 
 local Reasons = require(script.Parent.Parent.Reasons)
+local Sfx = require(script.Parent.Parent.Sfx)
 local UI = require(script.Parent.Parent.UI)
 local FieldController = require(script.Parent.FieldController)
 local HotbarController = require(script.Parent.HotbarController)
@@ -821,6 +822,7 @@ local function updateRings()
 			local model = part:FindFirstAncestorWhichIsA("Model")
 			local plot = model and model:GetAttribute("PlotIndex")
 			ring = makeRing(part, plot ~= nil and plot == mine, part:GetAttribute("Crop"))
+			Sfx.play("Rustle", part)
 			local crop = part:FindFirstChild("Crop")
 			if crop and crop:IsA("Model") then
 				ring.crop, ring.base = crop, crop:GetPivot()
@@ -953,7 +955,7 @@ local function updateKnockout()
 		local camera = workspace.CurrentCamera
 		koEffects = {
 			make("ColorCorrectionEffect", { Saturation = -0.85, Brightness = -0.04, Parent = camera }),
-			make("BlurEffect", { Size = 6, Parent = camera }),
+			if UI.calm then nil else make("BlurEffect", { Size = 6, Parent = camera }), -- (Reduced motion: grey, no blur)
 		}
 		local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 		if humanoid then
@@ -1255,6 +1257,10 @@ homeButton.Activated:Connect(function()
 end)
 
 local function showAlarm(info)
+	if not (alarmCard.Visible and alarm and alarm.userId == info.userId) then
+		Sfx.play("Siren") -- (once per thief, not for every crop they touch)
+	end
+	Sfx.duck(8)
 	alarmToken += 1
 	local token = alarmToken
 	local crop = info.crop and Crops.ById[info.crop]
@@ -1279,7 +1285,8 @@ local function showAlarm(info)
 	end
 	alarmCard.Visible = true
 	for _, edge in edges do
-		edge.BackgroundTransparency = 0.2
+		-- (Settings: Flashing effects scales it; at 0 there's no red edge)
+		edge.BackgroundTransparency = 1 - 0.8 * UI.flashing
 		local pulse = TweenService:Create(edge, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, 4, true), { BackgroundTransparency = 1 })
 		pulse.Completed:Connect(function(state)
 			if state == Enum.PlaybackState.Completed then
@@ -1402,6 +1409,7 @@ function CrimeController.Start()
 		if kind == "Alarm" then
 			showAlarm(info)
 		elseif kind == "Bonk" and info.at then
+			Sfx.at("Bonk", info.at, 0.95 + math.random() * 0.1)
 			popText(info.at, "BONK!", C.gold, 30)
 			starBurst(info.at)
 		elseif kind == "Nudge" and info.at then
@@ -1410,8 +1418,13 @@ function CrimeController.Start()
 			puff(info.at)
 			popText(info.at, "BUSTED!", C.red, 30)
 		elseif kind == "Busted" then
+			Sfx.play("Whistle")
 			bustedCard(info)
 		elseif kind == "Arrested" then
+			Sfx.play("Whistle")
+			if (info.paid or 0) > 0 then
+				task.delay(0.9, Sfx.play, "CashRegister") -- (the fine, paid to you: §4.12)
+			end
 			arrestedPop(info)
 		elseif kind == "GateShut" then
 			local line = `🔔 Your Watchman shut the gate on {info.name} for {info.seconds} s.`

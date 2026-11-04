@@ -655,6 +655,7 @@ local function levelUp(player: Player, data, to: number)
 	StoreLayout.grow(store.layout, from, to)
 	store.level = to
 	store.build = nil
+	Analytics.progress(player, "StoreLevel", to)
 	local before, after = StoreLayout.level(from), StoreLayout.level(to)
 	local st = stores[player]
 	if after.building ~= before.building then
@@ -719,6 +720,20 @@ function StoreService.IsDecorating(player: Player): boolean
 end
 
 -- Redraws the displays and the stockroom (after the offline settlement).
+-- The building again in its paint (the VIP's gold awning comes and goes:
+-- MonetizationService sets the plot's StorePaint).
+function StoreService.Repaint(player: Player)
+	local st = stores[player]
+	if not st or st.decorating then
+		return
+	end
+	local building = PlotService.model(st.index).Store:FindFirstChild("Building")
+	if building then
+		building:SetAttribute("Level", -1) -- (so redraw builds it again)
+	end
+	redraw(player)
+end
+
 function StoreService.Redraw(player: Player)
 	redraw(player)
 end

@@ -14,6 +14,7 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local Sfx = require(script.Parent.Parent.Sfx)
 
 local PoseController = {}
 
@@ -224,6 +225,7 @@ local function track(character: Model)
 			return -- (your own swing: already playing)
 		end
 		rig.swingAt = os.clock() - SEEN_AT
+		Sfx.play("Swing", torso)
 	end)
 	character.AncestryChanged:Connect(function()
 		if not character:IsDescendantOf(workspace) then
@@ -240,6 +242,7 @@ function PoseController.swing(character: Model)
 	if rig then
 		rig.swingAt = os.clock()
 		rig.ownSwingAt = os.clock()
+		Sfx.play("Swing", rig.torso)
 	end
 end
 

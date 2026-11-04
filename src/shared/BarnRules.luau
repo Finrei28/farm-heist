@@ -32,14 +32,20 @@ function BarnRules.units(inventory): number
 	return total
 end
 
-function BarnRules.capacity(silo: number?): number
+-- bigger: the Bigger Barn pass (Config/Monetization: ×2.5).
+function BarnRules.capacity(silo: number?, bigger: boolean?): number
 	local level = math.clamp(silo or 0, 0, #Barn.SILO_COST)
-	return Barn.CAPACITY[level]
+	return if bigger then math.floor(Barn.CAPACITY[level] * Barn.BIGGER) else Barn.CAPACITY[level]
 end
 
--- Room for `count` more units from a harvest.
-function BarnRules.hasRoom(inventory, silo: number?, count: number?): boolean
-	return BarnRules.units(inventory) + (count or 1) <= BarnRules.capacity(silo)
+-- A save's barn space (its Silo, and the Bigger Barn pass in data.passes).
+function BarnRules.capacityOf(data): number
+	return BarnRules.capacity(data.silo, data.passes ~= nil and data.passes.BiggerBarn == true)
+end
+
+-- Room for `count` more units from a harvest in this save's barn.
+function BarnRules.hasRoom(data, count: number?): boolean
+	return BarnRules.units(data.inventory) + (count or 1) <= BarnRules.capacityOf(data)
 end
 
 function BarnRules.addCrops(inventory, key: string, count: number)

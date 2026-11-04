@@ -774,7 +774,7 @@ function StoreArt.buildBuilding(model: Model, levelNumber: number, name: string)
 	local level = StoreLayout.level(levelNumber)
 	local building = level.building
 	local look = LOOK[building.id]
-	local color = Parts.farmColor(index)
+	local color = model:GetAttribute("StorePaint") or Parts.farmColor(index) -- (VIP: a gold awning, MonetizationService)
 	local sf = storeFrame(index)
 	local folder = Instance.new("Model")
 	folder.Name = "Building"
@@ -1052,6 +1052,7 @@ end
 
 -- A plot's store before anyone has it: an empty Corner Store, "For rent".
 function StoreArt.build(model: Model)
+	model:SetAttribute("StorePaint", nil) -- (a farm for rent has no VIP: its own colour)
 	StoreArt.buildBuilding(model, 1, "FOR RENT")
 end
 

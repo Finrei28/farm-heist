@@ -16,6 +16,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local PlotLayout = require(ReplicatedStorage:WaitForChild("Shared").PlotLayout)
+local Sfx = require(script.Parent.Parent.Sfx)
 
 local TruckController = {}
 
@@ -68,6 +69,7 @@ local function beep(farm, truck: Model, on: boolean)
 		label.Font = Enum.Font.FredokaOne
 		label.TextScaled = true
 		label.Text = "BEEP BEEP!"
+		Sfx.play("TruckHorn", truck:FindFirstChild("Cab") or truck:FindFirstChildWhichIsA("BasePart"))
 		local corner = Instance.new("UICorner")
 		corner.CornerRadius = UDim.new(0.3, 0)
 		corner.Parent = label
@@ -111,6 +113,9 @@ local function tripOf(farm, truck: Model)
 		local departAt = truck:GetAttribute("DepartAt") or 0
 		if farm.trip and farm.trip.departAt ~= departAt then
 			farm.late = 0 -- (a new trip: back on time)
+		end
+		if (not farm.trip or farm.trip.departAt ~= departAt) and math.abs(workspace:GetServerTimeNow() - departAt) < 3 then
+			Sfx.play("TruckHorn", truck:FindFirstChild("Cab") or truck:FindFirstChildWhichIsA("BasePart")) -- (off to the City)
 		end
 		farm.trip = { departAt = departAt, arriveAt = truck:GetAttribute("ArriveAt") or 0, returnAt = returnAt }
 	elseif farm.late <= 0 then

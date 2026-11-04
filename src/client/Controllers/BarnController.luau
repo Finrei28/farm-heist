@@ -22,6 +22,7 @@ local PlayerState = require(script.Parent.Parent.PlayerState)
 local Reasons = require(script.Parent.Parent.Reasons)
 local UI = require(script.Parent.Parent.UI)
 local HudController = require(script.Parent.HudController)
+local Sfx = require(script.Parent.Parent.Sfx)
 
 local C = UI.C
 local make = UI.make
@@ -63,7 +64,7 @@ end
 
 local function cropsTab(state)
 	local inventory = state.inventory
-	local units, capacity = BarnRules.units(inventory), BarnRules.capacity(state.silo)
+	local units, capacity = BarnRules.units(inventory), BarnRules.capacityOf(state)
 	panel.toolbar.Text = `📦 {units} / {capacity} crops{if units >= capacity then "  ·  Barn full!" else ""}`
 	local keys = {}
 	for key in inventory.crops do
@@ -155,6 +156,7 @@ local function landTab(state)
 			make("TextButton", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "", ZIndex = 25, Parent = cell }).Activated:Connect(function()
 				local result = LandAction:InvokeServer("Clear", tostring(block))
 				if result.ok then
+					Sfx.play("Buy")
 					panel.close()
 				else
 					local text = Reasons(result.reason)
@@ -228,7 +230,9 @@ local function fieldTab(state)
 			end
 			task.spawn(function()
 				local result = LandAction:InvokeServer("UpgradeField")
-				if not result.ok then
+				if result.ok then
+					Sfx.play("Buy")
+				else
 					local text = Reasons(result.reason)
 					if text then
 						UI.toast(text, "Error", 3)

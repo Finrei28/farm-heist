@@ -28,6 +28,7 @@ local Remotes = require(Shared.Remotes)
 local WeatherRules = require(Shared.WeatherRules)
 
 local Reasons = require(script.Parent.Parent.Reasons)
+local Sfx = require(script.Parent.Parent.Sfx)
 local UI = require(script.Parent.Parent.UI)
 local HotbarController = require(script.Parent.HotbarController)
 local PlayerState = require(script.Parent.Parent.PlayerState)
@@ -245,6 +246,7 @@ local function act()
 	busy = false
 	local crop = cropId and Crops.ById[cropId]
 	if result.ok then
+		Sfx.play(kind, part, 0.95 + math.random() * 0.1) -- (Plant · Water · Harvest, a little different each time)
 		if kind == "Harvest" and crop then
 			local mutation = result.result and result.result.mutation
 			floatAtButton(`+{result.result and result.result.count or 1} {crop.icon}{if mutation then ` ✨{mutation}` else ""}`, C.gold)

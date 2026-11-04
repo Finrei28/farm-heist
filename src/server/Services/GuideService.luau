@@ -25,6 +25,7 @@ local function after(player: Player, guide, result: string?)
 	end
 	if result == "finished" then
 		Analytics.event(player, "GuideFinished")
+		Analytics.step(player, DataService.Get(player), "GuideDone")
 		if GuideRules.claimReward(guide) then
 			DataService.AddCoins(player, Guide.REWARD_COINS, Analytics.GAMEPLAY, "GuideReward")
 			Notice.send(player, `Farm Guide done! +{Format.number(Guide.REWARD_COINS)} coins`, "Good")

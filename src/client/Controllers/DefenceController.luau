@@ -29,6 +29,7 @@ local PlayerState = require(script.Parent.Parent.PlayerState)
 local Reasons = require(script.Parent.Parent.Reasons)
 local UI = require(script.Parent.Parent.UI)
 local HudController = require(script.Parent.HudController)
+local Sfx = require(script.Parent.Parent.Sfx)
 
 local C = UI.C
 local make = UI.make
@@ -58,6 +59,8 @@ local function myPlot(): number?
 	return if plot and plot > 0 then plot else nil
 end
 
+local SPENDS = { Buy = true } -- (actions that spend coins: the Buy sound)
+
 local function send(action: string, arg: string?, done: ((any) -> ())?)
 	task.spawn(function()
 		local result = DefenceAction:InvokeServer(action, arg)
@@ -66,8 +69,13 @@ local function send(action: string, arg: string?, done: ((any) -> ())?)
 			if text then
 				UI.toast(text, "Error", 3)
 			end
-		elseif done then
-			done(result.result)
+		else
+			if SPENDS[action] then
+				Sfx.play("Buy") -- (coins spent)
+			end
+			if done then
+				done(result.result)
+			end
 		end
 		if panel.refresh then
 			panel.refresh()

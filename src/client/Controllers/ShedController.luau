@@ -33,6 +33,7 @@ local WarehouseRules = require(Shared.WarehouseRules)
 local PlayerState = require(script.Parent.Parent.PlayerState)
 local Reasons = require(script.Parent.Parent.Reasons)
 local UI = require(script.Parent.Parent.UI)
+local Sfx = require(script.Parent.Parent.Sfx)
 
 local C = UI.C
 local make = UI.make
@@ -202,6 +203,7 @@ local function release()
 	local result = WarehouseAction:InvokeServer("Pack")
 	busy = false
 	if result.ok then
+		Sfx.play("Tape")
 		finish(result.result)
 	else
 		hint.Text = Reasons(result.reason) or "Hold it a little longer."

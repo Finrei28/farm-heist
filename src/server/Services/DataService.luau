@@ -19,6 +19,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local Shared = ReplicatedStorage.Shared
 local Remotes = require(Shared.Remotes)
 local Settings = require(Shared.Config.Settings)
+local Monetization = require(ReplicatedStorage.Shared.Config.Monetization)
 local FineRules = require(Shared.FineRules)
 local LandRules = require(Shared.LandRules)
 local ProgressionRules = require(Shared.ProgressionRules)
@@ -184,6 +185,7 @@ function DataService.AddXp(player, amount: number)
 		setStat(player, "Level", after)
 		local permits = LandRules.permitsEarned(after) - LandRules.permitsEarned(before)
 		Notice.send(player, `Farm Level {after}!`, "LevelUp", { level = after, permits = permits })
+		Analytics.progress(player, "FarmLevel", after)
 		for _, callback in levelUpCallbacks do
 			task.spawn(callback, player, data, before, after)
 		end
@@ -200,10 +202,13 @@ DataService.Garnish = nil :: ((Player, any, number) -> number)?
 -- the sale happens while you're playing (live), never for sales settled
 -- while you were away. Someone in debt keeps half; the rest pays the owners
 -- they owe (DataService.Garnish).
-function DataService.Earn(player, coins: number, sku: string, live: boolean)
+function DataService.Earn(player, coins: number, sku: string, live: boolean): number
 	local data = profiles[player]
 	if not data or not (coins > 0) then
-		return
+		return 0
+	end
+	if player:GetAttribute("Pass_VIP") == true and sku ~= "Dev" then
+		coins = math.floor(coins * (1 + Monetization.VIP_BONUS) + 0.5) -- (VIP: +10% on sales, §7)
 	end
 	FineRules.addEarnings(data.crime, os.time(), coins)
 	local kept = if DataService.Garnish then DataService.Garnish(player, data, coins) else coins
@@ -211,6 +216,7 @@ function DataService.Earn(player, coins: number, sku: string, live: boolean)
 	if live then
 		DataService.AddXp(player, ProgressionRules.salesXp(coins))
 	end
+	return coins
 end
 
 -- Calls callback(player, data, oldLevel, newLevel) after every level-up.
@@ -279,6 +285,10 @@ local function getPublicState(data)
 		streak = data.streak,
 		cropdex = data.cropdex,
 		settings = data.settings,
+		passes = data.passes,
+		weatherTokens = data.weatherTokens,
+		boostLeft = data.boostLeft,
+		cosmetics = data.cosmetics,
 	}
 end
 

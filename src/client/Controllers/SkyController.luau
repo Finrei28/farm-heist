@@ -28,6 +28,7 @@ local Weather = require(Shared.Config.Weather)
 local WeatherRules = require(Shared.WeatherRules)
 
 local PlayerState = require(script.Parent.Parent.PlayerState)
+local Sfx = require(script.Parent.Parent.Sfx)
 local UI = require(script.Parent.Parent.UI)
 
 local C = UI.C
@@ -35,6 +36,10 @@ local make = UI.make
 local player = Players.LocalPlayer
 
 local SkyController = {}
+
+-- What the sky's doing now, for the ambience (AmbienceController): the
+-- weather's id, how far it has faded in (0–1), and whether it's night.
+SkyController.state = { weather = "Clear", weight = 0, night = false }
 
 local function rgb(r: number, g: number, b: number): Color3
 	return Color3.fromRGB(r, g, b)
@@ -222,6 +227,8 @@ local function strike(at: Vector3, look: Vector3)
 	local ahead = CFrame.Angles(0, math.rad(turn), 0):VectorToWorldSpace(flat)
 	local ground = at + ahead * math.random(BOLT_NEAR, BOLT_FAR)
 	ground = Vector3.new(ground.X, at.Y - 30, ground.Z)
+	-- the thunder, as far behind the flash as the strike is far away
+	task.delay(math.clamp((ground - at).Magnitude / 340, 0.3, 1.2), Sfx.play, "Thunder", nil, 0.9 + math.random() * 0.2)
 	local points = { ground + Vector3.new(0, BOLT_HEIGHT, 0) }
 	for i = 1, BOLT_STEPS do
 		local wobble = if i == BOLT_STEPS then Vector3.zero else Vector3.new(math.random(-22, 22), 0, math.random(-22, 22))
@@ -581,7 +588,7 @@ function SkyController.Start()
 		grade.Saturation = look.saturation
 		grade.Contrast = look.contrast
 		grade.TintColor = look.tint
-		grade.Brightness = flash * 0.35
+		grade.Brightness = flash * 0.35 * UI.flashing -- (Settings: Flashing effects)
 		rays.Intensity = look.rays
 
 		-- what falls, the moon, and lightning in a storm
@@ -613,6 +620,7 @@ function SkyController.Start()
 		end
 
 		local isNight = dayness(shown) < 0.4 or id == "HarvestMoon"
+		SkyController.state.weather, SkyController.state.weight, SkyController.state.night = id, weight, isNight
 		if isNight ~= night then
 			if isNight and night == false and not toldNight then
 				toldNight = true

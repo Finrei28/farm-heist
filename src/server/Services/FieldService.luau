@@ -17,6 +17,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local Shared = ReplicatedStorage.Shared
+local Monetization = require(Shared.Config.Monetization)
+local RobuxRules = require(Shared.RobuxRules)
 local BarnRules = require(Shared.BarnRules)
 local Crops = require(Shared.Config.Crops)
 local DefenceRules = require(Shared.DefenceRules)
@@ -87,7 +89,15 @@ local function settle(player: Player, data, draw: boolean)
 		return
 	end
 	local index = PlotService.plotOf(player)
-	local speed = WeatherRules.growth(WeatherRules.now(t))
+	-- the weather's speed, and the Growth Boost's while some is left (it's
+	-- used up only while you play: shared/RobuxRules)
+	local speed = WeatherRules.growth(WeatherRules.now(t)) * RobuxRules.boostOver(data, elapsed)
+	local field = index and PlotService.model(index):FindFirstChild("Field")
+	local boost = if (data.boostLeft or 0) > 0 then Monetization.BOOST else nil
+	if draw and field and field:GetAttribute("Boost") ~= boost then
+		field:SetAttribute("Boost", boost) -- (FarmArt counts the ripe times with it)
+		task.defer(FieldService.Render, player)
+	end
 	for key, tile in data.field do
 		local before = FarmArt.stage(tile)
 		GrowthRules.advance(tile, elapsed, speed)
@@ -239,7 +249,7 @@ function actions.Harvest(player, data, arg)
 		return "NotRipe"
 	end
 	local count = GrowthRules.yieldOf(planted)
-	if not BarnRules.hasRoom(ownerData.inventory, ownerData.silo, count) then
+	if not BarnRules.hasRoom(ownerData, count) then
 		Notice.send(player, if helping then `{owner.DisplayName}'s barn is full.` else "Barn full! Sell some crops to make room.", "Error")
 		return "BarnFull"
 	end
@@ -283,7 +293,7 @@ function FieldService.WorkerHarvest(player: Player, data, key: string, replant: 
 		return "Leave"
 	elseif not GrowthRules.isRipe(planted) then
 		return "NotRipe"
-	elseif not BarnRules.hasRoom(data.inventory, data.silo, GrowthRules.yieldOf(planted)) then
+	elseif not BarnRules.hasRoom(data, GrowthRules.yieldOf(planted)) then
 		return "BarnFull"
 	end
 	local regrowing, mutation = planted.regrowing, planted.mutation
@@ -362,8 +372,9 @@ function FieldService.RipeTiles(player: Player, data): { string }
 end
 
 -- Every Weather.ROLL seconds: each ripe crop left in a field rolls the
--- weather's mutation (and the any-weather ones). One mutation at most; it
--- shows as an aura that thieves see too (§4.14).
+-- weather's mutation (and the any-weather ones). A crop holds one mutation;
+-- one already mutated keeps rolling and takes a new one only if it's worth
+-- more (WeatherRules.better). It shows as an aura that thieves see too (§4.14).
 local function rollMutations()
 	local t = now()
 	local weatherId = WeatherRules.weather(WeatherRules.now(t)).id
@@ -374,24 +385,30 @@ local function rollMutations()
 			settle(player, data, true)
 			local turned = {}
 			for key, tile in data.field do
-				if not tile.mutation and GrowthRules.isRipe(tile) then
+				if GrowthRules.isRipe(tile) then
 					local mutation = WeatherRules.mutate(weatherId, math.random())
-					if mutation then
+					if WeatherRules.better(tile.mutation, mutation) then
+						turned[tile] = tile.mutation or false -- (what it was before)
 						tile.mutation = mutation
 						FarmArt.showTile(tilePart(index, tonumber(key) :: number), tile, t)
-						table.insert(turned, tile)
 					end
 				end
 			end
-			if #turned == 1 then
-				local tile = turned[1]
-				local crop = Crops.ById[tile.crop]
-				Notice.send(player, `✨ Your {crop.icon} {Crops.count(tile.crop, GrowthRules.yieldOf(tile))} turned {tile.mutation}: worth ×{WeatherRules.value(tile.mutation)} now!`, "Good")
-			elseif #turned > 1 then
-				Notice.send(player, `✨ {#turned} of your ripe crops mutated! Harvest them, or leave them out for more.`, "Good")
+			local count, only, was = 0, nil, nil
+			for tile, before in turned do
+				count += 1
+				only, was = tile, before
 			end
-			if #turned > 0 then
-				Analytics.event(player, "Mutation", #turned)
+			if count == 1 then
+				local crop = Crops.ById[only.crop]
+				-- ("Your 🥕 6 Wet carrots turned Shocked: worth ×3 now!")
+				local what = `{crop.icon} {Crops.count(only.crop, GrowthRules.yieldOf(only), was or nil)}`
+				Notice.send(player, `✨ Your {what} turned {only.mutation}: worth ×{WeatherRules.value(only.mutation)} now!`, "Good")
+			elseif count > 1 then
+				Notice.send(player, `✨ {count} of your ripe crops mutated! Harvest them, or leave them out for something even better.`, "Good")
+			end
+			if count > 0 then
+				Analytics.event(player, "Mutation", count)
 			end
 		end
 	end

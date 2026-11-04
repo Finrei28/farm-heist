@@ -20,6 +20,7 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
 local Format = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Format"))
+local Sfx = require(script.Parent.Sfx)
 
 local player = Players.LocalPlayer
 
@@ -51,6 +52,12 @@ UI.HAND = Enum.Font.PatrickHand -- paper notes and chalk
 
 UI.compact = false -- a phone-sized screen (height under COMPACT_HEIGHT)
 UI.touch = false -- a touch screen
+
+-- The player's screen settings (SettingsController sets them; shared/SettingsRules):
+UI.calm = false -- Reduced motion: no bobbing, pulsing, blur, confetti or rising numbers
+UI.flashing = 1 -- Flashing effects, 0–1: how strongly things may flash
+UI.quiet = false -- Quiet mode: no news for everyone (notes with `everyone`)
+UI.textScale = 1 -- Text size, 0.8–1.25: windows and notes are drawn this much bigger
 
 -- make("Frame", { Size = ... }, { children }): Parent goes on last.
 function UI.make(className: string, props, children)
@@ -178,8 +185,11 @@ local BUTTON_KINDS = {
 	blue = { face = C.sky, text = C.ink },
 	cream = { face = C.cream, text = C.ink },
 	wood = { face = Color3.fromRGB(128, 88, 55), text = C.cream },
+	robux = { face = Color3.fromRGB(0, 160, 90), text = C.cream }, -- (spends Robux: with the Robux sign, UI.ROBUX)
 }
 local EDGE = 4
+
+UI.ROBUX = utf8.char(0xE002) -- the Robux sign (Roblox draws this character as its icon in any font)
 
 -- UI.button({ text, kind?, size?, position?, anchor?, textSize?, parent? })
 -- returns the holder (position and size it) and the TextButton (connect it).
@@ -210,6 +220,9 @@ function UI.button(props)
 	UI.fit(button, 10)
 	button.MouseButton1Down:Connect(function()
 		button.Position = UDim2.fromOffset(0, EDGE - 1)
+	end)
+	button.Activated:Connect(function()
+		Sfx.play("UiClick")
 	end)
 	local function release()
 		button.Position = UDim2.new()
@@ -426,6 +439,9 @@ function UI.crate(props)
 	button.MouseButton1Down:Connect(function()
 		holder.Rotation = -4
 	end)
+	button.Activated:Connect(function()
+		Sfx.play("UiClick")
+	end)
 	local function release()
 		holder.Rotation = 0
 	end
@@ -542,6 +558,17 @@ local function relayout()
 	end
 end
 UI.screen:GetPropertyChangedSignal("AbsoluteSize"):Connect(relayout)
+
+-- Text size (Settings): windows and notes keep their place and size on the
+-- screen, and what's in them is drawn `scale` times bigger (a UIScale).
+function UI.setTextScale(scale: number)
+	if scale == UI.textScale then
+		return
+	end
+	UI.textScale = scale
+	lastKey = "" -- (lay everything out again)
+	relayout()
+end
 task.spawn(function()
 	while true do
 		relayout()
@@ -692,6 +719,7 @@ function UI.panel(title: string, options)
 			UI.crimp(tab, C.cream, math.max(4, math.floor(tabWidth / 11)), 6)
 			panel.tabs[name] = tab
 			tab.Activated:Connect(function()
+				Sfx.play("UiClick")
 				panel.setTab(name)
 			end)
 		end
@@ -772,11 +800,13 @@ function UI.panel(title: string, options)
 		end
 	end
 
+	local textScale = make("UIScale", { Name = "TextScale", Parent = frame })
 	UI.onLayout(function()
 		local size = UI.screen.AbsoluteSize
 		local width = math.min(options.width or 600, size.X - 40)
 		local height = math.min(options.height or 400, size.Y - (if UI.compact then 40 else 90))
-		frame.Size = UDim2.fromOffset(width, height)
+		textScale.Scale = UI.textScale -- (the same room on screen, bigger or smaller inside)
+		frame.Size = UDim2.fromOffset(width / UI.textScale, height / UI.textScale)
 	end)
 	if panel.tab then
 		panel.setTab(panel.tab)
@@ -822,9 +852,13 @@ local toastStack = make("Frame", {
 	BackgroundTransparency = 1,
 	ZIndex = 40,
 	Parent = UI.screen,
-}, { make("UIListLayout", { Padding = UDim.new(0, 10), HorizontalAlignment = Enum.HorizontalAlignment.Right, SortOrder = Enum.SortOrder.LayoutOrder }) })
+}, {
+	make("UIListLayout", { Padding = UDim.new(0, 10), HorizontalAlignment = Enum.HorizontalAlignment.Right, SortOrder = Enum.SortOrder.LayoutOrder }),
+	make("UIScale", { Name = "TextScale" }),
+})
 UI.onLayout(function()
-	toastStack.Size = UDim2.fromOffset(if UI.compact then 250 else 320, 400)
+	toastStack.TextScale.Scale = UI.textScale
+	toastStack.Size = UDim2.fromOffset((if UI.compact then 250 else 320) / UI.textScale, 400 / UI.textScale)
 end)
 
 local TACKS = { Good = C.green, Error = C.alarm, Announce = C.sky }
@@ -835,6 +869,11 @@ local MAX_TOASTS = 4
 -- button under the words ({ text, press }), e.g. the auction's Town.
 function UI.toast(text: string, kind: string?, seconds: number?, action: { text: string, press: () -> () }?)
 	toastOrder += 1
+	if kind == "Error" then
+		Sfx.play("Error")
+	elseif kind == "Announce" then
+		Sfx.play("Pop")
+	end
 	local note = make("Frame", {
 		Size = UDim2.new(1, 0, 0, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
@@ -917,7 +956,7 @@ function UI.float(text: string, at: UDim2, color: Color3?)
 		Parent = UI.screen,
 	})
 	TweenService:Create(label, TweenInfo.new(0.9, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-		Position = at - UDim2.fromOffset(0, 60),
+		Position = if UI.calm then at else at - UDim2.fromOffset(0, 60), -- (Reduced motion: it fades where it is)
 		TextTransparency = 1,
 		TextStrokeTransparency = 1,
 	}):Play()

@@ -47,6 +47,13 @@
 --                        shared/TradeRules)
 --   TradeEvent     S→C  { kind = "invite", userId, name, seconds } · { kind = "state", trade } · { kind = "problem", text }
 --                        · { kind = "declined", name } · { kind = "closed", reason?, done?, with?, lines?, coins?, value? }
+--   SettingsAction C→S  ("Set" "key=value") -> { ok, reason? }   the Settings window (server/Services/SettingsService,
+--                        shared/SettingsRules)
+--   RobuxAction    C→S  ("StartWeather" weatherId | "Equip" "kind|id" | "DevBuy" id (Studio only)) -> { ok, reason? }
+--                        the Robux window (server/Services/MonetizationService, shared/RobuxRules; purchases
+--                        themselves go through MarketplaceService)
+--   RobuxFunnel    C→S  "Opened" | "Tab:x" | "Prompt:id"   the Robux shop's analytics funnel (its own remote, so a
+--                        note never takes the action remote's cooldown from a purchase)
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
@@ -74,6 +81,9 @@ local DEFINITIONS = {
 	GuideAction = "RemoteFunction",
 	TradeAction = "RemoteFunction",
 	TradeEvent = "RemoteEvent",
+	SettingsAction = "RemoteFunction",
+	RobuxAction = "RemoteFunction",
+	RobuxFunnel = "RemoteEvent",
 }
 
 local IS_SERVER = RunService:IsServer()

@@ -202,7 +202,7 @@ local function closeLot(t: number)
 			if lot.kind == "Seed" and (lot.rarity == "Mythic" or lot.rarity == "Legendary") then
 				for _, other in Players:GetPlayers() do
 					if other ~= winner then
-						Notice.send(other, `🔨 {winner.DisplayName} won a {what.name} at the Auction House for {coins(top.amount)}!`, "Announce")
+						Notice.send(other, `🔨 {winner.DisplayName} won a {what.name} at the Auction House for {coins(top.amount)}!`, "Announce", { everyone = true })
 					end
 				end
 			end
@@ -288,6 +288,7 @@ function actions.Bid(player, data, arg)
 		return reason
 	end
 	hold(player, data, amount)
+	Analytics.event(player, "AuctionBid", amount)
 	if previous then
 		refund(previous.userId, previous.amount)
 		local outbid = playerOf(previous.userId)

@@ -75,6 +75,7 @@ for _, name in {
 	"MarketController", "ShedController", "TruckController", "ShopperController", "PromptController", "SprintController", "RoofController",
 	"WarehouseController", "WorkersController", "WorkerController", "PoseController", "CrimeController", "PoliceController",
 	"GateController", "WatchController", "DefenceController", "SkyController", "AuctionController", "QuestsController", "GuideController", "TradeController",
+	"SettingsController", "AmbienceController", "RobuxController",
 } do
 	task.spawn(function() -- (one waiting on the world doesn't hold up the rest)
 		local ok, err = pcall(function()

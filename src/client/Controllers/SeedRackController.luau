@@ -19,6 +19,7 @@ local SeedStock = require(Shared.SeedStock)
 local PlayerState = require(script.Parent.Parent.PlayerState)
 local Reasons = require(script.Parent.Parent.Reasons)
 local UI = require(script.Parent.Parent.UI)
+local Sfx = require(script.Parent.Parent.Sfx)
 
 local C = UI.C
 local make = UI.make
@@ -61,6 +62,7 @@ end
 local function buy(cropId: string, count: number)
 	local result = SeedAction:InvokeServer("Buy", `{cropId}|{count}`)
 	if result.ok then
+		Sfx.play("Buy")
 		local crop = Crops.ById[cropId]
 		UI.toast(`+{count} {crop.name} seed{if count == 1 then "" else "s"}`, "Good", 2)
 	else
