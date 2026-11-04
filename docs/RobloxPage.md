@@ -93,7 +93,9 @@ Check after: buy one of each in a published test server (each item's price is sp
 
 Upload each `.wav` (Studio: Window > Asset Manager > Import, or Creator Dashboard > Development Items > Audio), then paste its id as `"rbxassetid://..."` next to the same name in `src/shared/Config/Sounds.luau`. They're silent until then.
 
-Error · Plant · Water · Harvest · CashRegister · LevelUp · Tape · TruckHorn · Siren · Bonk · Whistle · Rustle · AlarmBell · Gavel · Rain · Birds · Crickets · FarmTheme
+Error · Plant · Water · Harvest · CashRegister · Scan · ShopBell · LevelUp · Tape · TruckHorn · Siren · Bonk · Whistle · Rustle · AlarmBell · Gavel · Rain · Birds · Crickets · FarmTheme
+
+(`TillOpen` uses the CashRegister file: paste CashRegister's id into both.)
 
 Still to pick from the Creator Store (Toolbox > Audio, one Roblox uploaded so anyone may use it): **Bark**, the guard dog.
 

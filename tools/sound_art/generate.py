@@ -263,6 +263,22 @@ def cash_register():
     return out
 
 
+def scan():
+    """A till's scanner reading a barcode: one short, clean beep."""
+    out = silence(0.16)
+    beep = tone(2350, 0.11, ((1, 1.0), (3, 0.12))) * env(0.11, 0.003, 0.09, 0.0, 0.01)
+    place(out, beep, 0.0)
+    return out
+
+
+def shop_bell():
+    """The service bell on the Shop Counter: a small, bright ding."""
+    out = silence(1.1)
+    place(out, bell_tone(note("A6"), 1.0, 1.1, 0.35) * 0.9, 0.0)
+    place(out, lowpass(highpass(noise(0.01), 3000), 9000) * 0.4, 0.0)  # (the tap on the button)
+    return out
+
+
 def level_up():
     """A Farm Level: a bright brass arpeggio up a G chord, a bell on top."""
     s = 1.6
@@ -490,6 +506,8 @@ SOUNDS = {
     "Water": (water, False),
     "Harvest": (harvest, False),
     "CashRegister": (cash_register, False),
+    "Scan": (scan, False),
+    "ShopBell": (shop_bell, False),
     "LevelUp": (level_up, False),
     "Tape": (tape, False),
     "TruckHorn": (truck_horn, False),

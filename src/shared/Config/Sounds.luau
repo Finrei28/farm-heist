@@ -28,6 +28,9 @@ return {
 	TruckHorn = { id = "", file = "TruckHorn", volume = 0.5, range = 160 }, -- a truck leaving for the City, BEEP BEEP
 	CashRegister = { id = "", file = "CashRegister", volume = 0.75 }, -- a truck back with its pay (the receipt)
 	Coins = { id = "rbxassetid://330274138", volume = 0.45, range = 60 }, -- a shopper paying at your checkout (Toolbox: "Coin Drop")
+	Scan = { id = "", file = "Scan", volume = 0.45, range = 40 }, -- a thing scanned at a till (you serving, beep)
+	ShopBell = { id = "", file = "ShopBell", volume = 0.55, range = 70 }, -- a shopper waiting at a till rings its bell
+	TillOpen = { id = "", file = "CashRegister", volume = 0.6, range = 50 }, -- a shopper paid at a till: the drawer pops open
 
 	-- Raids
 	Siren = { id = "", file = "Siren", volume = 0.3 }, -- the theft alarm, to the farm's owner

@@ -3,6 +3,7 @@
 -- hiring board. A worker is { type, level, xp, trait?, name, look } (in the
 -- save under a uid). tests/workers.test.luau.
 local Workers = require(script.Parent.Config.Workers)
+local Store = require(script.Parent.Config.Store)
 local Warehouse = require(script.Parent.Config.Warehouse)
 local LandRules = require(script.Parent.LandRules)
 local WarehouseRules = require(script.Parent.WarehouseRules)
@@ -158,9 +159,10 @@ end
 -- The slots' ctx (below) from a save, or the client's copy of it: the
 -- server's crew and the Auction House's card both use it.
 function WorkerRules.context(data)
-	local registers = 0
+	local registers = 0 -- (the tills: Shop Counters and Registers)
 	for _, entry in data.store.layout do
-		if entry.item == "Register" then
+		local def = Store.ITEMS[entry.item]
+		if def and def.staffed then
 			registers += 1
 		end
 	end
@@ -185,7 +187,7 @@ function WorkerRules.slots(typeName: string, ctx): number
 	elseif typeName == "Driver" then
 		return if ctx.warehouseLevel >= Workers.DRIVERS_FROM then ctx.trucks else 0
 	elseif typeName == "Cashier" then
-		return ctx.registers
+		return if (ctx.storeLevel or 1) >= Workers.CASHIERS_FROM then ctx.registers else 0
 	end
 	if kind.untilLevel and ctx.warehouseLevel >= kind.untilLevel then
 		return 0
@@ -202,7 +204,7 @@ function WorkerRules.slots(typeName: string, ctx): number
 end
 
 -- What opens the next slot of a type, for a greyed slot: "Warehouse Level 8",
--- "Store Level 2", "32 cleared tiles", "a Register in your store"; nil if none will.
+-- "Store Level 2", "32 cleared tiles", "another till in your store"; nil if none will.
 function WorkerRules.nextSlot(typeName: string, ctx): string?
 	local kind = Workers.TYPES[typeName]
 	local have = WorkerRules.slots(typeName, ctx)
@@ -219,7 +221,7 @@ function WorkerRules.nextSlot(typeName: string, ctx): string?
 		end
 		return nil
 	elseif typeName == "Cashier" then
-		return "a Register in your store"
+		return if (ctx.storeLevel or 1) < Workers.CASHIERS_FROM then `Store Level {Workers.CASHIERS_FROM}` else "another till in your store"
 	end
 	if kind.untilLevel and ctx.warehouseLevel >= kind.untilLevel then
 		return nil

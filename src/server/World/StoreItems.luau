@@ -223,17 +223,45 @@ end
 ------------------------------------------------------------------------
 -- Checkouts
 
-function builders.HonourBox(m: Model)
-	solid(m, "Foot", Vector3.new(1.8, 0.3, 1.8), CFrame.new(0, 0.15, 0.3), DARK_WOOD)
-	solid(m, "Post", Vector3.new(0.5, 2.9, 0.5), CFrame.new(0, 1.75, 0.3), WOOD)
-	solid(m, "Box", Vector3.new(2.0, 1.3, 1.4), CFrame.new(0, 3.85, 0.25), COLORS.hay)
-	deco(m, "Slot", Vector3.new(1.0, 0.08, 0.25), CFrame.new(0, 4.57, 0.25), COLORS.dark)
-	deco(m, "Lid", Vector3.new(2.1, 0.12, 1.5), CFrame.new(0, 4.5, 0.25), Color3.fromRGB(224, 160, 48))
-	local sign = deco(m, "Sign", Vector3.new(2.4, 1.1, 0.15), CFrame.new(0, 5.35, 0.85), COLORS.cream)
-	words(sign, "PAY HERE ♥", COLORS.barnRed)
-	for _, x in { -1.1, 1.1 } do
-		deco(m, "SignPost", Vector3.new(0.15, 1.2, 0.15), CFrame.new(x * 0.8, 4.95, 1.0), DARK_WOOD) -- (behind the sign)
+-- The Shop Counter (a till you serve at, Config/Store): a cream counter with
+-- the Register's red stripe, PAY HERE on its front; on top, a till facing you
+-- behind it (its cash drawer pops open when a shopper pays: client
+-- CheckoutController), its little screen to the shopper, a flat scanner with
+-- red glass, a service bell at the shopper's edge and a paper bag. Front is
+-- -Z (the shopper), you stand at +Z.
+function builders.ShopCounter(m: Model)
+	local cream, red = COLORS.cream, COLORS.barnRed
+	solid(m, "Counter", Vector3.new(3.7, 3.0, 2.3), CFrame.new(0, 1.5, 0.35), cream)
+	deco(m, "Kick", Vector3.new(3.8, 0.35, 2.4), CFrame.new(0, 0.175, 0.35), DARK_WOOD)
+	deco(m, "Stripe", Vector3.new(3.8, 0.4, 2.4), CFrame.new(0, 2.4, 0.35), red)
+	local sign = deco(m, "Sign", Vector3.new(2.3, 0.6, 0.08), CFrame.new(0, 1.45, -0.84), Color3.fromRGB(246, 230, 196))
+	words(sign, "PAY HERE", red)
+	solid(m, "Top", Vector3.new(4.0, 0.22, 2.6), CFrame.new(0, 3.11, 0.35), DARK_WOOD)
+	-- the till, its keys toward you, its drawer under them
+	local tillColor = Color3.fromRGB(78, 82, 90)
+	deco(m, "TillBody", Vector3.new(1.5, 0.75, 1.2), CFrame.new(0.75, 3.595, 0.5), tillColor)
+	deco(m, "Drawer", Vector3.new(1.32, 0.28, 0.2), CFrame.new(0.75, 3.38, 1.18), Color3.fromRGB(104, 108, 118))
+	deco(m, "Handle", Vector3.new(0.5, 0.08, 0.06), CFrame.new(0.75, 3.4, 1.31), GOLD)
+	deco(m, "Keys", Vector3.new(1.2, 0.1, 0.62), CFrame.new(0.75, 4.02, 0.78) * CFrame.Angles(math.rad(22), 0, 0), Color3.fromRGB(46, 48, 54))
+	for i = 0, 2 do
+		for j = 0, 1 do
+			deco(m, "Key", Vector3.new(0.24, 0.06, 0.16), CFrame.new(0.75, 4.02, 0.78) * CFrame.Angles(math.rad(22), 0, 0)
+				* CFrame.new(-0.36 + i * 0.36, 0.07, -0.12 + j * 0.26), if i == 2 and j == 1 then COLORS.leaf else cream)
+		end
 	end
+	deco(m, "ScreenPost", Vector3.new(0.14, 0.33, 0.14), CFrame.new(0.75, 4.135, 0.2), STEEL) -- (stops short of the screen)
+	local screen = deco(m, "Screen", Vector3.new(0.95, 0.5, 0.1), CFrame.new(0.75, 4.6, 0.16), COLORS.dark)
+	words(screen, "OPEN", Color3.fromRGB(120, 230, 140), Enum.Font.Code, true)
+	-- the scanner, flat in the counter top
+	deco(m, "ScanBed", Vector3.new(0.95, 0.06, 0.8), CFrame.new(-0.55, 3.25, 0.3), COLORS.dark)
+	deco(m, "ScanGlass", Vector3.new(0.62, 0.04, 0.46), CFrame.new(-0.55, 3.31, 0.3), Color3.fromRGB(255, 70, 60), { Material = Enum.Material.Neon })
+	-- the service bell, at the shopper's edge
+	upright(m, "BellBase", Vector3.new(-1.35, 3.26, -0.55), 0.62, 0.08, DARK_WOOD)
+	ball(m, "Bell", Vector3.new(-1.35, 3.27, -0.55), 0.5, GOLD, { Reflectance = 0.2 })
+	ball(m, "BellKnob", Vector3.new(-1.35, 3.54, -0.55), 0.12, GOLD)
+	-- a paper bag, ready
+	deco(m, "Bag", Vector3.new(0.62, 0.8, 0.42), CFrame.new(-1.45, 3.62, 0.85), Color3.fromRGB(200, 160, 104))
+	deco(m, "BagFold", Vector3.new(0.66, 0.1, 0.46), CFrame.new(-1.45, 4.05, 0.85), Color3.fromRGB(178, 138, 86))
 end
 
 function builders.Register(m: Model)

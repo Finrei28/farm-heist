@@ -122,4 +122,6 @@ PROP_COLOURS.update({
     "pool": (74, 146, 178), "poolDeep": (58, 120, 156),
     "fir": (58, 120, 66), "firDark": (44, 98, 56), "firDeep": (34, 80, 48), "firLight": (78, 142, 78),
     "tulipRed": (222, 52, 52), "tulipRedDark": (184, 34, 40), "bedSoil": (98, 68, 46), "bedSoilDark": (80, 54, 36),
+    # dirt paths (tools/crop_art/valley.py; the path itself is the trail colour, 216 180 122)
+    "pathRut": (176, 136, 86), "pathRutDark": (158, 120, 74), "pathEdge": (198, 160, 104), "pathEdgeDark": (160, 124, 80),
 })

@@ -117,6 +117,51 @@ local function startStore(store)
 	store.started = true
 end
 
+-- The Honour Box became the Shop Counter (a till you serve at, §4.8): each
+-- one turns into a counter where it stood if that still keeps the layout's
+-- rules (the counter needs a free cell behind it, for you), else on the
+-- starter kit's spot, else wherever it fits. Owned and free counts carry over.
+local function honourBoxes(store)
+	for _, counts in { store.owned, store.gifts } do
+		if counts.HonourBox then
+			counts.ShopCounter = (counts.ShopCounter or 0) + counts.HonourBox
+			counts.HonourBox = nil
+		end
+	end
+	local moved = {}
+	for id, entry in store.layout do
+		if entry.item == "HonourBox" then
+			entry.item = "ShopCounter"
+			entry.slots = StoreLayout.newSlots("ShopCounter")
+			table.insert(moved, id)
+		end
+	end
+	if #moved == 0 or StoreLayout.check(store.layout, store.level) then
+		return
+	end
+	local start
+	for _, spot in Store.START do
+		if spot.item == "ShopCounter" then
+			start = spot
+		end
+	end
+	for _, id in moved do
+		local entry = store.layout[id]
+		local was = { entry.x, entry.y, entry.rot }
+		entry.x, entry.y, entry.rot = start.x, start.y, start.rot
+		if not StoreLayout.check(store.layout, store.level) then
+			store.layout[id] = nil
+			local x, y, rot = StoreLayout.findSpot(store.layout, store.level, "ShopCounter")
+			store.layout[id] = entry
+			if x then
+				entry.x, entry.y, entry.rot = x, y, rot
+			else
+				entry.x, entry.y, entry.rot = was[1], was[2], was[3] -- (Decorate says what's wrong)
+			end
+		end
+	end
+end
+
 -- Changes an old save's shape to today's, after reconcile: a new store gets
 -- its starter kit, the Farm Stand's goods, prices and rating (week 2's
 -- `shop`) move into the store, and week 2's warehouse tier and truck bed
@@ -125,6 +170,7 @@ local function migrate(data)
 	if not data.store.started then
 		startStore(data.store)
 	end
+	honourBoxes(data.store)
 	WarehouseRules.migrate(data.warehouse)
 	local shop = data.shop
 	if shop then

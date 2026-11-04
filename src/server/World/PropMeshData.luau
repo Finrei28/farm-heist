@@ -38,6 +38,12 @@ return {
 		FlowerBed = { size = Vector3.new(7, 2.647, 7), centre = Vector3.new(0, 1.323, 0) },
 		HedgeSection = { size = Vector3.new(7.002, 13.784, 44.556), centre = Vector3.new(-0.15, 6.513, -0.117) },
 		TunnelArch = { size = Vector3.new(53.6, 36, 4.4), centre = Vector3.new(0, 18, 0.8) },
+		PathWear1 = { size = Vector3.new(4.593, 0, 16), centre = Vector3.new(-0.084, 0.05, 0) },
+		PathEdge1 = { size = Vector3.new(2.937, 0.824, 16), centre = Vector3.new(3.669, 0.152, 0) },
+		PathWear2 = { size = Vector3.new(4.458, 0, 16), centre = Vector3.new(-0.179, 0.05, 0) },
+		PathEdge2 = { size = Vector3.new(1.821, 0.676, 16), centre = Vector3.new(3.11, 0.078, 0) },
+		PathWear3 = { size = Vector3.new(4.571, 0, 16), centre = Vector3.new(0.165, 0.05, 0) },
+		PathEdge3 = { size = Vector3.new(1.887, 0.859, 16), centre = Vector3.new(3.143, 0.169, 0) },
 	},
 	wild = {
 		obstacles = {

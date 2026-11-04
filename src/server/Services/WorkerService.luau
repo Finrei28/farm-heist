@@ -93,11 +93,13 @@ local function ofType(data, typeName: string)
 	return list
 end
 
--- The Registers in the layout, in id order.
+-- The tills (Shop Counters and Registers) in the layout, in id order: the
+-- first Cashier works the first.
 local function registers(store): { string }
 	local ids = {}
 	for id, entry in store.layout do
-		if entry.item == "Register" then
+		local def = Store.ITEMS[entry.item]
+		if def and def.staffed then
 			table.insert(ids, id)
 		end
 	end

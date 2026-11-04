@@ -52,8 +52,9 @@ local coinSign = make("Frame", {
 }, { UI.corner(6), UI.stroke(UI.SEAM, 3) })
 UI.wood(coinSign, 2, false)
 for _, x in { 26, 164 } do
-	make("Frame", { -- the ropes it hangs from, up off the top of the screen
-		AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0, x, 0, 6), Size = UDim2.fromOffset(3, 60),
+	make("Frame", { -- the ropes it hangs from, up off the top of the screen (long enough
+		-- to reach it past Roblox's top bar on any screen: 60 stopped short of it)
+		AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0, x, 0, 6), Size = UDim2.fromOffset(3, 400),
 		BackgroundColor3 = Color3.fromRGB(206, 170, 112), BorderSizePixel = 0, ZIndex = 0, Parent = coinSign,
 	})
 end

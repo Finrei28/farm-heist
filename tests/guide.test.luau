@@ -11,14 +11,14 @@ return function(spec, harness)
 	end
 
 	describe("the steps", function()
-		it("has the eight steps of the design doc, in order, each with a spot", function()
+		it("has the nine steps of the design doc, in order, each with a spot", function()
 			local ids = {}
 			for _, step in Guide.STEPS do
 				table.insert(ids, step.id)
 				expect(type(step.where)).toBe("string")
 				expect(#step.hint > 0).toBe(true)
 			end
-			expect(table.concat(ids, " ")).toBe("Plant Water Harvest Pack Dispatch Seeds Store Hire")
+			expect(table.concat(ids, " ")).toBe("Plant Water Harvest Pack Dispatch Seeds Store Serve Hire")
 		end)
 		it("starts at Plant and moves on as steps are done, in any order", function()
 			local guide = newGuide()

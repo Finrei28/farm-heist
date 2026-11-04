@@ -9,10 +9,13 @@
 -- (world points from server time `at`, at Shop.SPEED) that replaces the last
 -- one. A shopper walks the sidewalk to the door, the aisles to a display for
 -- each crop they want (they decide there: ShopRules.pick), then to the
--- shortest checkout queue; they pay when served (an Honour Box serves
--- itself; a Register while you stand behind it or a Cashier works it), or
--- put their basket back after Shop.PATIENCE seconds. The coins come in when
--- they pay. A Greeter brings more shoppers; Stockers fill the displays
+-- shortest checkout queue; they pay when served, or put their basket back
+-- after Shop.PATIENCE seconds. A till (the Shop Counter, a Register) is a
+-- job: a shopper at it waits for you (the bell rings, and you're told if
+-- you're out), and behind it you scan each thing in their basket and take
+-- their coins (the Serve action; client CheckoutController), until a
+-- Cashier works it for you (Store Level 3 on); a Self-checkout serves
+-- itself. The coins come in when they pay. A Greeter brings more shoppers; Stockers fill the displays
 -- (WorkerService, through StoreService.crew and StoreService.Restock).
 --
 -- (Shoppers only come while you're playing. Selling while you're away is
@@ -53,8 +56,10 @@ local StoreService = {}
 StoreService.REACH = 9 -- studs from a display you can fill it from
 local TICK = 0.2
 local RUSH_GAP = 1.5 -- seconds between shoppers during /shoppers
-local STAFF_DOOR_REACH = 7
-local SERVE_REACH = 0.8 -- cells from the spot behind a Register you serve from
+local STAFF_DOOR_REACH = 7 -- studs from the doorway that open the staff door ...
+local STAFF_DOOR_SLACK = 2 -- ... and this much farther before it shuts again
+local SERVE_REACH = 0.8 -- cells from the spot behind a till you serve from
+local BELL_NOTE_GAP = 25 -- seconds between "a shopper is waiting at your counter" notes
 local SIDEWALK_Y, STEP_Y = 0.3, 0.35
 local FLOOR = PlotLayout.PLOT.store.floor
 local LAYOUT_MAX = 20_000 -- characters of a layout from Decorate
@@ -216,15 +221,15 @@ local function basketUnits(shopper): number
 end
 
 -- Sends a shopper on a walk (or to stand still: one point) from `startAt`.
--- extra: { face = Vector3?, say = string?, coins = number?, leave = true? }
+-- extra: { face = Vector3?, say = string?, mood = "good" | "bad"?, coins = number?, leave = true? }
 local function send(shopper, points, startAt: number, extra)
 	shopper.points = points
 	shopper.startAt = startAt
 	shopper.arriveAt = startAt + PlotLayout.pathLength(points) / Shop.SPEED
 	local message = {
 		plot = shopper.plot, id = shopper.id, look = shopper.look, at = startAt, points = points,
-		face = extra and extra.face, say = extra and extra.say, coins = extra and extra.coins,
-		basket = basketUnits(shopper), leave = extra and extra.leave,
+		face = extra and extra.face, say = extra and extra.say, mood = extra and extra.mood, coins = extra and extra.coins,
+		basket = basketUnits(shopper), crop = shopper.basket[1] and shopper.basket[1].crop, leave = extra and extra.leave,
 	}
 	shopper.last = message
 	ShopperEvent:FireAllClients("Path", message)
@@ -245,10 +250,10 @@ local function aisle(index: number, store, from, to)
 end
 
 -- The free cell nearest a point on the floor (cell units), for a shopper
--- whose spot just got furniture put on it.
+-- whose spot just got furniture put on it (never behind a till).
 local function nearestFree(store, cx: number, cy: number)
 	local level = StoreLayout.level(store.level)
-	local taken = StoreLayout.occupied(store.layout)
+	local taken = StoreLayout.closedToShoppers(store.layout)
 	local best, bestDistance = { Store.DOOR_X, 1 }, math.huge
 	for y = 1, level.floor[2] do
 		for x = 1, level.floor[1] do
@@ -275,7 +280,13 @@ local function remove(st, shopper)
 end
 
 -- Out through the door and off along the sidewalk.
-local function leave(st, shopper, startAt: number, say: string?, score: number?)
+-- What a shopper says, picked from Shop.LINES[kind], and its mood.
+local function line(kind: string): (string, string?)
+	local lines = Shop.LINES[kind]
+	return lines[rng:NextInteger(1, #lines)], Shop.MOODS[kind]
+end
+
+local function leave(st, shopper, startAt: number, say: string?, score: number?, mood: string?)
 	local data = DataService.Get(shopper.owner)
 	if data and score then
 		ShopRules.addScore(data.store, score)
@@ -296,7 +307,7 @@ local function leave(st, shopper, startAt: number, say: string?, score: number?)
 		table.insert(points, Vector3.new(p.X, if i == #outside then STEP_Y else SIDEWALK_Y, p.Z))
 	end
 	shopper.stage = "out"
-	send(shopper, points, startAt, { say = say, leave = true })
+	send(shopper, points, startAt, { say = say, mood = mood, leave = true })
 end
 
 local function displayCentre(index: number, store, id: string): Vector3?
@@ -337,7 +348,7 @@ end
 
 -- What a shopper does next from where they're standing (at `startAt`): the
 -- next crop they want, else a checkout with their basket, else home.
-local function goNext(st, shopper, startAt: number, say: string?)
+local function goNext(st, shopper, startAt: number, say: string?, mood: string?)
 	local data = DataService.Get(shopper.owner)
 	if not data then
 		return
@@ -349,6 +360,12 @@ local function goNext(st, shopper, startAt: number, say: string?)
 	while #shopper.wants > 0 do
 		local cropId = table.remove(shopper.wants, 1)
 		local id = ShopRules.displayWith(store, cropId, rng)
+		if not id and not say and not st.decorating then
+			-- what they came in for sold out before they got to it: they say so
+			-- (it used to be skipped without a word)
+			say, mood = line("soldOut")
+			shopper.disappointed = true
+		end
 		local entry = id and store.layout[id]
 		if entry then
 			local slotIndex = 1
@@ -364,7 +381,7 @@ local function goNext(st, shopper, startAt: number, say: string?)
 				shopper.cell = cell
 				shopper.target = { display = id, crop = cropId }
 				shopper.stage = "toDisplay"
-				send(shopper, points, startAt, { say = say, face = displayCentre(st.index, store, id) })
+				send(shopper, points, startAt, { say = say, mood = mood, face = displayCentre(st.index, store, id) })
 				return
 			end
 		end
@@ -372,7 +389,7 @@ local function goNext(st, shopper, startAt: number, say: string?)
 	if #shopper.basket == 0 then
 		-- (nothing they'd pay for, or it sold out before they got there; no
 		-- score if they were hurried out by "Back soon")
-		leave(st, shopper, startAt, say, if st.decorating then nil else Shop.SCORE_TOO_DEAR)
+		leave(st, shopper, startAt, say, if st.decorating then nil else Shop.SCORE_TOO_DEAR, mood)
 		return
 	end
 	-- the shortest queue
@@ -390,7 +407,8 @@ local function goNext(st, shopper, startAt: number, say: string?)
 		end
 		table.clear(shopper.basket)
 		drawDisplays(shopper.owner)
-		leave(st, shopper, startAt, "Queue's too long!", Shop.SCORE_LEFT_QUEUE)
+		local text, cross = line("queueLong")
+		leave(st, shopper, startAt, text, Shop.SCORE_LEFT_QUEUE, cross)
 		return
 	end
 	st.queues[best] = st.queues[best] or {}
@@ -404,7 +422,7 @@ local function goNext(st, shopper, startAt: number, say: string?)
 	table.insert(points, to)
 	shopper.cell = tail
 	shopper.stage = "toQueue"
-	send(shopper, points, startAt, { say = say, face = displayCentre(st.index, store, best) })
+	send(shopper, points, startAt, { say = say, mood = mood, face = displayCentre(st.index, store, best) })
 end
 
 -- A new shopper sets off from the woods along the sidewalk.
@@ -437,13 +455,19 @@ local function atDisplay(st, shopper, t: number)
 	local data = DataService.Get(player)
 	local target = shopper.target
 	shopper.target = nil
-	local say = nil
+	local say, mood = nil, nil
 	if data and target then
-		local result, line = ShopRules.pick(data.store, target.display, target.crop, rng, MarketService.priceAt())
+		local result, taken, felt = ShopRules.pick(data.store, target.display, target.crop, rng, MarketService.priceAt())
 		local crop = Crops.ById[target.crop]
 		if result == "Bought" then
-			table.insert(shopper.basket, line)
-			say = `{crop.icon or ""}×{line.units}`
+			table.insert(shopper.basket, taken)
+			-- what they took, and now and then what they thought of the price
+			local kind = ShopRules.reaction(result, felt, rng:NextNumber())
+			local remark = nil
+			if kind then
+				remark, mood = line(kind)
+			end
+			say = `{crop.icon or ""}×{taken.units}` .. (if remark then ` {remark}` else "")
 			drawDisplays(player)
 			if not ShopRules.isOpen(data.store) and not st.soldOutTold then
 				st.soldOutTold = true
@@ -451,46 +475,71 @@ local function atDisplay(st, shopper, t: number)
 					then "Your store sold out! Fill the displays from the stockroom."
 					else "Your store sold out! Send it more crates from the Packing Shed.")
 			end
-		elseif result == "TooDear" then
-			say = `Too dear!`
-			shopper.disappointed = true
 		else
-			say = "Sold out!"
+			say, mood = line(ShopRules.reaction(result, felt, 0) :: string)
 			shopper.disappointed = true
 		end
 	end
-	goNext(st, shopper, t + Shop.BROWSE, say)
+	goNext(st, shopper, t + Shop.BROWSE, say, mood)
 end
 
--- Whether a checkout can serve right now, and how long a shopper takes: a
--- Register while you stand behind it or while a Cashier works it (slower
--- until they're trained), and the Cashier if it's theirs.
-local function canServe(st, store, checkout: string): (boolean, number?, any)
+-- Whether the store's owner stands behind a till (where you serve from).
+local function behindTill(st, store, checkout: string): boolean
 	local entry = store.layout[checkout]
-	local def = entry and Store.ITEMS[entry.item]
-	if not def then
-		return false
-	end
-	if not def.staffed then
-		return true, def.serve
-	end
 	local owner = PlotService.ownerOf(st.index)
 	local position = owner and MovementService.positionOf(owner)
-	if position and (owner:GetAttribute("InStore") or 0) == st.index then
-		local cx, cy = PlotLayout.storeCellAt(st.index, position)
-		for _, cell in StoreLayout.behind(entry) do
-			if math.abs(cx - cell[1]) <= SERVE_REACH and math.abs(cy - cell[2]) <= SERVE_REACH then
-				return true, def.serve
-			end
-		end
+	if not entry or not position or (owner:GetAttribute("InStore") or 0) ~= st.index then
+		return false
 	end
-	if owner then
-		local cashier, seconds = StoreService.crew.cashier(owner, checkout)
-		if cashier then
-			return true, math.max(def.serve, seconds), cashier
+	local cx, cy = PlotLayout.storeCellAt(st.index, position)
+	for _, cell in StoreLayout.behind(entry) do
+		if math.abs(cx - cell[1]) <= SERVE_REACH and math.abs(cy - cell[2]) <= SERVE_REACH then
+			return true
 		end
 	end
 	return false
+end
+
+-- How a checkout serves on its own right now: a Self-checkout serves itself
+-- ("self"), a till a Cashier works is theirs ("cashier", slower until
+-- they're trained); with the seconds a shopper takes. nil: a till waiting
+-- for you.
+local function serveMode(st, store, checkout: string): (string?, number?, any)
+	local entry = store.layout[checkout]
+	local def = entry and Store.ITEMS[entry.item]
+	if not def then
+		return nil
+	end
+	if not def.staffed then
+		return "self", def.serve
+	end
+	local owner = PlotService.ownerOf(st.index)
+	if owner then
+		local cashier, seconds = StoreService.crew.cashier(owner, checkout)
+		if cashier then
+			return "cashier", math.max(def.serve, seconds), cashier
+		end
+	end
+	return nil
+end
+
+-- The till's receipt on its owner's screen (CheckoutController): the basket
+-- of the shopper waiting at a till you serve and how much is scanned, or
+-- (shopper nil) that they've gone.
+local function tellTill(st, checkout: string, shopper)
+	local owner = PlotService.ownerOf(st.index)
+	if not owner then
+		return
+	end
+	if not shopper then
+		ShopperEvent:FireClient(owner, "Till", { plot = st.index, checkout = checkout, done = true })
+		return
+	end
+	local lines = {}
+	for _, line in shopper.basket do
+		table.insert(lines, { crop = line.crop, units = line.units, coins = line.coins })
+	end
+	ShopperEvent:FireClient(owner, "Till", { plot = st.index, checkout = checkout, id = shopper.id, lines = lines, scanned = shopper.scanned or 0 })
 end
 
 local function pay(st, shopper, t: number)
@@ -507,14 +556,17 @@ local function pay(st, shopper, t: number)
 		QuestService.Bump(player, "storeCoins", coins)
 		Analytics.step(player, data, "FirstShopSale")
 	end
-	leave(st, shopper, t, nil, Shop.SCORE_BOUGHT)
-	ShopperEvent:FireAllClients("Paid", { plot = st.index, id = shopper.id, coins = coins })
+	local entry = data and checkout and data.store.layout[checkout]
+	local staffed = entry and Store.ITEMS[entry.item] and Store.ITEMS[entry.item].staffed
+	local thanks, glad = line("thanks")
+	leave(st, shopper, t, if staffed then thanks else nil, Shop.SCORE_BOUGHT, glad)
+	ShopperEvent:FireAllClients("Paid", { plot = st.index, id = shopper.id, coins = coins, checkout = checkout })
 	if data then
 		shuffle(st, data.store, checkout, t)
 	end
 end
 
-local function giveUp(st, shopper, t: number, why: string)
+local function giveUp(st, shopper, t: number, why: string) -- (why: a kind of Shop.LINES)
 	local data = DataService.Get(shopper.owner)
 	if data then
 		for _, line in shopper.basket do
@@ -524,7 +576,11 @@ local function giveUp(st, shopper, t: number, why: string)
 	end
 	table.clear(shopper.basket)
 	local checkout = shopper.checkout
-	leave(st, shopper, t, why, Shop.SCORE_LEFT_QUEUE)
+	if checkout and shopper.stage == "atTill" then
+		tellTill(st, checkout, nil)
+	end
+	local text, mood = line(why)
+	leave(st, shopper, t, text, Shop.SCORE_LEFT_QUEUE, mood)
 	if data and checkout then
 		shuffle(st, data.store, checkout, t)
 	end
@@ -545,8 +601,11 @@ local function clearOut(player: Player, st, t: number)
 			end
 			table.clear(shopper.basket)
 			table.clear(shopper.wants)
+			if shopper.checkout and shopper.stage == "atTill" then
+				tellTill(st, shopper.checkout, nil)
+			end
 			shopper.checkout = nil
-			leave(st, shopper, t, "Oh! It's all moved.", nil)
+			leave(st, shopper, t, (line("moved")), nil)
 		end
 	end
 	table.clear(st.queues)
@@ -604,13 +663,29 @@ local function tickShoppers(player: Player, st, t: number)
 	-- checkouts
 	for checkout, queue in st.queues do
 		local head = queue[1]
-		if head and head.stage == "queued" and head.spot == 1 then
-			local ok, seconds, cashier = canServe(st, store, checkout)
-			if ok then
+		local waiting = head and head.spot == 1 and (head.stage == "queued" or (head.stage == "atTill" and (head.scanned or 0) == 0))
+		if waiting then
+			local mode, seconds, cashier = serveMode(st, store, checkout)
+			if mode then -- (it serves itself, or a Cashier does: even one who just started)
+				if head.stage == "atTill" then
+					tellTill(st, checkout, nil)
+				end
 				head.stage = "paying"
 				head.payAt = t + seconds
 				head.cashier = cashier
 				head.serveSeconds = seconds
+			elseif head.stage == "queued" then
+				-- a till you serve at: they wait for you there, and ring the bell
+				head.stage = "atTill"
+				head.tillAt = t
+				head.scanned = 0
+				tellTill(st, checkout, head)
+				ShopperEvent:FireAllClients("Bell", { plot = st.index, checkout = checkout })
+				if not behindTill(st, store, checkout) and (player:GetAttribute("InStore") or 0) ~= st.index
+					and t - (st.bellToldAt or -math.huge) > BELL_NOTE_GAP then
+					st.bellToldAt = t
+					Notice.send(player, "🛎️ A shopper is waiting at your counter! Serve them from behind it.")
+				end
 			end
 		end
 		if head and head.stage == "paying" and t >= head.payAt then
@@ -619,11 +694,14 @@ local function tickShoppers(player: Player, st, t: number)
 			end
 			pay(st, head, t)
 		end
+		local def = store.layout[checkout] and Store.ITEMS[store.layout[checkout].item]
+		local unserved = def and def.staffed and not serveMode(st, store, checkout) and not behindTill(st, store, checkout)
 		for i = #queue, 1, -1 do
 			local shopper = queue[i]
 			if shopper.stage == "queued" and t - shopper.joinedAt > Shop.PATIENCE then
-				local def = store.layout[checkout] and Store.ITEMS[store.layout[checkout].item]
-				giveUp(st, shopper, t, if def and def.staffed and not canServe(st, store, checkout) then "Nobody at the till!" else "Too slow!")
+				giveUp(st, shopper, t, if unserved then "nobody" else "tooSlow")
+			elseif shopper.stage == "atTill" and t - (shopper.lastScan or shopper.tillAt) > Shop.TILL_PATIENCE then -- (also if you wander off halfway)
+				giveUp(st, shopper, t, if unserved then "nobody" else "tooSlow")
 			end
 		end
 	end
@@ -818,6 +896,40 @@ function actions.Fill(player, data, arg)
 		GuideService.Record(player, "Store")
 	end
 	return if failure == "Empty" or failure == "Full" then nil else failure
+end
+
+-- "checkoutId": serving at your till (§4.8). Behind it, each press scans
+-- the next thing in the waiting shopper's basket; once it's all scanned, the
+-- next takes their coins. Returns { scanned, of } or { paid }.
+function actions.Serve(player, data, checkout)
+	local st = stores[player]
+	local queue = st and checkout and st.queues[checkout]
+	local head = queue and queue[1]
+	if not head or head.stage ~= "atTill" then
+		return "NoShopper"
+	end
+	if not behindTill(st, data.store, checkout) then
+		return "NotAtTill"
+	end
+	local t = now()
+	if t - (head.lastScan or -math.huge) < Shop.SCAN_GAP then
+		return "Cooldown"
+	end
+	head.lastScan = t
+	if head.scanned < #head.basket then
+		head.scanned += 1
+		tellTill(st, checkout, head)
+		ShopperEvent:FireAllClients("Scan", { plot = st.index, checkout = checkout, id = head.id, crop = head.basket[head.scanned].crop })
+		return nil, { scanned = head.scanned, of = #head.basket }
+	end
+	local coins = 0
+	for _, line in head.basket do
+		coins += line.coins
+	end
+	tellTill(st, checkout, nil)
+	pay(st, head, t)
+	GuideService.Record(player, "Serve")
+	return nil, { paid = coins }
 end
 
 -- "id|slot|cropId" or "id|slot|Auto"
@@ -1116,14 +1228,20 @@ end
 function tickStore(player: Player, st, data, t: number, second: boolean)
 	tickShoppers(player, st, t)
 	local model = PlotService.model(st.index)
-	-- the staff door opens for you and your Trusted friends (§4.11)
+	-- the staff door opens for you and your Trusted friends (§4.11). Measured
+	-- from the doorway (the blocker), never the leaf: the leaf swings away as
+	-- it opens, which read as "gone out of reach" and shut it again, over and
+	-- over. Once open it stays open a little farther out.
 	local door = model.Store:FindFirstChild("Building") and model.Store.Building:FindFirstChild("StaffDoor")
+	local doorway = door and door:FindFirstChild("StaffDoorBlocker")
 	local near = false
-	if door then
+	if doorway then
+		local reach = if door:GetAttribute("Open") then STAFF_DOOR_REACH + STAFF_DOOR_SLACK else STAFF_DOOR_REACH
 		for _, other in Players:GetPlayers() do
 			if other == player or DefenceRules.isTrusted(data.trusted, other.UserId) then
 				local position = MovementService.positionOf(other)
-				if position and (position - door.Leaf.Position).Magnitude < STAFF_DOOR_REACH then
+				local flat = position and (position - doorway.Position) * Vector3.new(1, 0, 1) -- (the blocker is tall: across the ground only)
+				if flat and flat.Magnitude < reach then
 					near = true
 					break
 				end

@@ -397,6 +397,68 @@ function UI.stamp(props)
 	return holder, face
 end
 
+-- A key cap: a cream key on a darker edge, with the key's letter (or a
+-- gamepad button's picture). props: size (px, default 30), position,
+-- anchor, zIndex, parent, name. Returns the holder; UI.setKey fills it in.
+function UI.keycap(props)
+	local s = props.size or 30
+	local z = props.zIndex or 1
+	local holder = make("Frame", {
+		Name = props.name or "KeyCap", Size = UDim2.fromOffset(s, s), Position = props.position or UDim2.new(),
+		AnchorPoint = props.anchor or Vector2.zero, BackgroundColor3 = Color3.fromRGB(196, 170, 128), ZIndex = z, Parent = props.parent,
+	}, { UI.corner(math.floor(s * 0.22)), UI.stroke(SEAM, 2) })
+	local face = make("Frame", {
+		Name = "Face", Size = UDim2.new(1, 0, 1, -math.max(3, math.floor(s / 9))), BackgroundColor3 = C.cream, ZIndex = z + 1, Parent = holder,
+	}, { UI.corner(math.floor(s * 0.22)) })
+	make("Frame", { -- (rises as you hold: the prompts' hold bar)
+		Name = "Fill", AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), Size = UDim2.fromScale(1, 0),
+		BackgroundColor3 = C.gold, BorderSizePixel = 0, ZIndex = z + 1, Parent = face,
+	}, { UI.corner(math.floor(s * 0.22)) })
+	make("TextLabel", {
+		Name = "Key", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Font = UI.HEAD, Text = "E",
+		TextSize = math.floor(s * 0.56), TextColor3 = C.ink, ZIndex = z + 2, Parent = face,
+	})
+	make("ImageLabel", {
+		Name = "Pad", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.78, 0.78),
+		BackgroundTransparency = 1, Visible = false, ZIndex = z + 2, Parent = face,
+	})
+	return holder
+end
+
+-- Shows a key on a key cap: a keyboard key's letter, a gamepad button's
+-- picture, or (touch) `tapText`. Returns whether it shows anything.
+function UI.setKey(cap: Frame, inputType: string, keyboard: Enum.KeyCode?, gamepad: Enum.KeyCode?, tapText: string?): boolean
+	local key, pad = cap.Face.Key, cap.Face.Pad
+	if inputType == "Gamepad" and gamepad then
+		local image = UserInputService:GetImageForKeyCode(gamepad)
+		pad.Image = image
+		pad.Visible = image ~= ""
+		key.Text = if image ~= "" then "" else (gamepad.Name:gsub("^Button", ""))
+		return true
+	end
+	pad.Visible = false
+	if inputType == "Touch" then
+		key.Text = tapText or ""
+		return tapText ~= nil
+	end
+	local text = keyboard and UserInputService:GetStringForKeyCode(keyboard) or ""
+	key.Text = if text ~= "" then string.upper(text) else (keyboard and keyboard.Name or "")
+	return keyboard ~= nil
+end
+
+-- What you're playing with now: "Keyboard", "Gamepad" or "Touch".
+function UI.inputKind(): string
+	local last = UserInputService:GetLastInputType()
+	if last.Name:sub(1, 7) == "Gamepad" then
+		return "Gamepad"
+	elseif last == Enum.UserInputType.Touch or not UserInputService.KeyboardEnabled then -- (no keyboard: no E to press)
+		return "Touch"
+	elseif last == Enum.UserInputType.None then
+		return if UI.touch then "Touch" else "Keyboard"
+	end
+	return "Keyboard"
+end
+
 function UI.setStampKind(holder: Frame, kindName: string)
 	local kind = BUTTON_KINDS[kindName]
 	holder.BackgroundColor3 = UI.darker(kind.face, 0.55)
@@ -608,6 +670,11 @@ backdrop.Activated:Connect(UI.closePanels)
 
 function UI.isOpen(panel): boolean
 	return openPanel == panel
+end
+
+-- Whether any window is open (prompts hide behind windows).
+function UI.anyOpen(): boolean
+	return openPanel ~= nil
 end
 
 -- UI.panel("Barn", { tabs = { "Crops", "Seeds" }, tabColors = {...}, accent = Color3,

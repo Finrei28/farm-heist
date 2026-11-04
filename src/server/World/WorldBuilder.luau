@@ -28,6 +28,7 @@ local PlazaArt = require(script.Parent.PlazaArt)
 local TownArt = require(script.Parent.TownArt)
 local BoardArt = require(script.Parent.BoardArt)
 local ValleyArt = require(script.Parent.ValleyArt)
+local PathArt = require(script.Parent.PathArt)
 local Meshes = require(script.Parent.Meshes)
 
 local WorldBuilder = {}
@@ -145,16 +146,26 @@ local function buildTown(world: Instance)
 	ring("Sidewalk", PlotLayout.SIDEWALK.radius, PlotLayout.SIDEWALK.width, 120, COLORS.plaza, world) -- (shoppers walk it)
 	ring("BackTrail", PlotLayout.BACK_TRAIL.radius, PlotLayout.BACK_TRAIL.width, 120, COLORS.trail, world)
 
-	-- Paths from the walk round the town to each farm's gate.
+	-- Paths from the walk round the town to each farm's gate: dirt lanes
+	-- with ruts, ragged edges, pebbles and tufts (World/PathArt), bare where
+	-- they cross the ring road and its sidewalk and by the signpost and lamp
+	-- at the town end.
+	local function crossing(point: Vector3): boolean
+		local r = Vector3.new(point.X, 0, point.Z).Magnitude
+		return r < square.walkRadius + 12
+			or math.abs(r - PlotLayout.RING_ROAD.radius) < PlotLayout.RING_ROAD.width / 2 + 1.5
+			or math.abs(r - PlotLayout.SIDEWALK.radius) < PlotLayout.SIDEWALK.width / 2 + 1.5
+	end
 	for index = 1, PlotLayout.COUNT do
 		local from = PlotLayout.polar(PlotLayout.angle(index), square.walkRadius + 3.5, 0.1)
 		local to = PlotLayout.visitWorld(index) + Vector3.new(0, 0.1, 0)
-		part({
+		local path = part({
 			Name = `Path{index}`,
 			Size = Vector3.new(6, 0.2, (to - from).Magnitude),
 			CFrame = CFrame.lookAt((from + to) / 2, to),
 			Color = COLORS.trail,
 		}, town)
+		PathArt.dress(from, to, 6, path.CFrame.Y + path.Size.Y / 2, 0, path, 1000 + index * 101, crossing)
 	end
 end
 
@@ -288,8 +299,14 @@ local function buildPlot(index: number, world: Instance)
 	local gatePost = plotBox("Gate", frame, Vector3.new(gateLeft, 0, -1.5), Vector3.new(gateRight, 0.5, 0.5), { Color = COLORS.trail }, model)
 	buildGateArch(model, frame, index, gateLeft, gateRight)
 
-	-- (the path: on the lawn, not level with it)
-	plotBox("Path", frame, P.path.min + Vector3.new(0, 0.2, 0), P.path.max + Vector3.new(0, 0.15, 0), { Color = COLORS.trail }, model)
+	-- (the path: on the lawn, not level with it; walked on: World/PathArt)
+	local path = plotBox("Path", frame, P.path.min + Vector3.new(0, 0.2, 0), P.path.max + Vector3.new(0, 0.15, 0), { Color = COLORS.trail }, model)
+	local middle = (P.path.min.X + P.path.max.X) / 2
+	PathArt.dress(frame:PointToWorldSpace(Vector3.new(middle, 0, P.path.min.Z)), frame:PointToWorldSpace(Vector3.new(middle, 0, P.path.max.Z)),
+		P.path.max.X - P.path.min.X, path.CFrame.Y + path.Size.Y / 2, frame.Position.Y + 0.2, path, 2000 + index * 211, function(point)
+			local z = frame:PointToObjectSpace(point).Z
+			return z < 2.5 or z > P.path.max.Z - 1.5 -- (the gate's sill; the field's edge)
+		end)
 	-- Selling: the Packing Shed with its dock, lane and pickup (rebuilt as
 	-- the owner's Warehouse Level grows), and your store.
 	YardArt.build(model, frame)

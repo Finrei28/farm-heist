@@ -483,7 +483,8 @@ end
 -- if your price is low enough, takes 1–4 patches' worth off the display
 -- into their basket (6–24 carrots, 1–4 pumpkins). Returns "Bought", line ·
 -- "TooDear" · "SoldOut", where
--- line = { display, crop, units, a, coins } (paid at the checkout).
+-- line = { display, crop, units, a, coins } (paid at the checkout), and
+-- how the price felt: your price ÷ what they'd pay (nil when sold out).
 function ShopRules.pick(store, id: string, cropId: string, rng, marketPrice)
 	local entry = store.layout[id]
 	local def = entry and Store.ITEMS[entry.item]
@@ -494,13 +495,13 @@ function ShopRules.pick(store, id: string, cropId: string, rng, marketPrice)
 		end
 	end
 	if not def or have <= 0 then
-		return "SoldOut", nil
+		return "SoldOut", nil, nil
 	end
 	local ref = ShopRules.reference(cropId, marketPrice(cropId))
 	local price = store.prices[cropId] or math.floor(ref + 0.5)
 	local willing = ref * math.exp(Shop.SIGMA * normal(rng)) * (1 + DemandModel.ratingBonus(ShopRules.stars(store))) * def.present
 	if price > willing then
-		return "TooDear", nil
+		return "TooDear", nil, price / willing
 	end
 	local per = Crops.ById[cropId].perPatch
 	local want = math.min(rng:NextInteger(per, 4 * per), have)
@@ -523,7 +524,26 @@ function ShopRules.pick(store, id: string, cropId: string, rng, marketPrice)
 		end
 	end
 	line.coins = line.a * math.floor(price * Warehouse.GRADE_A + 0.5) + (line.units - line.a) * price
-	return "Bought", line
+	return "Bought", line, price / willing
+end
+
+-- What a shopper says after looking at a display (a kind of Shop.LINES, or
+-- nil for nothing beyond what they took), from how pick went: bought far
+-- under what they'd pay "bargain", close to it "pricey", else now and then
+-- (roll, 0–1, under Shop.REMARK) "bought"; turned down "tooDear", far over
+-- "ripOff"; nothing there "soldOut".
+function ShopRules.reaction(result: string, felt: number?, roll: number): string?
+	if result == "Bought" then
+		if felt and felt < Shop.BARGAIN then
+			return "bargain"
+		elseif felt and felt > Shop.PRICEY then
+			return "pricey"
+		end
+		return if roll < Shop.REMARK then "bought" else nil
+	elseif result == "TooDear" then
+		return if felt and felt > Shop.RIP_OFF then "ripOff" else "tooDear"
+	end
+	return "soldOut"
 end
 
 -- A shopper gives up and puts their basket back: onto the display it came

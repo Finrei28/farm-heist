@@ -23,7 +23,7 @@ return {
 		Loader = { name = "Loader", station = "Load", wage = 87.5, speed = 20, slots = { warehouse = { 5, 9, 15 } }, job = "Loads the trucks from the Cold Room" },
 		Driver = { name = "Driver", station = "Truck", wage = 140, job = "Sends a truck by your rule; quicker trips with levels" }, -- 1 per truck, from Warehouse Level 5
 		Stocker = { name = "Stocker", station = "Shelves", wage = 87.5, speed = 80, slots = { store = { 2, 8, 14 } }, job = "Fills your store's displays" },
-		Cashier = { name = "Cashier", station = "Register", wage = 105, speed = 12, job = "Serves at a Register" }, -- 1 per Register
+		Cashier = { name = "Cashier", station = "Register", wage = 105, speed = 12, job = "Serves shoppers at a till" }, -- 1 per till (Counter or Register), from Store Level CASHIERS_FROM
 		Greeter = { name = "Greeter", station = "Door", wage = 87.5, slots = { store = { 8 } }, job = "Welcomes shoppers in: more shoppers" },
 		Watchman = { name = "Watchman", station = "Gatehouse", wage = 175, slots = { farm = { 20 } },
 			job = "Rings the bell on thieves, lights them up and shuts the gate on them" },
@@ -33,6 +33,7 @@ return {
 	TILES_PER_FARMHAND = 16,
 	MAX_FARMHANDS = 4,
 	DRIVERS_FROM = 5, -- Warehouse Level: the first Driver (1 per truck)
+	CASHIERS_FROM = 3, -- Store Level: Cashiers (1 per till); till then you serve your shoppers yourself
 
 	-- Levels: efficiency 40% at Level 1 up to 100% at Level 10 (+6.7% a
 	-- level); the wage from 60% to 100%, so a trained worker costs less per job.

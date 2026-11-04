@@ -279,6 +279,32 @@ function StoreLayout.occupied(layout)
 	return taken
 end
 
+-- The cells behind the tills (the Shop Counter, Registers), where whoever
+-- serves stands: staff only, so shoppers never walk, queue or stand there
+-- (the user, 2026-11-04: "Customers should not go behind the counter").
+-- { ["x,y"] = id }.
+function StoreLayout.staffOnly(layout)
+	local cells = {}
+	for id, entry in layout do
+		local def = Store.ITEMS[entry.item]
+		if def and def.staffed then
+			for _, cell in StoreLayout.behind(entry) do
+				cells[key(cell[1], cell[2])] = id
+			end
+		end
+	end
+	return cells
+end
+
+-- Where shoppers can't go: what stands on the floor and the staff-only cells.
+function StoreLayout.closedToShoppers(layout)
+	local closed = StoreLayout.occupied(layout)
+	for k, id in StoreLayout.staffOnly(layout) do
+		closed[k] = closed[k] or id
+	end
+	return closed
+end
+
 -- Free cells reachable from the door: { ["x,y"] = true }.
 local function reach(level, taken)
 	local doorX, doorY = StoreLayout.doorCell()
@@ -302,7 +328,7 @@ local function reach(level, taken)
 end
 
 -- A checkout's queue: { { x, y } × (1 + QUEUE_CELLS) } from its till's front
--- cell, avoiding `used` cells, or nil.
+-- cell, avoiding `used` cells, or nil. (`taken` includes the staff-only cells.)
 local function queueOf(entry, level, taken, used)
 	local front = StoreLayout.tillFront(entry)
 	local fx, fy = StoreLayout.facing(entry.rot or 0)
@@ -329,7 +355,7 @@ end
 -- Every checkout's queue: { [id] = { { x, y } } } (nil for one without room).
 function StoreLayout.queues(layout, levelNumber: number)
 	local level = StoreLayout.level(levelNumber)
-	local taken = StoreLayout.occupied(layout)
+	local taken = StoreLayout.closedToShoppers(layout)
 	local used, queues = {}, {}
 	for _, id in StoreLayout.ofKind(layout, "Checkout") do
 		local cells = queueOf(layout[id], level, taken, used)
@@ -440,7 +466,7 @@ function StoreLayout.check(layout, levelNumber: number): (boolean, string?, stri
 			end
 		end
 	end
-	local reached = reach(level, taken)
+	local reached = reach(level, StoreLayout.closedToShoppers(layout)) -- (shoppers keep out from behind the tills)
 	for _, id in ids do
 		local entry = layout[id]
 		if StoreLayout.hasFront(entry) then
@@ -451,7 +477,7 @@ function StoreLayout.check(layout, levelNumber: number): (boolean, string?, stri
 			end
 		end
 	end
-	if not reached[key(staffX, staffY)] then
+	if not reach(level, taken)[key(staffX, staffY)] then -- (you get from the staff door to the shop floor)
 		return false, "StaffDoor", nil
 	end
 	local queues = StoreLayout.queues(layout, levelNumber)
@@ -466,11 +492,12 @@ end
 ------------------------------------------------------------------------
 -- Walking the aisles
 
--- The shortest walk on free cells from one cell to another: a list of
--- cells { { x, y } } from `from` to `to`, or nil.
+-- The shortest walk a shopper can take from one cell to another (free
+-- cells, never behind a till): a list of cells { { x, y } } from `from` to
+-- `to`, or nil.
 function StoreLayout.path(layout, levelNumber: number, from, to)
 	local level = StoreLayout.level(levelNumber)
-	local taken = StoreLayout.occupied(layout)
+	local taken = StoreLayout.closedToShoppers(layout)
 	local start, goal = key(from[1], from[2]), key(to[1], to[2])
 	local cameFrom = { [start] = false }
 	local queue = { from }
@@ -526,7 +553,7 @@ function StoreLayout.smooth(layout, levelNumber: number, cells)
 		return cells
 	end
 	local level = StoreLayout.level(levelNumber)
-	local taken = StoreLayout.occupied(layout)
+	local taken = StoreLayout.closedToShoppers(layout)
 	local points = { cells[1] }
 	local i = 1
 	while i < #cells do

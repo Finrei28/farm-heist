@@ -9,9 +9,9 @@ return function(spec, harness)
 	local Shop = harness.load("Config/Shop")
 	local Store = harness.load("Config/Store")
 
-	-- A store with one Honour Box and the displays given ({ id = itemId }).
+	-- A store with one Shop Counter and the displays given ({ id = itemId }).
 	local function newStore(displays)
-		local layout = { box = { item = "HonourBox", x = 5, y = 1, rot = 2 } }
+		local layout = { box = { item = "ShopCounter", x = 2, y = 2, rot = 3 } }
 		local x = 1
 		for id, itemId in displays or {} do
 			layout[id] = { item = itemId, x = x, y = 3, rot = 0, slots = StoreLayout.newSlots(itemId) }
@@ -196,6 +196,90 @@ return function(spec, harness)
 					end
 				end
 				expect(bought / visits).toBeNear(DemandModel.buyChance(case.price, 30, case.stars, false, present), 0.03)
+			end
+		end)
+		it("say how the price felt: under 1 when they buy (a bargain far under), over 1 when they turn it down", function()
+			local rng = harness.Random.new(11)
+			local cheap, dear = 0, 0
+			for _ = 1, 400 do
+				for _, price in { 6, 300 } do
+					local store = newStore({ c = "ProduceCrate" })
+					slot(store, "c", 1).crop, slot(store, "c", 1).units = "Carrot", 72
+					store.prices.Carrot = price
+					local result, _, felt = ShopRules.pick(store, "c", "Carrot", rng, market(30))
+					if result == "Bought" then
+						expect(felt <= 1).toBe(true)
+						if felt < Shop.BARGAIN then
+							cheap += 1
+						end
+					else
+						expect(result).toBe("TooDear")
+						expect(felt > 1).toBe(true)
+						if felt > Shop.RIP_OFF then
+							dear += 1
+						end
+					end
+				end
+			end
+			expect(cheap > 300).toBe(true) -- (6 coins for a 30-coin carrot: nearly always a bargain)
+			expect(dear > 300).toBe(true) -- (300: ten times over, a rip-off)
+		end)
+		it("have something to say for every case (plain lines and Kiwi slang), short enough for a bubble", function()
+			for _, kind in { "bargain", "bought", "pricey", "tooDear", "ripOff", "soldOut", "queueLong", "nobody", "tooSlow", "thanks", "moved" } do
+				expect(#Shop.LINES[kind] >= 3).toBe(true)
+				for _, text in Shop.LINES[kind] do
+					expect(#text > 0 and #text <= 26).toBe(true) -- (fits a bubble)
+					expect(text ~= "Too dear!").toBe(true)
+				end
+			end
+			for kind, mood in Shop.MOODS do
+				expect(Shop.LINES[kind] ~= nil).toBe(true)
+				expect(mood == "good" or mood == "bad").toBe(true)
+			end
+			expect(Shop.BARGAIN < Shop.PRICEY and Shop.PRICEY < 1 and Shop.RIP_OFF > 1).toBe(true)
+		end)
+		it("use every line: each price reaction comes up at prices players set, the rest from the store's events", function()
+			-- the shelf: a sweep of prices (half to three times what shoppers
+			-- expect), a Produce Crate at 3★ with carrots at 30
+			local rng = harness.Random.new(21)
+			local seen, atDefault = {}, {}
+			local visits = 0
+			for _, times in { 0.5, 0.8, 1, 1.2, 1.5, 2, 3 } do
+				for _ = 1, 600 do
+					local store = newStore({ c = "ProduceCrate" })
+					slot(store, "c", 1).crop, slot(store, "c", 1).units = "Carrot", 72
+					local ref = ShopRules.reference("Carrot", 30)
+					store.prices.Carrot = math.floor(ref * times + 0.5)
+					local result, _, felt = ShopRules.pick(store, "c", "Carrot", rng, market(30))
+					local kind = ShopRules.reaction(result, felt, rng:NextNumber()) or "none"
+					seen[kind] = (seen[kind] or 0) + 1
+					if times == 1 then
+						atDefault[kind] = (atDefault[kind] or 0) + 1
+						visits += 1
+					end
+				end
+			end
+			local empty = newStore({ c = "ProduceCrate" })
+			local result = ShopRules.pick(empty, "c", "Carrot", rng, market(30))
+			seen[ShopRules.reaction(result, nil, 0) :: string] = 1
+			for _, kind in { "bargain", "bought", "pricey", "tooDear", "ripOff", "soldOut" } do
+				expect(seen[kind] ~= nil).toBe(true)
+			end
+			-- at the price a store starts with, the everyday ones come up often
+			expect((atDefault.bargain or 0) / visits > 0.02).toBe(true)
+			expect((atDefault.bought or 0) / visits > 0.1).toBe(true)
+			expect((atDefault.pricey or 0) / visits > 0.05).toBe(true)
+			expect((atDefault.tooDear or 0) / visits > 0.1).toBe(true)
+			-- every other pool is said by the store when its moment comes
+			-- (a full queue, an unserved or slow till, paying at a till, a
+			-- re-decorate, a crop gone before they got to it)
+			local source = require("@lune/fs").readFile("src/server/Services/StoreService.luau")
+			for kind in Shop.LINES do
+				local used = string.find(source, `line("{kind}")`, 1, true) ~= nil or string.find(source, `"{kind}"`, 1, true) ~= nil
+					or table.find({ "bargain", "bought", "pricey", "tooDear", "ripOff" }, kind) ~= nil -- (ShopRules.reaction)
+				if not used then
+					error(`nothing says the "{kind}" lines`)
+				end
 			end
 		end)
 		it("take 1–4 patches' worth (6–24 carrots, 15 on average), grade A first at 15% more", function()

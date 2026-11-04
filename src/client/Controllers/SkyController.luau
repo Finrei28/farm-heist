@@ -416,8 +416,8 @@ local dial = make("TextButton", { -- (hung from the purse's frame, left of the c
 	Name = "Sky", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(0, -8, 0, 0), Size = UDim2.fromOffset(66, 96),
 	BackgroundTransparency = 1, Text = "", AutoButtonColor = false, Parent = UI.screen,
 })
-make("Frame", { -- the rope it hangs from
-	AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 0, 6), Size = UDim2.fromOffset(3, 60),
+make("Frame", { -- the rope it hangs from, up off the top of the screen (as the purse's)
+	AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 0, 6), Size = UDim2.fromOffset(3, 400),
 	BackgroundColor3 = rgb(206, 170, 112), BorderSizePixel = 0, ZIndex = 0, Parent = dial,
 })
 local rim = make("Frame", {

@@ -44,6 +44,35 @@ return function(spec, harness)
 			expect(data.store.layout["4"]).toBe(nil)
 			expect(data.store.nextId).toBe(6)
 		end)
+		it("turns an old Honour Box into the Shop Counter (a till you serve at), moving it if its back is to a wall", function()
+			local StoreLayout = harness.load("StoreLayout")
+			local data = SaveData.deepCopy(SaveData.TEMPLATE)
+			SaveData.migrate(data)
+			-- yesterday's starter store: the Honour Box in the corner by the door
+			data.store.layout["5"] = { item = "HonourBox", x = 6, y = 1, rot = 2 }
+			data.store.owned.ShopCounter, data.store.gifts.ShopCounter = nil, nil
+			data.store.owned.HonourBox, data.store.gifts.HonourBox = 2, 1
+			SaveData.migrate(data)
+			local counter = data.store.layout["5"]
+			expect(counter.item).toBe("ShopCounter")
+			expect(`{counter.x},{counter.y},{counter.rot}`).toBe("2,2,3") -- (inside the staff door, like a new store's)
+			expect(data.store.owned.ShopCounter).toBe(2)
+			expect(data.store.gifts.ShopCounter).toBe(1)
+			expect(data.store.owned.HonourBox).toBe(nil)
+			expect((StoreLayout.check(data.store.layout, 1))).toBe(true)
+		end)
+		it("leaves a converted counter where it stood when there's room behind it", function()
+			local StoreLayout = harness.load("StoreLayout")
+			local data = SaveData.deepCopy(SaveData.TEMPLATE)
+			SaveData.migrate(data)
+			data.store.level = 3
+			StoreLayout.grow(data.store.layout, 1, 3)
+			data.store.layout["5"] = { item = "HonourBox", x = 6, y = 2, rot = 1 } -- (faces the door's side; free cell behind)
+			SaveData.migrate(data)
+			local counter = data.store.layout["5"]
+			expect(`{counter.item} {counter.x},{counter.y},{counter.rot}`).toBe("ShopCounter 6,2,1")
+			expect((StoreLayout.check(data.store.layout, 3))).toBe(true)
+		end)
 		it("takes over the Farm Stand's goods, prices and rating", function()
 			local old = { shop = { tier = 0, shelves = { ["1"] = { crop = "Carrot", units = 9, a = 4 } },
 				stockroom = { { crop = "Wheat", key = "Wheat||", units = 12, grade = "B" } },

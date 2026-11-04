@@ -1,10 +1,14 @@
 -- The hotbar (docs/GameDesign.md §5.2): your seeds along the bottom, as
 -- seed packets (crimped top, a band in the rarity colour, the count on a
 -- tag). The one you pick stands up out of the row: it's what the context
--- stamp plants. Tap a packet, or press 1–9. Inside your own farm the bat
--- (a Tool the server gives you there: CrimeService) is the first packet:
--- tap it to hold it, tap a seed to put it away. Watering is the context
--- stamp's job.
+-- stamp plants. Tap a packet, or press 1–9; tap the one you're holding (or
+-- its key) again to put it away. Inside your own farm the bat (a Tool the
+-- server gives you there: CrimeService) is the first packet: tap it to hold
+-- it, tap a seed to put it away. Watering is the context stamp's job.
+--
+-- Pressing Plant with no seed in hand opens the seed picker
+-- (HotbarController.openPicker): every seed you have as a big packet, the
+-- ones you can't plant yet greyed with their level.
 local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -14,6 +18,7 @@ local Crops = require(Shared.Config.Crops)
 local Rarities = require(Shared.Config.Rarities)
 
 local PlayerState = require(script.Parent.Parent.PlayerState)
+local Sfx = require(script.Parent.Parent.Sfx)
 local UI = require(script.Parent.Parent.UI)
 local HudController = require(script.Parent.HudController)
 
@@ -28,7 +33,7 @@ local SLOT = 54 -- a packet's width
 local PACKET = 66 -- and height
 local LIFT = 8 -- how far the picked packet stands up
 
-local selected: string? = nil
+local selected: string? = nil -- the seed in hand (nil: none, until you pick one)
 local keyOrder = {} -- what keys 1–9 pick, in the bar's order: "Bat" or a crop id
 local changedEvent = Instance.new("BindableEvent")
 HotbarController.changed = changedEvent.Event
@@ -106,6 +111,9 @@ local function highlight()
 	end
 end
 
+local pickerDone: ((string) -> ())? = nil -- what the open seed picker plants once you pick
+local picker -- (the seed picker's window: below)
+
 local function select(cropId: string?)
 	if selected == cropId then
 		return
@@ -113,9 +121,16 @@ local function select(cropId: string?)
 	selected = cropId
 	highlight()
 	changedEvent:Fire(cropId)
+	if cropId and pickerDone then -- (picked from the picker, or with a key while it was open)
+		local done = pickerDone
+		pickerDone = nil
+		picker.close()
+		task.spawn(done, cropId)
+	end
 end
 
--- A tap or a key: the bat goes in or out of your hand; a seed puts it away.
+-- A tap or a key: the bat goes in or out of your hand; a seed puts the bat
+-- away; the seed you're holding goes away (nothing stands up then).
 local function pick(id: string)
 	if id == "Bat" then
 		if HotbarController.batEquipped() then
@@ -124,8 +139,13 @@ local function pick(id: string)
 			HotbarController.equipBat()
 		end
 	else
+		local hadBat = HotbarController.batEquipped()
 		unequipBat()
-		select(id)
+		if selected == id and not hadBat then
+			select(nil)
+		else
+			select(id)
+		end
 	end
 	highlight()
 end
@@ -211,11 +231,123 @@ local function rebuild(state)
 		local crop = Crops.ById[cropId]
 		packet(cropId, i, Rarities.ById[crop.rarity].color, crop.icon or "🌱", `×{seeds[cropId]}`, C.kraft, C.ink)
 	end
-	-- Keep the pick if you still have it; else the first packet.
-	local keep = selected and table.find(ids, selected) and selected or ids[1]
+	-- Keep the seed in your hand while you still have some; none when it runs
+	-- out (it never jumps to another seed: you pick the next one).
+	local keep = if selected and table.find(ids, selected) then selected else nil
 	selected = nil
 	select(keep)
 	highlight()
+	if picker and UI.isOpen(picker) then
+		HotbarController.fillPicker()
+	end
+end
+
+------------------------------------------------------------------------
+-- The seed picker: Plant with no seed in hand opens it.
+
+picker = UI.panel("Pick a seed", { width = 560, height = 320, toolbar = true })
+picker.toolbar.Text = "Tap a seed packet to plant it. Tap it on the bar again to put it away."
+make("UIGridLayout", { CellSize = UDim2.fromOffset(96, 122), CellPadding = UDim2.fromOffset(10, 12), SortOrder = Enum.SortOrder.LayoutOrder, Parent = picker.list })
+picker.onClose = function()
+	pickerDone = nil
+end
+
+-- Whether you have any seeds at all.
+function HotbarController.hasSeeds(): boolean
+	local state = PlayerState.current
+	for cropId, count in state and state.inventory.seeds or {} do
+		if count > 0 and Crops.ById[cropId] then
+			return true
+		end
+	end
+	return false
+end
+
+function HotbarController.pickerOpen(): boolean
+	return UI.isOpen(picker)
+end
+
+function HotbarController.closePicker()
+	picker.close()
+end
+
+-- (Re)draws the picker's packets from your seeds.
+function HotbarController.fillPicker()
+	UI.clear(picker.list)
+	local state = PlayerState.current
+	local seeds = state and state.inventory.seeds or {}
+	local ids = {}
+	for cropId, count in seeds do
+		if count > 0 and Crops.ById[cropId] then
+			table.insert(ids, cropId)
+		end
+	end
+	table.sort(ids, order)
+	for i, cropId in ids do
+		local crop = Crops.ById[cropId]
+		local rarity = Rarities.ById[crop.rarity]
+		local locked = state.level < rarity.seedLevel
+		local card = make("Frame", {
+			Name = cropId, LayoutOrder = i, BackgroundColor3 = if locked then Color3.fromRGB(214, 206, 190) else C.cream,
+			ZIndex = 23, Parent = picker.list,
+		}, { UI.corner(4), UI.stroke(UI.SEAM, 2) })
+		UI.crimp(card, card.BackgroundColor3, 7, 7)
+		make("Frame", { -- the rarity band
+			Size = UDim2.new(1, 0, 0, 8), Position = UDim2.fromOffset(0, 6), BackgroundColor3 = rarity.color, BorderSizePixel = 0,
+			ZIndex = 23, Parent = card,
+		})
+		make("TextLabel", {
+			Size = UDim2.new(1, 0, 0, 44), Position = UDim2.fromOffset(0, 16), BackgroundTransparency = 1, Font = UI.HEAD,
+			Text = crop.icon or "🌱", TextSize = 38, TextColor3 = C.ink, TextTransparency = if locked then 0.45 else 0, ZIndex = 23, Parent = card,
+		})
+		UI.fit(UI.label({
+			Size = UDim2.new(1, -8, 0, 20), Position = UDim2.fromOffset(4, 62), Font = UI.HEAD, TextSize = 16,
+			TextXAlignment = Enum.TextXAlignment.Center, Text = crop.name, TextColor3 = C.ink, ZIndex = 23, Parent = card,
+		}), 10)
+		make("TextLabel", {
+			AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -6), Size = UDim2.new(1, -12, 0, 22),
+			BackgroundColor3 = if locked then C.soil else C.kraft, Font = UI.HEAD,
+			Text = if locked then `🔒 Lv {rarity.seedLevel}` else `×{seeds[cropId]}`,
+			TextSize = 15, TextColor3 = if locked then C.cream else C.ink, ZIndex = 23, Parent = card,
+		}, { UI.corner(3) })
+		local hit = make("TextButton", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "", ZIndex = 24, Parent = card })
+		hit.Activated:Connect(function()
+			if locked then
+				UI.toast(`{crop.icon} {crop.name} needs Farm Level {rarity.seedLevel}.`, "Error", 2.5)
+				return
+			end
+			Sfx.play("UiClick")
+			unequipBat()
+			if selected == cropId and pickerDone then -- (already in hand: plant it anyway)
+				local done = pickerDone
+				pickerDone = nil
+				picker.close()
+				task.spawn(done, cropId)
+			else
+				select(cropId)
+			end
+		end)
+	end
+end
+
+-- Opens the picker; once you pick a seed it's in your hand and onPick(cropId)
+-- runs (the stamp plants it). Closing it without picking does nothing.
+function HotbarController.openPicker(onPick: ((string) -> ())?)
+	HotbarController.fillPicker()
+	picker.open()
+	pickerDone = onPick
+	-- as tall as its rows of packets (a few seeds shouldn't sit in a big empty window)
+	local frame = picker.frame
+	local count = 0
+	for _, child in picker.list:GetChildren() do
+		if child:IsA("Frame") then
+			count += 1
+		end
+	end
+	local perRow = math.max(1, math.floor((frame.Size.X.Offset - 46) / 106))
+	local rows = math.max(1, math.ceil(count / perRow))
+	local most = (UI.screen.AbsoluteSize.Y - (if UI.compact then 40 else 90)) / UI.textScale
+	frame.Size = UDim2.fromOffset(frame.Size.X.Offset, math.min(picker.top + rows * 134 + 20, 320, most))
 end
 
 function HotbarController.Start()

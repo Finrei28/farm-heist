@@ -78,8 +78,10 @@ Store.CHARM_MAX_STARS = 1
 -- deep } in cells (a wall item: cells along the wall). Displays: slots ×
 -- patches' worth each (a Produce Crate's 12: 72 carrots, 60 tomatoes;
 -- ShopRules.slotRoom), the rarities they hold, and `present`: what shoppers will pay
--- there (× their willingness). Checkouts: seconds per shopper (`serve`);
--- `staffed`: only while you (or a Cashier, week 4) stand behind it. flat:
+-- there (× their willingness). Checkouts: seconds per shopper (`serve`: a
+-- Cashier never serves faster); `staffed`: a till, worked by you (you scan
+-- each thing in the basket and take the coins: StoreService's Serve) or a
+-- Cashier (from Store Level CASHIERS_FROM, Config/Workers). flat:
 -- shoppers walk over it. level: the Store Level that unlocks buying it.
 Store.ITEMS = {
 	-- Displays
@@ -99,7 +101,7 @@ Store.ITEMS = {
 		rarities = { "Legendary", "Mythic" }, present = 1.25, cost = 1_200_000, level = 15, charm = 4 },
 
 	-- Checkouts
-	HonourBox = { kind = "Checkout", name = "Honour Box", size = { 1, 1 }, serve = 6, cost = 5_000, level = 1 },
+	ShopCounter = { kind = "Checkout", name = "Shop Counter", size = { 1, 1 }, serve = 4, staffed = true, cost = 5_000, level = 1 },
 	Register = { kind = "Checkout", name = "Register", size = { 2, 1 }, serve = 3, staffed = true, cost = 30_000, level = 3 },
 	SelfCheckout = { kind = "Checkout", name = "Self-checkout", size = { 1, 1 }, serve = 4, cost = 600_000, level = 15 },
 
@@ -128,7 +130,7 @@ Store.ITEMS = {
 -- The drawer's tabs, in order, and the order of cards in each.
 Store.ORDER = {
 	"ProduceCrate", "WoodenShelf", "BulkBin", "TieredRack", "ChillerCabinet", "GlassShowcase", "VelvetPedestal",
-	"HonourBox", "Register", "SelfCheckout",
+	"ShopCounter", "Register", "SelfCheckout",
 	"PottedPlant", "HayBaleSeat", "FlowerBarrel", "PumpkinPile", "LampPost", "Rug", "FruitCart", "Bench",
 	"Fountain", "FlowerArch", "GoldenScarecrow",
 	"PaintedSign", "ChalkBoard", "Clock", "FairyLights", "Mural", "NeonSign",
@@ -136,18 +138,19 @@ Store.ORDER = {
 
 -- A new store's furniture (free, kept forever, can't be sold): the shelf
 -- and crates along the back wall facing the door, a plant beside them, the
--- Honour Box in the corner by the door with its queue up the side wall, and
--- the middle of the floor left free for your first new things.
---   y=4  [Shelf  Shelf][Crate][Crate][Plant][  q  ]   (back wall)
---   y=3  [  aisle ............................][  q  ]
---   y=2  [staff][  .  ][  .  ][  .  ][  .  ][  q  ]
---   y=1  [  .  ][  .  ][door ][  .  ][  .  ][ Box ]
+-- Shop Counter just inside the staff door (you step in from the yard and
+-- you're behind it), facing across the store with its queue in front of
+-- the door, and the rest of the floor free for your first new things.
+--   y=4  [Shelf  Shelf][Crate][Crate][Plant][  .  ]   (back wall)
+--   y=3  [  aisle .................................]
+--   y=2  [ you ][Cntr ][ q1  ][ q2  ][ q3  ][  .  ]   (you: in the staff doorway)
+--   y=1  [  .  ][  .  ][door ][  .  ][  .  ][  .  ]
 Store.START = {
 	{ item = "WoodenShelf", x = 1, y = 4, rot = 0 },
 	{ item = "ProduceCrate", x = 3, y = 4, rot = 0 },
 	{ item = "ProduceCrate", x = 4, y = 4, rot = 0 },
 	{ item = "PottedPlant", x = 5, y = 4, rot = 0 },
-	{ item = "HonourBox", x = 6, y = 1, rot = 2 },
+	{ item = "ShopCounter", x = 2, y = 2, rot = 3 },
 }
 
 for id, item in Store.ITEMS do

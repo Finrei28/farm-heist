@@ -40,4 +40,55 @@ return {
 	BROWSE = 2.5, -- seconds at each display
 	QUEUE_LENGTH = 4, -- shoppers waiting at a checkout, besides the one paying
 	PATIENCE = 20, -- seconds a shopper waits in a queue before putting their basket back
+	TILL_PATIENCE = 30, -- seconds a shopper waits at a till nobody's serving (once you start, they wait for you)
+	SCAN_GAP = 0.15, -- seconds between two presses at the till
+
+	-- What shoppers say in their bubble (StoreService picks one at random;
+	-- the clients colour the bubble by its mood: green good, red bad). When
+	-- they buy, what they took goes first ("🥕×12 What a deal!"). How a price
+	-- felt is price ÷ what that shopper would pay: under BARGAIN it's a
+	-- bargain, over PRICEY they grumble but buy; turned down, over RIP_OFF
+	-- they're cross about it. REMARK: the share of other buyers who say
+	-- something nice besides what they took.
+	--
+	-- Each pool has the plain lines and Kiwi slang mixed in (the user,
+	-- 2026-11-05: "Instead of british slang, why not add some New Zealand
+	-- slang?", then "keep the current ones, add kiwi slang as new ones"), so
+	-- anyone gets the gist (the bubble's colour helps too). The Kiwi ones, for
+	-- readers elsewhere: sweet as / choice / mean as = great;
+	-- chur = thanks, cool; stoked = really happy; hard out = totally; tu meke =
+	-- awesome (Māori, "too much"); kai = food (Māori); kia ora = hello, thanks
+	-- (Māori); ka kite = see you (Māori); yeah, nah = no; spendy = expensive;
+	-- far out = wow; gutted = really disappointed; eh = isn't it; bro, cuz =
+	-- mate; over it = fed up.
+	LINES = {
+		bargain = { "What a deal!", "Bargain!", "So cheap!", "Stocking up!", "Great price!",
+			"Sweet as, what a deal!", "Choice price!", "Mean as, so cheap!", "Hard out bargain!", "Tu meke, so cheap!" },
+		bought = { "Lovely!", "So fresh!", "Yum!", "Perfect!", "Just what I needed!", "Looks tasty!",
+			"Sweet as!", "Choice!", "Chur!", "Mean as!", "Good kai!", "Stoked!" },
+		pricey = { "Pricey, but okay.", "A bit steep...", "Worth it, I guess.", "Ouch, my wallet!",
+			"Bit steep, eh.", "Far out, pricey!", "Spendy, but worth it." },
+		tooDear = { "Too expensive!", "Too pricey for me.", "Not at that price.", "I'll pass.", "Maybe if it was cheaper.",
+			"Yeah, nah. Too pricey.", "Bit spendy for me, bro.", "Nah, I'll pass, cuz.", "Too expensive, eh." },
+		ripOff = { "What a rip-off!", "Are you kidding?!", "Way too expensive!", "Who'd pay that?!", "Nope! Too much!",
+			"Far out, you're joking?!", "Yeah, nah. No way!", "Who'd pay that, bro?!", "Daylight robbery!" },
+		soldOut = { "Sold out?!", "Nothing left!", "Empty shelf...", "Aw, it's all gone!", "I came all this way!",
+			"Sold out? Gutted!", "Aw, gutted!", "Nothing left, bro!", "Empty shelf, eh?" },
+		queueLong = { "Queue's too long!", "Not waiting in that!", "Look at that line!", "I'll come back later.",
+			"Yeah, nah. Huge queue.", "Not waiting in that, cuz!", "Far out, what a line!" },
+		nobody = { "Hello? Anyone?", "Nobody at the till!", "Where's the cashier?!", "I can't pay anyone!",
+			"Kia ora? Anyone?", "Where's the cashier, bro?", "Can't pay anyone, eh!" },
+		tooSlow = { "This is taking forever!", "Too slow!", "Terrible service!", "I've waited long enough!",
+			"Taking forever, eh!", "Far out, so slow!", "Hurry up, cuz!", "Over it! I'm off." },
+		thanks = { "Thanks!", "See you soon!", "Great shop!", "Have a nice day!", "I'll be back!", "Love this place!",
+			"Chur!", "Cheers, bro!", "Ka kite!", "Sweet as, thanks!", "Choice shop!", "Kia ora!" },
+		moved = { "Oh! It's all moved.", "Huh? Where'd it go?", "They moved everything!",
+			"Eh? Where'd it go?", "Huh, it's all different!" },
+	},
+	MOODS = { bargain = "good", bought = "good", thanks = "good", tooDear = "bad", ripOff = "bad", soldOut = "bad",
+		queueLong = "bad", nobody = "bad", tooSlow = "bad" }, -- (pricey and moved: plain)
+	BARGAIN = 0.65,
+	PRICEY = 0.92,
+	RIP_OFF = 1.6,
+	REMARK = 0.5,
 }

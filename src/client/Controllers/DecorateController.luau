@@ -57,7 +57,11 @@ local selected = nil -- the id of a placed item you tapped
 local tab = "Displays"
 local view = nil -- workspace folder: grid, items, ghost
 local hidden = {} -- [BasePart] = how hidden (1, or faded 0.75) on this screen while decorating
-local hud = {} -- [GuiObject] = visible before
+local hud = {} -- [GuiObject] = true: on screen before (shown again after); false: came up while decorating (left off)
+-- Shown over Decorate rather than hidden: notes, and the level-up card (a
+-- card that came up mid-decorate used to be put back on at DONE, after its
+-- own timer had hidden it, and then stayed on screen for good).
+local KEEP = { Toasts = true, LevelUp = true }
 local savedCamera = nil
 local zoom, pan = 1, Vector3.zero -- (pan: how far the view has moved over the floor, in studs)
 local touchControls = nil -- Roblox's thumbstick and jump button, hidden while decorating
@@ -178,7 +182,7 @@ local function explain(reason: string, about: string?, self: string?): string
 	elseif reason == "FrontBlocked" then
 		return if mine then "Leave the space in front of it free." else `That's in front of {nameOf(about :: string)}.`
 	elseif reason == "BehindBlocked" then
-		return if mine then "A Register needs room behind it for whoever serves." else `That's where you'd stand to serve at {nameOf(about :: string)}.`
+		return if mine then "A till needs room behind it, for whoever serves." else `That's where you'd stand to serve at {nameOf(about :: string)}.`
 	elseif reason == "Unreachable" then
 		return if mine then "Shoppers couldn't reach it from the door." else `This would block the aisle to {nameOf(about :: string)}.`
 	elseif reason == "StaffDoor" then
@@ -444,7 +448,7 @@ local function card(order: number, itemId: string)
 		local low, high = StoreLayout.rarityRange(itemId)
 		detail = `{def.slots}×{holds(def)} · {if low == high then low else `{low}–{high}`}`
 	elseif def.kind == "Checkout" then
-		detail = `a shopper every {def.serve} s` .. (if def.staffed then " (staffed)" else "")
+		detail = if def.staffed then "a till: you or a Cashier serve" else `serves itself: every {def.serve} s`
 	else
 		detail = `Charm {def.charm}`
 	end
@@ -751,14 +755,16 @@ local function setHud(visible: boolean)
 	if not visible then
 		table.clear(hud)
 		for _, child in UI.screen:GetChildren() do
-			if child:IsA("GuiObject") and child ~= overlay and child.Name ~= "Toasts" and child.Visible then
+			if child:IsA("GuiObject") and child ~= overlay and not KEEP[child.Name] and child.Visible then
 				hud[child] = true
 				child.Visible = false
 			end
 		end
 	else
-		for child in hud do
-			child.Visible = true
+		for child, before in hud do
+			if before then
+				child.Visible = true
+			end
 		end
 		table.clear(hud)
 	end
@@ -1093,8 +1099,10 @@ function DecorateController.Start()
 		end
 		frameCamera()
 		for _, child in UI.screen:GetChildren() do
-			if child:IsA("GuiObject") and child ~= overlay and child.Name ~= "Toasts" and child.Visible then
-				hud[child] = true
+			if child:IsA("GuiObject") and child ~= overlay and not KEEP[child.Name] and child.Visible then
+				if hud[child] == nil then
+					hud[child] = false -- (came up while decorating: its own controller shows it again if it should be)
+				end
 				child.Visible = false
 			end
 		end

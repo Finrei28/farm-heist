@@ -23,6 +23,7 @@ local Shop = require(Shared.Config.Shop)
 local Store = require(Shared.Config.Store)
 local ShopRules = require(Shared.ShopRules)
 local StoreLayout = require(Shared.StoreLayout)
+local Workers = require(Shared.Config.Workers)
 
 local PlayerState = require(script.Parent.Parent.PlayerState)
 local Reasons = require(script.Parent.Parent.Reasons)
@@ -140,7 +141,8 @@ local function why(store): string
 			end
 		end
 		if onlyRegisters then
-			return `{gaveUp} shoppers gave up in the queue: stand behind your Register, or add an Honour Box`
+			return if store.level >= Workers.CASHIERS_FROM then `{gaveUp} shoppers gave up waiting: serve them at your till, or hire a Cashier (Workers)`
+				else `{gaveUp} shoppers gave up waiting: serve them at your counter (Cashiers come at Store Level {Workers.CASHIERS_FROM})`
 		elseif #StoreLayout.ofKind(store.layout, "Checkout") < StoreLayout.level(store.level).checkouts then
 			return `{gaveUp} shoppers gave up in the queue: open another checkout (Decorate)`
 		end

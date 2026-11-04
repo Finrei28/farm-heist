@@ -115,11 +115,16 @@ return function(spec, harness)
 				error(`{reason} {id}`)
 			end
 		end)
-		it("queues at the Honour Box up the side wall, clear of the aisle", function()
-			local queue = StoreLayout.queues(starter(), 1)["5"]
+		it("has the Shop Counter just inside the staff door: you serve from the doorway, they queue across the floor", function()
+			local layout = starter()
+			expect(layout["5"].item).toBe("ShopCounter")
+			local behind = StoreLayout.behind(layout["5"])
+			local staffX, staffY = StoreLayout.staffCell()
+			expect(StoreLayout.key(behind[1][1], behind[1][2])).toBe(StoreLayout.key(staffX, staffY))
+			local queue = StoreLayout.queues(layout, 1)["5"]
 			expect(#queue).toBe(3)
-			expect(StoreLayout.key(queue[1][1], queue[1][2])).toBe("6,2")
-			expect(StoreLayout.key(queue[3][1], queue[3][2])).toBe("6,4")
+			expect(StoreLayout.key(queue[1][1], queue[1][2])).toBe("3,2")
+			expect(StoreLayout.key(queue[3][1], queue[3][2])).toBe("5,2")
 		end)
 		it("has room for a few new things at Level 1", function()
 			local layout = starter()
@@ -161,7 +166,7 @@ return function(spec, harness)
 		it("refuse a move that cuts a display off from the door, naming it", function()
 			-- 7×5: a crate in the back corner, facing along the back wall.
 			local layout = {
-				box = { item = "HonourBox", x = 5, y = 1, rot = 2 },
+				box = { item = "SelfCheckout", x = 5, y = 1, rot = 2 },
 				a = { item = "ProduceCrate", x = 1, y = 5, rot = 3 }, -- its front: (2, 5)
 				p2 = { item = "PottedPlant", x = 3, y = 5, rot = 0 },
 			}
@@ -174,11 +179,11 @@ return function(spec, harness)
 		end)
 		it("need a queue for every checkout: 2 free cells in a line, straight back or turning", function()
 			local layout = starter()
-			layout["5"] = { item = "HonourBox", x = 4, y = 1, rot = 2 } -- straight back is a crate: it turns
+			layout["5"] = { item = "SelfCheckout", x = 4, y = 1, rot = 2 } -- straight back is a crate: it turns
 			expect((StoreLayout.check(layout, 1))).toBe(true)
 			local queue = StoreLayout.queues(layout, 1)["5"]
 			expect(StoreLayout.key(queue[2][1], queue[2][2])).toBe("3,2")
-			layout["5"] = { item = "HonourBox", x = 1, y = 1, rot = 3 } -- the door straight on, the wall to the right ...
+			layout["5"] = { item = "SelfCheckout", x = 1, y = 1, rot = 3 } -- the door straight on, the wall to the right ...
 			layout.p = { item = "PottedPlant", x = 2, y = 2, rot = 0 } -- ... and a plant to the left
 			local _, reason, id = StoreLayout.check(layout, 1)
 			expect(reason).toBe("NoQueue")
@@ -186,8 +191,8 @@ return function(spec, harness)
 		end)
 		it("don't let two checkouts share a queue", function()
 			local layout = starter()
-			layout["5"] = { item = "HonourBox", x = 4, y = 1, rot = 2 } -- queues (4,2) (3,2) (2,2)
-			layout.b = { item = "HonourBox", x = 2, y = 1, rot = 2 } -- back into the shelf, left the staff door, right the other queue
+			layout["5"] = { item = "SelfCheckout", x = 4, y = 1, rot = 2 } -- queues (4,2) (3,2) (2,2)
+			layout.b = { item = "SelfCheckout", x = 2, y = 1, rot = 2 } -- back into the shelf, left the staff door, right the other queue
 			local _, reason, id = StoreLayout.check(layout, 3)
 			expect(reason).toBe("NoQueue")
 			expect(id).toBe("b")
@@ -221,7 +226,7 @@ return function(spec, harness)
 		end)
 		it("allow one checkout at Levels 1–2, and need at least one", function()
 			local layout = starter()
-			layout.b = { item = "HonourBox", x = 2, y = 1, rot = 2 }
+			layout.b = { item = "SelfCheckout", x = 6, y = 1, rot = 2 }
 			local _, reason = StoreLayout.check(layout, 2)
 			expect(reason).toBe("TooManyCheckouts")
 			layout.b = nil
@@ -245,7 +250,7 @@ return function(spec, harness)
 			expect(reason).toBe("Overlap")
 		end)
 		it("cap the floor at 100 items", function()
-			local layout = { box = { item = "HonourBox", x = 5, y = 1, rot = 2 } }
+			local layout = { box = { item = "SelfCheckout", x = 5, y = 1, rot = 2 } }
 			for i = 1, Store.MAX_FLOOR_ITEMS + 1 do
 				layout[`r{i}`] = { item = "Rug", x = (i - 1) % 12 + 1, y = 2 + (i - 1) // 12, rot = 0 }
 			end
@@ -264,12 +269,39 @@ return function(spec, harness)
 
 	describe("aisles", function()
 		it("find the shortest walk from the door, around things", function()
-			local path = StoreLayout.path(starter(), 1, { 3, 1 }, { 1, 2 })
-			expect(#path).toBe(4) -- (3,1) (3,2) (2,2) (1,2), or the same length another way
+			local path = StoreLayout.path(starter(), 1, { 3, 1 }, { 1, 3 })
+			expect(#path).toBe(5) -- (3,1) (3,2) (3,3) (2,3) (1,3): round the counter, not behind it
 			expect(StoreLayout.path(starter(), 1, { 3, 1 }, { 1, 4 })).toBe(nil) -- (the shelf stands there)
 		end)
+		it("never take a shopper behind a till: walking, queueing or standing", function()
+			local layout = starter()
+			local behind = StoreLayout.staffOnly(layout)
+			local staffX, staffY = StoreLayout.staffCell()
+			expect(behind[StoreLayout.key(staffX, staffY)]).toBe("5") -- (the Shop Counter's spot, inside the staff door)
+			expect(StoreLayout.path(layout, 1, { 3, 1 }, { staffX, staffY })).toBe(nil)
+			for y = 1, 4 do
+				for x = 1, 6 do
+					local walk = StoreLayout.path(layout, 1, { 3, 1 }, { x, y })
+					for _, cell in walk or {} do
+						expect(behind[StoreLayout.key(cell[1], cell[2])]).toBe(nil)
+					end
+				end
+			end
+			for _, cells in StoreLayout.queues(layout, 1) do
+				for _, cell in cells do
+					expect(behind[StoreLayout.key(cell[1], cell[2])]).toBe(nil)
+				end
+			end
+			-- a display whose front is where you'd serve from can't be reached
+			layout.c = { item = "ProduceCrate", x = 1, y = 3, rot = 0 } -- (its front: (1,2), behind the counter)
+			layout["1"] = nil
+			local ok, reason, id = StoreLayout.check(layout, 1)
+			expect(ok).toBe(false)
+			expect(reason).toBe("Unreachable")
+			expect(id).toBe("c")
+		end)
 		it("cut corners across open floor, never through a display", function()
-			local layout = { box = { item = "HonourBox", x = 6, y = 1, rot = 2 } }
+			local layout = { box = { item = "SelfCheckout", x = 6, y = 1, rot = 2 } }
 			local cells = StoreLayout.path(layout, 13, { 3, 1 }, { 9, 6 })
 			local smooth = StoreLayout.smooth(layout, 13, cells)
 			expect(#smooth).toBe(2) -- straight there
@@ -311,7 +343,7 @@ return function(spec, harness)
 			local layout = starter()
 			expect(StoreLayout.grow(layout, 2, 3)).toBe(true)
 			expect(layout["1"].y).toBe(5)
-			expect(layout["5"].y).toBe(1) -- (the Honour Box stays by the door)
+			expect(layout["5"].y).toBe(2) -- (the Shop Counter stays by the staff door)
 			expect((StoreLayout.check(layout, 3))).toBe(true)
 		end)
 		it("leaves things where they are when the floor only gets wider", function()

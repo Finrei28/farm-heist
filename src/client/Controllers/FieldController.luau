@@ -1,8 +1,10 @@
 -- Working your field (docs/GameDesign.md §5.2): the big round stamp at the
 -- bottom right does whatever the tile you're standing on needs: Harvest
 -- (ripe), Water (growing, not watered this stage), Plant (empty soil: the
--- seed packet picked in the hotbar). A chalkboard above it says what's
--- there and how long it has left, and the tile gets an outline.
+-- seed packet picked in the hotbar; with none in hand it opens the seed
+-- picker, and plants what you pick). A chalkboard above it says what's
+-- there and how long it has left, and the tile gets an outline. A key cap
+-- on its rim says which key does it (E; X on a gamepad; none on a phone).
 --
 -- Hold the button (or E) and walk along a row to plant, water or harvest
 -- every tile you cross. The server checks everything (FieldService); the
@@ -17,6 +19,7 @@ local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Crops = require(Shared.Config.Crops)
@@ -63,6 +66,14 @@ local sub = UI.label({
 	Font = UI.HEAD, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Center, Text = "", ZIndex = button.ZIndex + 1, Parent = button,
 })
 UI.fit(sub, 9)
+-- the key that presses it, on its rim at the top left (none on a phone)
+local stampKey = UI.keycap({ name = "Key", size = 32, anchor = Vector2.new(0.5, 0.5), position = UDim2.fromScale(0.13, 0.13),
+	zIndex = button.ZIndex + 3, parent = holder })
+local function showKey()
+	stampKey.Visible = UI.setKey(stampKey, UI.inputKind(), Enum.KeyCode.E, Enum.KeyCode.ButtonX, nil)
+end
+showKey()
+UserInputService.LastInputTypeChanged:Connect(showKey)
 
 local info, infoLabel = UI.chalkboard({ name = "TileInfo", size = UDim2.fromOffset(0, 32), autoWidth = true, anchor = Vector2.new(1, 1),
 	textSize = 21, visible = false, parent = UI.screen })
@@ -176,7 +187,10 @@ local function actionFor(part: BasePart, friend: string?): (string?, string)
 	local seed = HotbarController.selectedSeed()
 	local fresh = if part:GetAttribute("Fresh") then " · Fresh soil +25%" else ""
 	if not seed then
-		return nil, `Empty soil{fresh} · no seeds`
+		if HotbarController.hasSeeds() then
+			return "Plant", `Empty soil{fresh} · pick a seed`
+		end
+		return nil, `Empty soil{fresh} · no seeds: Barley sells them in town`
 	end
 	local crop = Crops.ById[seed]
 	local state = PlayerState.current
@@ -229,9 +243,28 @@ local function floatAtButton(text: string, color: Color3?)
 	UI.float(text, UDim2.fromOffset(at.X, at.Y - 50), color)
 end
 
+local update: () -> () -- (below: act opens the picker and looks again once you pick)
+local pickerTile: number? = nil -- the tile the seed picker was opened for (it closes if you walk off it)
+
 local function act()
 	local part, tile, kind = current.part, current.tile, current.kind
 	if busy or not part or not kind then
+		return
+	end
+	if kind == "Plant" and not HotbarController.selectedSeed() then
+		-- nothing in hand: pick a seed, then it's planted here
+		if not HotbarController.pickerOpen() then
+			holding = false
+			pickerTile = tile
+			HotbarController.openPicker(function()
+				pickerTile = nil
+				update()
+				if current.kind == "Plant" and current.tile == tile then
+					lastDone = { tile = 0, kind = "", at = 0 }
+					act()
+				end
+			end)
+		end
 		return
 	end
 	local now = os.clock()
@@ -265,7 +298,7 @@ local function act()
 	end
 end
 
-local function update()
+function update()
 	local offer = bestOffer()
 	if offer then
 		current = { part = nil, tile = nil, kind = nil, offer = offer }
@@ -284,6 +317,12 @@ local function update()
 	if part then
 		kind, line = actionFor(part, friend)
 	end
+	if pickerTile and (not HotbarController.pickerOpen() or tile ~= pickerTile or kind ~= "Plant") then
+		if HotbarController.pickerOpen() then
+			HotbarController.closePicker() -- (you walked off the soil you were planting)
+		end
+		pickerTile = nil
+	end
 	current = { part = part, tile = tile, kind = kind, offer = nil }
 	info.Visible = part ~= nil
 	infoLabel.Text = line
@@ -293,7 +332,7 @@ local function update()
 		button.Text = look.text
 		UI.setStampKind(holder, look.kind)
 		local crop = if kind == "Plant" then Crops.ById[HotbarController.selectedSeed() or ""] else Crops.ById[part:GetAttribute("Crop") or ""]
-		sub.Text = if crop then `{crop.icon} {crop.name}` else ""
+		sub.Text = if crop then `{crop.icon} {crop.name}` elseif kind == "Plant" then "🌱 Pick seed" else ""
 		sub.TextColor3 = button.TextColor3
 		outline.Color3 = look.outline
 		outline.SurfaceColor3 = look.outline
@@ -345,13 +384,21 @@ function FieldController.Start()
 		end
 	end)
 
-	-- E (or the gamepad's X), unless a prompt (Barley, a "Clear here" sign) is showing.
+	-- E (or the gamepad's X), unless a prompt on E (Barley, a "Clear here"
+	-- sign, Fill) is showing: one on another key (a player's [T] Trade) doesn't count.
+	local shownOnE = {}
 	local promptsShown = 0
-	ProximityPromptService.PromptShown:Connect(function()
-		promptsShown += 1
+	ProximityPromptService.PromptShown:Connect(function(prompt)
+		if prompt.KeyboardKeyCode == Enum.KeyCode.E and not shownOnE[prompt] then
+			shownOnE[prompt] = true
+			promptsShown += 1
+		end
 	end)
-	ProximityPromptService.PromptHidden:Connect(function()
-		promptsShown = math.max(0, promptsShown - 1)
+	ProximityPromptService.PromptHidden:Connect(function(prompt)
+		if shownOnE[prompt] then
+			shownOnE[prompt] = nil
+			promptsShown = math.max(0, promptsShown - 1)
+		end
 	end)
 	ContextActionService:BindActionAtPriority("FieldContext", function(_, inputState)
 		if inputState == Enum.UserInputState.Begin then

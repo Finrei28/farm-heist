@@ -11,7 +11,7 @@ import numpy as np
 
 from crops import by_light
 from meshkit import Mesh, T, blob, frame, leaf, unit
-from props import chamfer_box, daisy, prop, rng_of
+from props import chamfer_box, daisy, prop, rng_of, tuft
 
 HEDGE_LENGTH = 42.0  # six to a farm's side (252 studs)
 
@@ -168,3 +168,95 @@ def tunnel_arch():
     m.add(chamfer_box((W + 1.6, 2.0, D + 1.4), 0.2, lambda n: "stoneLight" if n[1] > 0.5 else ("stoneDark" if n[1] < -0.5 else "stone")),
           np.array([[1, 0, 0, 0], [0, 1, 0, H - 1.0], [0, 0, 1, D / 2 - 0.7], [0, 0, 0, 1.0]]))
     return m
+
+
+# ---------------------------------------------------------------------------
+# Dirt paths (server/World/PathArt): a plain strip of trail colour reads as a
+# flat ribbon, so each path is dressed with tiles PATH_TILE long laid end to
+# end along it (Z), drawn round the path's top middle at y = 0:
+#   PathWear1-3  two worn ruts, darker, wavering, 0.05 over the path (flat:
+#                sides drew dark lines that made them read as boards)
+#   PathEdge1-3  the dirt spilling into the grass on the right (+X) side
+#                (turned round for the left), 0.05 under the path's top so
+#                the path's own straight edge hardly shows (0.15 over the
+#                grass, which is 0.2 under the path), grass growing at it
+# (Studio draws these palette colours a shade lighter than a part of the same
+# colour, so they're picked darker than the trail's 216 180 122.)
+# Every variant meets the next at the same place at its ends, so any order
+# (and either way round) joins up.
+
+PATH_TILE = 16.0
+PATH_HALF = 3.0  # the path is 6 wide
+
+
+def _wave(rng, amp, terms=(1, 2, 3, 5)):
+    """A smooth wobble along a tile, 0 at both its ends."""
+    parts = [(k, rng.uniform(-amp, amp) / (1 + 0.35 * k)) for k in terms]
+    return lambda t: sum(a * math.sin(k * math.pi * t) for k, a in parts)
+
+
+def _path_wear(v):
+    rng = rng_of(f"PathWear{v}")
+    m = Mesh()
+    L, steps, top = PATH_TILE, 32, 0.05
+    for side in (-1, 1):
+        sway, width = _wave(rng, 0.3), _wave(rng, 0.22, terms=(1, 2, 4))
+        gap = None
+        if rng.uniform() < 0.35:  # now and then a rut fades out for a step or two
+            g = rng.uniform(0.25, 0.7)
+            gap = (g, g + rng.uniform(0.05, 0.1))
+        # a darker, deeper-worn patch here and there (random lengths, not a beat)
+        dark, run = set(), 0
+        for i in range(steps):
+            if run == 0 and rng.uniform() < 0.07:
+                run = int(rng.integers(2, 5))
+            if run:
+                dark.add(i)
+                run -= 1
+        for i in range(steps):
+            t0, t1 = i / steps, (i + 1) / steps
+            if gap and gap[0] < (t0 + t1) / 2 < gap[1]:
+                continue
+            z0, z1 = -L / 2 + t0 * L, -L / 2 + t1 * L
+            c0, c1 = side * 1.5 + sway(t0), side * 1.5 + sway(t1)
+            h0, h1 = 0.55 + width(t0), 0.55 + width(t1)
+            col = "pathRutDark" if i in dark else "pathRut"
+            m.quad((c0 - h0, top, z0), (c0 + h0, top, z0), (c1 + h1, top, z1), (c1 - h1, top, z1), col, out=(0, 1, 0))
+    return m
+
+
+def _path_edge(v):
+    rng = rng_of(f"PathEdge{v}")
+    m = Mesh()
+    L, steps = PATH_TILE, 48
+    inner, top, foot = PATH_HALF - 0.8, -0.05, -0.26
+    reach = _wave(rng, 0.65, terms=(1, 2, 3, 4, 6, 9))
+    # a few rounded bites of dirt pushing further into the grass
+    lobes = [(rng.uniform(0.12, 0.88), rng.uniform(0.35, 0.8)) for _ in range(rng.integers(2, 4))]
+
+    def out_at(t):
+        o = PATH_HALF + 0.55 + reach(t)
+        for c, r in lobes:
+            d = abs(t - c) * L
+            if d < r * 1.6:
+                o += r * 0.7 * math.cos(d / (r * 1.6) * math.pi / 2)
+        return max(PATH_HALF + 0.15, o)
+    pts = [(-L / 2 + i / steps * L, out_at(i / steps)) for i in range(steps + 1)]
+    for i in range(steps):
+        (z0, o0), (z1, o1) = pts[i], pts[i + 1]
+        m.quad((inner, top, z0), (o0, top, z0), (o1, top, z1), (inner, top, z1), "pathEdge", out=(0, 1, 0))
+        m.quad((o0, top, z0), (o1, top, z1), (o1, foot, z1), (o0, foot, z0), "pathEdgeDark", out=(1, 0, 0))
+    # grass growing up at the edge of the dirt
+    for _ in range(rng.integers(3, 5)):
+        t = rng.uniform(0.08, 0.92)
+        z = -L / 2 + t * L
+        at = np.array([out_at(t) + rng.uniform(0.05, 0.35), -0.2, z])
+        clump = Mesh()
+        tuft(clump, rng, int(rng.integers(5, 9)), rng.uniform(0.55, 0.95), 0.2, ["grass", "grassDark", "grassLight"], radius=0.3, spread=0.5)
+        m.add(clump, T(*at))
+    return m
+
+
+for _v in (1, 2, 3):
+    prop(f"PathWear{_v}")(lambda v=_v: _path_wear(v))
+    prop(f"PathEdge{_v}")(lambda v=_v: _path_edge(v))

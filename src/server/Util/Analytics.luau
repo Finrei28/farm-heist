@@ -64,9 +64,12 @@ function Analytics.coins(player: Player, amount: number, balance: number, kind: 
 end
 
 -- A level reached on a ladder: "FarmLevel", "WarehouseLevel", "StoreLevel".
+-- (Roblox wants the level's name too: an empty one is logged as an error,
+-- seen in Studio 2026-11-04. "StoreLevel" 3 is named "Store Level 3".)
 function Analytics.progress(player: Player, path: string, level: number)
+	local name = `{(string.gsub(path, "(%l)(%u)", "%1 %2"))} {level}`
 	pcall(function()
-		AnalyticsService:LogProgressionCompleteEvent(player, path, level)
+		AnalyticsService:LogProgressionCompleteEvent(player, path, level, name)
 	end)
 end
 

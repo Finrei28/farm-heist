@@ -20,6 +20,7 @@ local BarnRules = require(Shared.BarnRules)
 local LandRules = require(Shared.LandRules)
 local PlotLayout = require(Shared.PlotLayout)
 local Remotes = require(Shared.Remotes)
+local Store = require(Shared.Config.Store)
 local StoreLayout = require(Shared.StoreLayout)
 local WarehouseRules = require(Shared.WarehouseRules)
 
@@ -215,6 +216,26 @@ local function firstDisplay(state): Vector3?
 	return best and PlotLayout.storeItemFrame(plot(), best, storeStage).Position
 end
 
+-- The spot behind your first till (where you serve from), and whether
+-- anything's on display (shoppers only come to a store with something out).
+local function tillSpot(state): (Vector3?, boolean)
+	local best, bestId = nil, nil
+	local stocked = false
+	for id, entry in state.store.layout do
+		local def = Store.ITEMS[entry.item]
+		if def and def.staffed and (not bestId or (tonumber(id) or 0) < bestId) then
+			best, bestId = entry, tonumber(id) or 0
+		end
+		for _, slot in entry.slots or {} do
+			if (slot.units or 0) > 0 then
+				stocked = true
+			end
+		end
+	end
+	local cell = best and StoreLayout.behind(best)[1]
+	return cell and PlotLayout.storeWorld(plot(), cell[1], cell[2], PlotLayout.PLOT.store.floor + 2.5), stocked
+end
+
 -- (where, the marker's word, the hint, the HUD button to pulse) for a step.
 local function target(step, state): (Vector3?, string, string, string?)
 	local where = step.where
@@ -259,6 +280,15 @@ local function target(step, state): (Vector3?, string, string, string?)
 			return at, label, text, nil
 		end
 		return benchWorld(state), "Pack here", "Pack a crate and pick 🏪 Store, then press Fill at a display.", nil
+	elseif where == "till" then
+		local at, stocked = tillSpot(state)
+		if not stocked then
+			if #state.store.stockroom > 0 then
+				return firstDisplay(state), "Fill", "Shoppers only come when something's out: press Fill at a display.", nil
+			end
+			return benchWorld(state), "Pack here", "Pack a crate and pick 🏪 Store, then press Fill at a display: shoppers come for it.", nil
+		end
+		return at, "Serve here", hint, nil
 	elseif where == "jobboard" then
 		return (PlotLayout.buildingFrame("HiringHall") * CFrame.new(-9.7, 5.4, 0.6)).Position, "Job board", hint, nil
 	end

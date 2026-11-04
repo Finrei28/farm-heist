@@ -364,8 +364,8 @@ function PipelineRules.simulate(state, seconds: number, rate: number, startTime:
 		end
 
 		-- Shoppers buy at your prices (they come whether or not the crew
-		-- works). Honour Boxes and Self-checkouts serve themselves; a store
-		-- with only Registers needs a Cashier.
+		-- works). Self-checkouts serve themselves; a store with only tills
+		-- (the Shop Counter, Registers) needs a Cashier while you're away.
 		local shop = state.shop
 		budget.shoppers += 60 / DemandModel.shopperInterval(shop.level, shop.stars) * rate * (1 + (shop.boost or 0))
 		local arrived = math.floor(budget.shoppers)
