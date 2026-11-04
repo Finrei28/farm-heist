@@ -34,7 +34,7 @@ So each stage below tests the riskiest assumption the build can answer by then. 
 
 ## Dev commands each stage needs
 
-Build them in `DevCommandService` (Studio only, plus `Util/Staff` in live servers) **before** the stage that uses them. Testing without them means waiting hours of real time.
+Build them in `DevCommandService` (Studio only; `Util/Staff` decides who may use the support commands in live servers) **before** the stage that uses them. Testing without them means waiting hours of real time.
 
 | Command | Does | Needed from |
 |---|---|---|

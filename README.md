@@ -97,7 +97,7 @@ lune run tests/run
 
 **Sounds:** `python tools/sound_art/generate.py` synthesises the game's own sounds into `art/sounds/*.wav` (`--all` remakes them, or name them); upload them and paste the ids into `src/shared/Config/Sounds.luau` (docs/RobloxPage.md).
 
-**Page art:** put Studio shots in `art/page/shots/` (docs/RobloxPage.md says which), then `python tools/page_art/compose.py` makes `art/page/icon.png` and the thumbnails.
+**Page art:** put Studio shots in `art/page/shots/` (docs/RobloxPage.md says which), then `python tools/page_art/compose.py` makes `art/page/icon.png`, the thumbnails, and the community's emblem and cover photo.
 
 **Raid race:** `lune run tools/raidrace` times the design doc's worked example (§4.11) from the real layout: a thief's whole raid on a back-row Pumpkin (in, steal, out over the fence) as each defence is added, against an owner at the farmhouse door, the warehouse or in town, reacting quickly or slowly, as seconds ahead (escapes) or behind (caught).
 
@@ -116,9 +116,9 @@ src/client/   UI (the Kraft & Crate kit) · PlayerState · Reasons
               Controllers/ Hud · Hotbar · Field · SeedRack · Barn · Shed · Market · Shop · Truck · Shopper · Prompt · Sprint
 tests/        *.test.luau, lib/ (harness, spec, raidrace)
 tools/        check.luau · progression.luau · raidrace.luau · designmap.luau · partdump.luau · crop_art/ (Python: the meshes, partview)
-              sound_art/ (Python: the sounds) · page_art/ (Python: the icon and thumbnails)
+              sound_art/ (Python: the sounds) · page_art/ (Python: the icon, thumbnails, community art)
 art/sounds/   *.wav (upload in Studio)
-art/page/     shots/ (from Studio) · icon.png · thumbnails
+art/page/     shots/ (from Studio) · icon.png · thumbnails · community_emblem/cover.png
 art/crops/    FarmHeistCrops.glb (import in Studio) · previews/ · contact_sheet.png
 art/props/    FarmHeistProps.glb (import in Studio) · previews/ · contact_sheet.png
 docs/         GameDesign.md · ArtDirection.md · PlaytestPlan.md · PlaytestLog.md (+ playtest/ screenshots)

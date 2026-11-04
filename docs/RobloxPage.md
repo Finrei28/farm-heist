@@ -2,6 +2,17 @@
 
 Everything the game's page on Roblox needs (design doc §7, §9 week 9, §11 step 7), and the things only the game's owner can do on the Creator Dashboard. The code is ready for each one: until an id is pasted in, an item is hidden in the live game (and free to try in Studio), and a sound is silent.
 
+## Publishing as a community
+
+Farm Heist is published by a community (Roblox's new name for a group), so the page shows the community as its creator. Do this first: passes, products, sounds and the game's settings all belong to the game, so they're made after it's published.
+
+1. **Make the community:** on roblox.com, Communities > Create Community, named **Farm Heist**, with `art/page/community_emblem.png` as its emblem and a description (a one-time fee in Robux, shown on that screen). You're its owner. Then Configure Community > Information > Cover Photo: `art/page/community_cover.png`.
+2. **Publish into it:** with `FarmHeist.rbxl` open and `lune run tools/check` passing, File > Publish to Roblox As… > Create new experience, and change **Creator** from your name to the community before Create (left on your name, the game lands on your profile).
+   - Already published under your own account? Creator Hub > Creations > the game > Configure > Settings > Initiate ownership transfer, pick the community and accept on its side. The game goes private and its servers close while it moves; make it public again after.
+3. **Set the game up:** Game Settings > Security > Enable Studio Access to API Services, and the server size of 8 (README).
+4. **Make everything below as the community:** switch Creator Hub to the community before making passes and products or uploading sounds and art. Audio uploaded to your own account is private to you and won't play in the community's game. The Robux from passes and products goes to the community's funds; pay yourself from there (the community's Revenue > Payouts).
+5. **Staff:** in live servers the community's owner can use `/trades` and `/rollback` (`src/server/Util/Staff.luau`). To let a role in too (moderators), set `Staff.GROUP_RANK` to that role's rank (the community's Roles settings show it), or add people by user id to `Staff.USER_IDS`.
+
 ## The page
 
 **Name:** Farm Heist
@@ -37,8 +48,10 @@ Take each shot in Studio (Play, graphics quality at its highest, the HUD hidden:
 | `store` | Inside a Supermarket full of displays and shoppers queueing at the checkouts | "BUILD YOUR OWN STORE" |
 | `auction` | The Auction House during a lot: Goldie Gavel, the lot over its pedestal, the board | "BID ON RARE SEEDS" |
 | `trucks` | A semi leaving the warehouse's dock, crates in the Cold Room, workers at the line | "SHIP TO THE CITY" |
+| `community_emblem` | None: drawn by the script (512 × 512). The plain bat and a carrot crossed, outlined like stickers, on barn-red planks with a stitched cream edge and a gold sparkle; no words, so it still reads at the 40-odd pixels Roblox shows emblems at in lists | none |
+| `community_cover` | The `farm` shot's right three quarters (1440 × 456, the 60:19 Roblox asks for, about 1:1 from the shot): the barn and farmhouse in the top half on the left. Roblox fades the cover's bottom into the page and puts the emblem and the name over its lower left, so nothing that matters is there | the FARM HEIST sign, hung on the right |
 
-Made on 2026-11-04 (in `art/page/`, shots in `art/page/shots/`): `icon.png`, `farm.png`, `raid.png`, `auction.png`, `trucks.png`. Still to take: `store` (a Supermarket full of displays and shoppers takes a long staging run). Studio's game view is 1920 × 822 at most on this screen, so each shot is taken in four quarters and stitched, and thumbnails are scaled up from about 1460 × 820.
+Made on 2026-11-04 (in `art/page/`, shots in `art/page/shots/`): `icon.png`, `farm.png`, `raid.png`, `auction.png`, `trucks.png`, `community_emblem.png`, `community_cover.png` (the community's two judged on a mock of the community page, light and dark, desktop and phone: the cover photo's size is from a DevForum answer, Dec 2025, as Roblox's docs don't give one). Still to take: `store` (a Supermarket full of displays and shoppers takes a long staging run). Studio's game view is 1920 × 822 at most on this screen, so each shot is taken in four quarters and stitched, and thumbnails are scaled up from about 1460 × 820.
 
 Upload: Creator Dashboard > the experience > Places > the start place > Thumbnails (the farm first); the icon under the experience's Basic Settings.
 
