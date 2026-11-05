@@ -249,6 +249,9 @@ function ShopRules.fill(store, id: string, marketPrice, limit: number?, allow): 
 		if left - used <= 1e-9 then
 			break
 		end
+		if slot.off then
+			continue -- (you took it off: it stays empty until you pick a crop)
+		end
 		if slot.units <= 0 then
 			slot.units, slot.a = 0, 0
 			slot.crop = if slot.set then slot.set else autoCrop(store, entry, allow)
@@ -277,6 +280,9 @@ local function fullness(store, id: string, allow): (number, boolean)
 	local full, room, wanted = 0, 0, false
 	local waiting = ShopRules.stockroomUnits(store, allow)
 	for _, slot in entry.slots do
+		if slot.off then
+			continue
+		end
 		if slot.crop and slot.units > 0 then
 			full += slot.units / Crops.ById[slot.crop].perPatch
 		end
@@ -371,7 +377,11 @@ function ShopRules.displayRoom(store): number
 	local room = 0
 	for _, id in StoreLayout.ofKind(store.layout, "Display") do
 		local def = Store.ITEMS[store.layout[id].item]
-		room += def.patches * #(store.layout[id].slots or {})
+		for _, slot in store.layout[id].slots or {} do
+			if not slot.off then
+				room += def.patches
+			end
+		end
 	end
 	return room
 end
@@ -405,6 +415,29 @@ function ShopRules.empty(store, id: string): number
 	return units
 end
 
+-- Takes one slot's crops off a display, back to your packed crates (goods
+-- coming back always fit), and leaves it empty until you pick a crop for it:
+-- or a Stocker would only put them straight back (the user, 2026-11-06:
+-- "Allow players to remove topped up crops on a shelf"). Returns units.
+function ShopRules.takeOff(store, id: string, index: number): number
+	local entry = store.layout[id]
+	local slot = entry and entry.slots and entry.slots[index]
+	if not slot or not slot.crop or slot.units <= 0 then
+		return 0
+	end
+	local units = slot.units
+	if slot.a > 0 then
+		ShopRules.restock(store, slot.crop, slot.a, "A")
+	end
+	if units - slot.a > 0 then
+		ShopRules.restock(store, slot.crop, units - slot.a, "B")
+	end
+	slot.units, slot.a = 0, 0
+	slot.crop = nil
+	slot.off = true
+	return units
+end
+
 -- Keeps a slot to one crop (cropId) or sets it back to Auto (nil). What's
 -- on it now goes back to the stockroom if it's a different crop. Returns
 -- nil, or why not: "BadRequest" · "CantHold".
@@ -418,6 +451,7 @@ function ShopRules.setSlot(store, id: string, index: number, cropId: string?): s
 		return "CantHold"
 	end
 	slot.set = cropId
+	slot.off = nil
 	if cropId and slot.crop and slot.crop ~= cropId and slot.units > 0 then
 		if slot.a > 0 then
 			ShopRules.restock(store, slot.crop, slot.a, "A")

@@ -369,7 +369,7 @@ local function stockTab(state)
 					elseif crop then `{crop.icon or ""} empty` else "empty",
 				ZIndex = 23, Parent = frame })
 			local set = slot.set and Crops.ById[slot.set]
-			local _, cycle = UI.button({ text = if set then `{set.icon or ""} {set.name}` else "Auto", kind = if set then "gold" else "cream",
+			local _, cycle = UI.button({ text = if slot.off then "Left empty" elseif set then `{set.icon or ""} {set.name}` else "Auto", kind = if set and not slot.off then "gold" else "cream",
 				size = UDim2.fromOffset(132, 30), anchor = Vector2.new(1, 0), position = UDim2.new(1, -10, 0, y), textSize = 14, zIndex = 23, parent = frame })
 			cycle.Activated:Connect(function()
 				local choices = slotChoices(store, entry, slot)

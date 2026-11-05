@@ -20,7 +20,9 @@ local Crops = require(Shared.Config.Crops)
 local LandRules = require(Shared.LandRules)
 local MarketPrice = require(Shared.MarketPrice)
 local PackRules = require(Shared.PackRules)
+local Rarities = require(Shared.Config.Rarities)
 local Remotes = require(Shared.Remotes)
+local ShopRules = require(Shared.ShopRules)
 local TruckRules = require(Shared.TruckRules)
 local Warehouse = require(Shared.Config.Warehouse)
 local WarehouseRules = require(Shared.WarehouseRules)
@@ -255,10 +257,29 @@ end
 local function routesTab(state)
 	local warehouse = state.warehouse
 	local info = WarehouseRules.level(warehouse.level)
+	-- every crop you've unlocked, so you can set one before its first harvest
+	-- (a crop only showed once it was in the barn, and it starts on Truck, so
+	-- that harvest had gone by truck before you could tick it), and anything
+	-- else you have, wherever it is
 	local crops = {}
+	for _, crop in Crops.List do
+		if state.level >= Rarities.ById[crop.rarity].seedLevel then
+			crops[crop.id] = true
+		end
+	end
 	for key, units in state.inventory.crops do
 		local cropId = BarnRules.parse(key)
 		if Crops.ById[cropId] and units > 0 then
+			crops[cropId] = true
+		end
+	end
+	for _, crate in state.store.stockroom do
+		if Crops.ById[crate.crop] then
+			crops[crate.crop] = true
+		end
+	end
+	for cropId in ShopRules.onDisplay(state.store) do
+		if Crops.ById[cropId] then
 			crops[cropId] = true
 		end
 	end

@@ -97,6 +97,73 @@ return function(spec, harness)
 		end)
 	end)
 
+	describe("taking crops off a shelf", function()
+		local function shelf()
+			local store = newStore({ s = "WoodenShelf" })
+			store.stockroom = { crate("Carrot", 72), crate("Carrot", 72), crate("Carrot", 36, "A") }
+			ShopRules.fill(store, "s", market(30))
+			return store
+		end
+		it("sends one slot back to your packed crates, grade A and all", function()
+			local store = shelf()
+			local slot = store.layout.s.slots[1]
+			local units, a = slot.units, slot.a
+			expect(ShopRules.takeOff(store, "s", 1)).toBe(units)
+			expect(slot.units).toBe(0)
+			expect(slot.a).toBe(0)
+			expect(ShopRules.stockroomUnits(store).Carrot).toBe(units)
+			local graded = 0
+			for _, c in store.stockroom do
+				if c.grade == "A" then
+					graded += c.units
+				end
+			end
+			expect(graded).toBe(a)
+		end)
+		it("loses nothing, slot by slot", function()
+			local store = shelf()
+			local function total()
+				local out = ShopRules.onDisplay(store).Carrot
+				return (if out then out.units else 0) + (ShopRules.stockroomUnits(store).Carrot or 0)
+			end
+			local before = total()
+			ShopRules.takeOff(store, "s", 1)
+			expect(total()).toBe(before)
+			ShopRules.takeOff(store, "s", 2)
+			expect(total()).toBe(before)
+			expect(ShopRules.onDisplay(store).Carrot).toBe(nil)
+		end)
+		it("stays empty: no Stocker, no Fill all", function()
+			local store = shelf()
+			ShopRules.takeOff(store, "s", 1)
+			expect(ShopRules.nextDisplay(store)).toBe(nil)
+			expect(ShopRules.restockDisplays(store, market(30), 8)).toBe(0)
+			expect(ShopRules.fillAll(store, market(30))).toBe(0)
+			expect(store.layout.s.slots[1].units).toBe(0)
+		end)
+		it("fills again once you pick a crop", function()
+			local store = shelf()
+			ShopRules.takeOff(store, "s", 1)
+			expect(ShopRules.setSlot(store, "s", 1, "Carrot")).toBe(nil)
+			expect(ShopRules.fill(store, "s", market(30)) > 0).toBe(true)
+			ShopRules.takeOff(store, "s", 1)
+			expect(ShopRules.setSlot(store, "s", 1, nil)).toBe(nil) -- (Auto too)
+			expect(ShopRules.fill(store, "s", market(30)) > 0).toBe(true)
+		end)
+		it("does nothing to an empty slot", function()
+			local store = newStore({ s = "WoodenShelf" })
+			expect(ShopRules.takeOff(store, "s", 1)).toBe(0)
+			expect(store.layout.s.slots[1].off).toBe(nil)
+			expect(ShopRules.takeOff(store, "s", 9)).toBe(0)
+		end)
+		it("doesn't count a slot left empty as room for the time-away sums", function()
+			local store = shelf()
+			local room = ShopRules.displayRoom(store)
+			ShopRules.takeOff(store, "s", 1)
+			expect(ShopRules.displayRoom(store) < room).toBe(true)
+		end)
+	end)
+
 	describe("a Stocker", function()
 		it("fills only as many patches' worth as their round allows, the emptiest display first", function()
 			local store = newStore({ a = "WoodenShelf", b = "WoodenShelf" })

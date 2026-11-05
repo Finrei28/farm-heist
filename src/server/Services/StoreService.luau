@@ -984,6 +984,34 @@ function actions.Stock(player, data, arg)
 	return nil, { moved = moved }
 end
 
+-- "id|slot": from the shelf panel: that slot's crops off the display and back
+-- to your packed crates. Returns { moved }.
+function actions.TakeOff(player, data, arg)
+	local st = stores[player]
+	if not st then
+		return "NoFarm"
+	end
+	local id, slotText = string.match(arg or "", "^(%w+)|(%d+)$")
+	local entry = id and data.store.layout[id]
+	local def = entry and Store.ITEMS[entry.item]
+	if not def or def.kind ~= "Display" then
+		return "BadRequest"
+	end
+	local position = MovementService.positionOf(player)
+	local item = PlotService.model(st.index).Store.Items:FindFirstChild(id)
+	if not position or not item or (position - item:GetPivot().Position).Magnitude > StoreService.REACH then
+		return "TooFar"
+	end
+	local moved = ShopRules.takeOff(data.store, id, tonumber(slotText) :: number)
+	if moved == 0 then
+		return "NoCrate"
+	end
+	drawDisplays(player)
+	drawStockroom(player)
+	DataService.NotifyState(player)
+	return nil, { moved = moved }
+end
+
 -- "checkoutId": serving at your till (§4.8). Behind it, holding the prompt
 -- over the waiting shopper checks them out: one beep, then their coins.
 -- Returns { paid }.

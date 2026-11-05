@@ -19,6 +19,22 @@ Follow-ups: <what to test next time>
 
 ## Sessions
 
+### 2026-11-06 · Routes tab, shelf Take off · build: uncommitted, on cf6c2cd
+Testers: Claude, driving Studio · Setup: Server & Clients × 1 (Player1: test save, Level 2, Store Level 3) · Lag: 0 · Shots: [playtest/2026-11-06-take-off-routes/](playtest/2026-11-06-take-off-routes/)
+
+| Case | Result | Pass? | Notes |
+|---|---|---|---|
+| **The reported bug:** Corn on the Routes tab | Corn has its row with nothing of it in the barn, and all 8 unlocked crops show at Level 2 | ✓ | [shot](playtest/2026-11-06-take-off-routes/routes-corn.jpg) |
+| Corn set to Store | Button turns green, "crew fills your store", saved as route 0 | ✓ | |
+| Take off card | First in the panel: "79 tomatoes to packed crates", red TAKE OFF, text fits | ✓ | [shot](playtest/2026-11-06-take-off-routes/take-off-card.jpg) |
+| Take off pressed | Toast "79 tomatoes back in your packed crates", slot tab loses its crop, "left empty: your crew stays off it until you pick a crop", card gone | ✓ | [shot](playtest/2026-11-06-take-off-routes/after-take-off.jpg) |
+| A Stocker afterwards | 25 s on, the slot still empty and marked off; the Stocker put those tomatoes on the other displays | ✓ | |
+| Stock tab | Slot button reads "Left empty"; pressing it goes to Auto | ✓ | [shot](playtest/2026-11-06-take-off-routes/left-empty.jpg) |
+
+Not run: Fill all with crates waiting and a slot off (covered by tests/shop.test.luau).
+
+Flags: **48 corn on Store stayed in the barn for 2 minutes**: the crew only packs a full crate, and Corn 48/60, Tomato 40/60, Carrot 66/72 were all just short (now). The "fi" in "crew fills your store" reads smudged at this size in the hand font (later).
+
 ### 2026-11-06 · crates to the stockroom, solid crates, store-ticked crops, travel from home, bubbles · build: uncommitted, on d295390
 Testers: Claude, driving Studio · Setup: Server & Clients × 1 and × 2 (Player1, Player2: test saves) · Lag: 0 · Shots: [playtest/2026-11-06-crates-to-stockroom/](playtest/2026-11-06-crates-to-stockroom/)
 

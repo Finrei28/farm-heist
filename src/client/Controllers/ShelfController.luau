@@ -10,7 +10,10 @@
 --     that gates planting) and anything else you hold: how many are in the
 --     stockroom, your price, and FILL, or OUT OF STOCK; crops this display
 --     can't hold are greyed, with the display that can;
---   * the card the slot is kept to has a gold edge.
+--   * the card the slot is kept to has a gold edge;
+--   * with crops out, a Take off card first: they go back to your packed
+--     crates (StoreAction "TakeOff"), and the slot stays empty, crew and Fill
+--     all included, until you pick something for it.
 -- Picking one keeps the slot to it and fills the display (StoreAction
 -- "Stock"); a one-slot display's panel closes once it's filled. Walking away
 -- closes it. The Store window's Stock tab keeps Fill all.
@@ -128,6 +131,31 @@ local function stock(choice: string, def)
 	end)
 end
 
+-- The slot's crops back to your packed crates.
+local function takeOff(cropId: string)
+	if busy or not shown then
+		return
+	end
+	busy = true
+	Sfx.play("UiClick")
+	local id, slot = shown.id, currentSlot()
+	task.spawn(function()
+		local result = StoreAction:InvokeServer("TakeOff", `{id}|{slot}`)
+		busy = false
+		if not result.ok then
+			local text = Reasons(result.reason)
+			if text then
+				UI.toast(text, "Error", 3)
+			end
+			return
+		end
+		local moved = result.result and result.result.moved
+		if moved then
+			UI.toast(`{Crops.ById[cropId].icon or ""} {Crops.count(cropId, moved)} back in your packed crates.`, "Good", 2.5)
+		end
+	end)
+end
+
 -- A card: the rarity band, the icon, the name, two lines, and its tag at
 -- the bottom (FILL, OUT OF STOCK, or what holds it).
 local function card(order: number, o)
@@ -192,6 +220,7 @@ local function render()
 	local where = if slots > 1 then `Slot {n}: ` else ""
 	panel.toolbar.Text = if onIt
 		then `{where}{onIt.icon or ""} {Crops.count(onIt.id, slot.units)} out of {ShopRules.slotRoom(def, onIt.id)}. Pick a crop to top it up or change it.`
+		elseif slot.off then `{where}{if slots > 1 then "left" else "Left"} empty: your crew stays off it until you pick a crop.`
 		else `{where}{if slots > 1 then "empty" else "Empty"}. Pick a crop to fill it.`
 
 	UI.clear(panel.list)
@@ -202,9 +231,20 @@ local function render()
 			anyHere = true
 		end
 	end
+	-- what's out, back to your packed crates
+	if onIt then
+		local cropId = onIt.id
+		card(-1, {
+			name = "Take off", icon = onIt.icon or "🌱", band = C.red, line1 = Crops.count(cropId, slot.units), line2 = "to packed crates",
+			tag = "TAKE OFF", tagColor = C.red,
+			press = function()
+				takeOff(cropId)
+			end,
+		})
+	end
 	-- Auto: whatever the stockroom has most of
 	card(0, {
-		name = "Auto", icon = "🔄", band = C.green, line1 = "Whatever you", line2 = "have most of", picked = slot.set == nil,
+		name = "Auto", icon = "🔄", band = C.green, line1 = "Whatever you", line2 = "have most of", picked = slot.set == nil and not slot.off,
 		tag = if anyHere then "FILL" else "OUT OF STOCK", tagColor = if anyHere then C.green else C.soil,
 		press = function()
 			if not anyHere then
@@ -225,7 +265,7 @@ local function render()
 			local price = store.prices[crop.id] or math.floor(ShopRules.reference(crop.id, MarketPrice.price(crop.id, t)) + 0.5)
 			local holder = if canHold then nil else holderOf(crop.rarity)
 			card(i, {
-				name = crop.name, icon = crop.icon or "🌱", band = rarity.color, dim = not canHold, picked = slot.set == crop.id,
+				name = crop.name, icon = crop.icon or "🌱", band = rarity.color, dim = not canHold, picked = slot.set == crop.id and not slot.off,
 				line1 = if count > 0 then `📦 {count} in stock` else "📦 none in stock",
 				line2 = `🪙 {UI.formatShort(price)} each`,
 				tag = if not canHold then `Needs a {holder or "bigger display"}` elseif count > 0 then (if mine then "TOP UP" else "FILL") else "OUT OF STOCK",
