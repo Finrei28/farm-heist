@@ -425,7 +425,7 @@ end
 -- Whether a layout keeps every rule at this Store Level. Returns true, or
 -- false, a reason and the id of the item it's about:
 --   TooMany · Unknown · OutOfFloor · Overlap · Doorway · WallSpace ·
---   NoCheckout · TooManyCheckouts · FrontBlocked · BehindBlocked · Unreachable · StaffDoor · NoQueue
+--   NoCheckout · TooManyCheckouts · FrontBlocked · BehindBlocked · NoWayBehind · Unreachable · StaffDoor · NoQueue
 function StoreLayout.check(layout, levelNumber: number): (boolean, string?, string?)
 	local level = StoreLayout.level(levelNumber)
 	local ids = StoreLayout.ids(layout)
@@ -516,6 +516,17 @@ function StoreLayout.check(layout, levelNumber: number): (boolean, string?, stri
 			end
 		end
 	end
+	local walkable = reach(level, taken) -- (whoever serves has to be able to get there: a Cashier walks between tills)
+	for _, id in ids do
+		local entry = layout[id]
+		if Store.ITEMS[entry.item].staffed then
+			for _, cell in StoreLayout.behind(entry) do
+				if not walkable[key(cell[1], cell[2])] then
+					return false, "NoWayBehind", id
+				end
+			end
+		end
+	end
 	local reached = reach(level, StoreLayout.closedToShoppers(layout)) -- (shoppers keep out from behind the tills)
 	for _, id in ids do
 		local entry = layout[id]
@@ -545,9 +556,9 @@ end
 -- The shortest walk a shopper can take from one cell to another (free
 -- cells, never behind a till): a list of cells { { x, y } } from `from` to
 -- `to`, or nil.
-function StoreLayout.path(layout, levelNumber: number, from, to)
+function StoreLayout.path(layout, levelNumber: number, from, to, staff: boolean?)
 	local level = StoreLayout.level(levelNumber)
-	local taken = StoreLayout.closedToShoppers(layout)
+	local taken = if staff then StoreLayout.occupied(layout) else StoreLayout.closedToShoppers(layout) -- (staff can go behind the tills)
 	local start, goal = key(from[1], from[2]), key(to[1], to[2])
 	local cameFrom = { [start] = false }
 	local queue = { from }

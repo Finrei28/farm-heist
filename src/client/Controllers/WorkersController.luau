@@ -103,7 +103,7 @@ end
 local function photo(parent: Instance, typeName: string, size: number, x: number, y: number)
 	local holder = make("Frame", { Position = UDim2.fromOffset(x, y), Size = UDim2.fromOffset(size, size), BackgroundColor3 = WorkerLooks.color(typeName), ZIndex = 23, Parent = parent },
 		{ UI.corner(size / 2), UI.stroke(UI.SEAM, 2) })
-	UI.label({ Size = UDim2.fromScale(1, 1), Font = UI.HEAD, TextSize = math.floor(size * 0.55), Text = WorkerLooks.TYPES[typeName].icon, ZIndex = 24, Parent = holder })
+	UI.label({ Size = UDim2.fromScale(1, 1), Font = UI.HEAD, TextSize = math.floor(size * 0.55), Text = WorkerLooks.TYPES[typeName].icon, TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 24, Parent = holder })
 end
 
 ------------------------------------------------------------------------

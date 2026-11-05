@@ -74,10 +74,13 @@ local rng = Random.new()
 
 local stores = {} -- [Player] = { index, shoppers = { [id] = shopper }, queues = { [checkoutId] = { shopper } }, nextAt, rush, decorating, decorateAt, soldOutTold }
 local lastId = 0
+local serveMode -- (further down)
 
 -- The store's crew (WorkerService sets these):
---   cashier(player, checkoutId) → the Cashier working that Register, and
---     the seconds they take a shopper; nil if none
+--   cashier(player, checkoutId) → the Cashier at that till, and the seconds
+--     they take a shopper; nil if none
+--   call(player, checkoutId, busy) → sends a free Cashier to a till nobody's
+--     at; whether one's coming (busy(till): they can't leave that till yet)
 --   boost(player) → the Greeter's extra shoppers (a share)
 --   served(player, worker, seconds) → a Cashier served a shopper
 --   moved(player) → the layout or the building changed: the crew moves to
@@ -85,6 +88,9 @@ local lastId = 0
 StoreService.crew = {
 	cashier = function(_player: Player, _checkout: string)
 		return nil, nil
+	end,
+	call = function(_player: Player, _checkout: string, _busy: (string) -> boolean): boolean
+		return false
 	end,
 	boost = function(_player: Player): number
 		return 0
@@ -404,13 +410,14 @@ local function goNext(st, shopper, startAt: number, say: string?, mood: string?)
 		leave(st, shopper, startAt, say, if st.decorating then nil else Shop.SCORE_TOO_DEAR, mood)
 		return
 	end
-	-- the shortest queue
+	-- the shortest queue, and of two alike the one that's being served
 	local queues = StoreLayout.queues(store.layout, store.level)
-	local best, length = nil, math.huge
+	local best, length, served = nil, math.huge, false
 	for _, checkout in StoreLayout.ofKind(store.layout, "Checkout") do
 		local waiting = #(st.queues[checkout] or {})
-		if queues[checkout] and waiting < length then
-			best, length = checkout, waiting
+		local serves = serveMode(st, store, checkout) ~= nil
+		if queues[checkout] and (waiting < length or (waiting == length and serves and not served)) then
+			best, length, served = checkout, waiting, serves
 		end
 	end
 	if not best or length >= 1 + Shop.QUEUE_LENGTH then
@@ -516,7 +523,7 @@ end
 -- ("self"), a till a Cashier works is theirs ("cashier", slower until
 -- they're trained); with the seconds a shopper takes. nil: a till waiting
 -- for you.
-local function serveMode(st, store, checkout: string): (string?, number?, any)
+function serveMode(st, store, checkout: string): (string?, number?, any)
 	local entry = store.layout[checkout]
 	local def = entry and Store.ITEMS[entry.item]
 	if not def then
@@ -533,6 +540,33 @@ local function serveMode(st, store, checkout: string): (string?, number?, any)
 		end
 	end
 	return nil
+end
+
+-- Tills nobody's at with a shopper waiting: a Cashier who isn't in the middle
+-- of a sale walks to whoever's waited longest, even with shoppers who came
+-- later at their own till (a queue there kept them from ever leaving, and
+-- the other till's shoppers gave up: Studio, 2026-11-05). The tills they're
+-- coming to.
+local function sendCashiers(player: Player, st, store, t: number): { [string]: boolean }
+	local empty = {}
+	for checkout, queue in st.queues do
+		local head = queue[1]
+		if head and head.spot == 1 and (head.stage == "queued" or head.stage == "atTill")
+			and not serveMode(st, store, checkout) and not behindTill(st, store, checkout) then
+			table.insert(empty, { checkout = checkout, since = head.joinedAt or t })
+		end
+	end
+	table.sort(empty, function(a, b)
+		return a.since < b.since
+	end)
+	local coming = {}
+	for _, till in empty do
+		coming[till.checkout] = StoreService.crew.call(player, till.checkout, function(other: string): boolean
+			local head = (st.queues[other] or {})[1]
+			return head ~= nil and (head.stage == "paying" or (head.joinedAt or t) <= till.since)
+		end)
+	end
+	return coming
 end
 
 -- The till's receipt on its owner's screen (CheckoutController): the basket
@@ -673,6 +707,7 @@ local function tickShoppers(player: Player, st, t: number)
 		end
 	end
 	-- checkouts
+	local coming = sendCashiers(player, st, store, t)
 	for checkout, queue in st.queues do
 		local head = queue[1]
 		local waiting = head and head.spot == 1 and (head.stage == "queued" or head.stage == "atTill")
@@ -686,7 +721,7 @@ local function tickShoppers(player: Player, st, t: number)
 				head.payAt = t + seconds
 				head.cashier = cashier
 				head.serveSeconds = seconds
-			elseif head.stage == "queued" then
+			elseif head.stage == "queued" and not coming[checkout] then
 				-- a till you serve at: they wait for you there, and ring the bell
 				head.stage = "atTill"
 				head.tillAt = t

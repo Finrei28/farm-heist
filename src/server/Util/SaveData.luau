@@ -42,8 +42,8 @@ local TEMPLATE = {
 	-- a building going up (build = { to, left }), what the crew does with each
 	-- crop, each truck's bed, batches waiting for a Packer, truck runs on the
 	-- road (paid when they reach the City, even if you've left by then), the
-	-- Drivers' rule.
-	warehouse = { level = 1, routes = {}, beds = { {} }, sorted = {}, trucks = {}, driverRule = 0 },
+	-- Drivers' rule, the mutated and Giant kinds the crew may pack (packs).
+	warehouse = { level = 1, routes = {}, beds = { {} }, sorted = {}, trucks = {}, driverRule = 0, packs = {} },
 	-- Your store (shared/ShopRules, shared/StoreLayout): its level, a new
 	-- building going up (build = { to, left } seconds of work), its name (nil:
 	-- "<you>'s <building>"), the layout (["id"] = item on the floor or a wall),

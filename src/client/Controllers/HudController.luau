@@ -213,7 +213,7 @@ UI.onLayout(layoutSide)
 ------------------------------------------------------------------------
 -- The top bar: small wooden signs at the right end of Roblox's own row
 -- (where players look for a shop and settings; the purse hangs from the
--- middle): Robux and Settings. Out of the side bar, so a phone's side bar stays two crates
+-- middle): Invite, Robux and Settings. Out of the side bar, so a phone's side bar stays two crates
 -- wide above the thumbstick (a third column covered the sky dial; Studio
 -- check 2026-11-04).
 

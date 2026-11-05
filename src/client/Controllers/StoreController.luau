@@ -5,8 +5,9 @@
 --            expect today, what the truck pays now, your price on a tag
 --            with − and +, the demand face and about how many sell a
 --            minute (shared/DemandModel, the same sums the shoppers use)
---   Stock:   Fill all (in your store), the stockroom, and each display's
---            slots: what's on them and what each is kept to (Auto or a crop)
+--   Stock:   Fill all (in your store), every packed crate (how many, and
+--            each kind with its amount), and each display's slots: what's
+--            on them and what each is kept to (Auto or a crop)
 --   Upgrade: the next Store Level on blueprint paper, and the ladder
 -- (The staff door lets you and your Trusted friends through: GateController.)
 local HttpService = game:GetService("HttpService")
@@ -14,6 +15,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local BarnRules = require(Shared.BarnRules)
 local Crops = require(Shared.Config.Crops)
 local DemandModel = require(Shared.DemandModel)
 local MarketPrice = require(Shared.MarketPrice)
@@ -113,7 +115,7 @@ local function labelRow(order: number, height: number, icon: string, title: stri
 		Size = UDim2.new(1, 0, 0, height), BackgroundColor3 = C.cream, LayoutOrder = order, ZIndex = 22, Parent = panel.list,
 	}, { UI.corner(3), UI.stroke(UI.SEAM, 2) })
 	make("Frame", { Size = UDim2.new(0, 8, 1, 0), BackgroundColor3 = color or C.soil, BorderSizePixel = 0, ZIndex = 23, Parent = frame })
-	UI.label({ Position = UDim2.fromOffset(14, 0), Size = UDim2.new(0, 40, 0, math.min(height, 56)), Font = UI.HEAD, Text = icon, TextSize = 28, ZIndex = 23, Parent = frame })
+	UI.label({ Position = UDim2.fromOffset(14, 0), Size = UDim2.new(0, 40, 0, math.min(height, 56)), Font = UI.HEAD, Text = icon, TextSize = 28, TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 23, Parent = frame })
 	local width = if wide then UDim2.new(1, -70, 0, 0) else UDim2.new(0.5, -60, 0, 0)
 	UI.fit(UI.label({ Position = UDim2.fromOffset(58, 5), Size = width + UDim2.fromOffset(0, 22), Font = UI.HEAD, TextSize = 17, Text = string.upper(title), ZIndex = 23, Parent = frame }), 11)
 	UI.label({ Position = UDim2.fromOffset(58, 27), Size = width + UDim2.fromOffset(0, height - 30), Font = UI.HAND, TextSize = 17, TextWrapped = true,
@@ -324,7 +326,7 @@ local function stockTab(state)
 	local order = 1
 	-- Fill all
 	local fillRow = labelRow(order, 56, "🧺", "Fill your displays",
-		if inMyStore() then "Tops up every display from the stockroom." else "Walk into your store to Fill all, or press E at a display to pick what goes on it.", C.green)
+		if inMyStore() then "Tops up every display from the stockroom." else "Walk into your store to use Fill all.", C.green)
 	local _, fillButton = UI.button({ text = "Fill all", kind = if inMyStore() then "green" else "cream", size = UDim2.fromOffset(120, 40),
 		anchor = Vector2.new(1, 0.5), position = UDim2.new(1, -10, 0.5, 2), textSize = 18, zIndex = 23, parent = fillRow })
 	fillButton.Activated:Connect(function()
@@ -335,21 +337,23 @@ local function stockTab(state)
 		send("Fill", "all")
 	end)
 	order += 1
-	-- the stockroom
-	local units = ShopRules.stockroomUnits(store)
-	local ids = {}
-	for cropId in units do
-		table.insert(ids, cropId)
+	-- your stock: how many crates, and each kind with its amount
+	local stacks = PackRules.stacks(store.stockroom)
+	local total = 0
+	for _, stack in stacks do
+		total += stack.units
 	end
-	table.sort(ids)
-	local lines = {}
-	for _, cropId in ids do
-		local crop = Crops.ById[cropId]
-		table.insert(lines, `{crop.icon or ""} {crop.name} ×{units[cropId]}`)
-	end
-	labelRow(order, 70, "📦", `Packed crates: {#store.stockroom} / {PackRules.size(state)}`,
-		if #lines > 0 then table.concat(lines, "   ") else "None ready for the shelves: pack some at the Packing Shed bench.", C.soil, true)
+	labelRow(order, 56, "📦", `Packed crates: {#store.stockroom} / {PackRules.size(state)}`,
+		if #stacks > 0 then `{UI.formatNumber(total)} crops waiting for a display or a truck.` else "None right now: pack some at the Packing Shed bench.", C.soil, true)
 	order += 1
+	for _, stack in stacks do
+		local crop = Crops.ById[stack.crop]
+		local _, mutation, giant = BarnRules.parse(stack.key)
+		local name = `{if giant then "Giant " else ""}{if mutation then mutation .. " " else ""}{crop.name}`
+		labelRow(order, 52, crop.icon or "🌱", `{name} ×{UI.formatNumber(stack.units)}{if stack.grade == "A" then " · grade A" else ""}`,
+			`{stack.crates} crate{if stack.crates == 1 then "" else "s"}{if mutation or giant then " · truck only" else ""}`, Rarities.ById[crop.rarity].color, true)
+		order += 1
+	end
 	-- each display
 	for _, id in StoreLayout.ofKind(store.layout, "Display") do
 		local entry = store.layout[id]

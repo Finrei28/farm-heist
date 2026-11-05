@@ -24,6 +24,7 @@ local Remotes = require(Shared.Remotes)
 local TruckRules = require(Shared.TruckRules)
 local Warehouse = require(Shared.Config.Warehouse)
 local WarehouseRules = require(Shared.WarehouseRules)
+local Weather = require(Shared.Config.Weather)
 local WorkerRules = require(Shared.WorkerRules)
 local Workers = require(Shared.Config.Workers)
 
@@ -76,7 +77,7 @@ local function labelRow(order: number, height: number, icon: string, title: stri
 		Size = UDim2.new(1, 0, 0, height), BackgroundColor3 = C.cream, LayoutOrder = order, ZIndex = 22, Parent = panel.list,
 	}, { UI.corner(3), UI.stroke(UI.SEAM, 2) })
 	make("Frame", { Name = "Band", Size = UDim2.new(0, 8, 1, 0), BackgroundColor3 = color or C.soil, BorderSizePixel = 0, ZIndex = 23, Parent = frame })
-	UI.label({ Position = UDim2.fromOffset(14, 0), Size = UDim2.new(0, 40, 0, math.min(height, 56)), Font = UI.HEAD, Text = icon, TextSize = 28, ZIndex = 23, Parent = frame })
+	UI.label({ Position = UDim2.fromOffset(14, 0), Size = UDim2.new(0, 40, 0, math.min(height, 56)), Font = UI.HEAD, Text = icon, TextSize = 28, TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 23, Parent = frame })
 	local width = UDim2.new(1, -(70 + (rightWidth or 0)), 0, 0)
 	UI.fit(UI.label({ Position = UDim2.fromOffset(58, 5), Size = width + UDim2.fromOffset(0, 22), Font = UI.HEAD, TextSize = 17, Text = string.upper(title), ZIndex = 23, Parent = frame }), 11)
 	local line = UI.label({ Position = UDim2.fromOffset(58, 27), Size = width + UDim2.fromOffset(0, height - 30), Font = UI.HAND, TextSize = 17, TextWrapped = true,
@@ -144,8 +145,8 @@ local function pipelineTab(state)
 	local waiting, crates, sizes, count = 0, 0, 0, 0
 	for key, units in state.inventory.crops do
 		local cropId = BarnRules.parse(key)
-		-- (mutated stacks wait for you at the wash table: the crew leaves them)
-		if Crops.ById[cropId] and CrateRules.storeable(key) and WarehouseRules.route(warehouse, cropId) then
+		-- (mutated stacks you haven't picked wait for you at the wash table)
+		if Crops.ById[cropId] and PackRules.crewTakes(warehouse, key) then
 			waiting += units
 			crates += units / CrateRules.size(cropId)
 			sizes += CrateRules.size(cropId)
@@ -306,6 +307,26 @@ local function routesTab(state)
 					send(WarehouseAction, "Route", `{cropId}|{math.clamp(math.round((from + step) * 10) / 10, 0, 1)}`)
 				end)
 			end
+		end
+	end
+
+	-- mutated and Giant crops: left for you unless you say so
+	local order = #list + 1
+	labelRow(order, 66, "✨", "Mutated crops",
+		"Your crew leaves these in the barn unless you pick 📦 Pack. They pack them while you're here, for the truck only. A crop on ✋ Keep stays kept.", C.sky)
+	local kinds = table.clone(Weather.MUTATION_ORDER)
+	table.insert(kinds, "Giant")
+	for i, kind in kinds do
+		local packs = (warehouse.packs or {})[kind] == true
+		local mutation = Weather.MUTATIONS[kind]
+		local detail = if packs then "📦 crew packs them for the truck" else "✋ left in the barn"
+		local frame = labelRow(order + i, 56, "✨", kind, if mutation then `×{mutation.value} · {detail}` else detail, if mutation then mutation.color else C.gold, 200)
+		for j, choice in { { "📦 Pack", "Pack", packs }, { "✋ Keep", "Keep", not packs } } do
+			local _, button = UI.button({ text = choice[1], kind = if choice[3] then "green" else "cream", size = UDim2.fromOffset(84, 38), anchor = Vector2.new(1, 0.5),
+				position = UDim2.new(1, -10 - (2 - j) * 90, 0.5, 0), textSize = 15, zIndex = 23, parent = frame })
+			button.Activated:Connect(function()
+				send(WarehouseAction, "PackKind", `{kind}|{choice[2]}`)
+			end)
 		end
 	end
 end

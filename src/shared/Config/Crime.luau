@@ -3,7 +3,7 @@
 return {
 	-- Who can steal, from whom, and how much
 	SHIELD_SECONDS = 45 * 60, -- Sprout Shield: your first 45 minutes of play
-	ARRIVAL_GRACE = 120, -- seconds after joining a server
+	ARRIVAL_GRACE = 60, -- seconds after joining a server
 	SAME_FARM_COOLDOWN = 180, -- seconds before you can steal from a farm you just left with loot, or were arrested in
 	RAID_CAP_WEIGHT = 10, -- the most raid weight (Config/Rarities raidWeight) a farm can lose ...
 	RAID_WINDOW = 600, -- ... in this many seconds, to all thieves together

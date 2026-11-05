@@ -88,8 +88,7 @@ local function roster(data)
 	return list
 end
 
--- Workers of a type in hiring order (the first Driver drives truck 1, the
--- first Cashier works the first Register ...).
+-- Workers of a type in hiring order (the first Driver drives truck 1 ...).
 local function ofType(data, typeName: string)
 	local list = {}
 	for _, entry in roster(data) do
@@ -100,8 +99,7 @@ local function ofType(data, typeName: string)
 	return list
 end
 
--- The tills (Shop Counters and Registers) in the layout, in id order: the
--- first Cashier works the first.
+-- The tills (Shop Counters and Registers) in the layout, in id order.
 local function registers(store): { string }
 	local ids = {}
 	for id, entry in store.layout do
@@ -116,6 +114,15 @@ local function registers(store): { string }
 	return ids
 end
 
+-- Which till each Cashier is at (WorkerRules.tills). st: the farm's crew state.
+local function cashierTills(st, data): { [string]: string }
+	local uids = {}
+	for _, entry in ofType(data, "Cashier") do
+		table.insert(uids, entry.uid)
+	end
+	return WorkerRules.tills(uids, registers(data.store), if st then st.tills else {})
+end
+
 -- What WorkerRules.slots needs about a farm.
 local context = WorkerRules.context
 WorkerService.context = context
@@ -123,7 +130,7 @@ WorkerService.context = context
 ------------------------------------------------------------------------
 -- Where they stand (world space), for the clients
 
-local function spotOf(index: number, data, entry, nth: number): (Vector3, Vector3)
+local function spotOf(index: number, data, entry, nth: number, till: string?): (Vector3, Vector3)
 	local worker = entry.worker
 	local frame = PlotLayout.frame(index)
 	local function at(local_: Vector3, face: Vector3): (Vector3, Vector3)
@@ -150,8 +157,7 @@ local function spotOf(index: number, data, entry, nth: number): (Vector3, Vector
 		local cx, cy = StoreLayout.stockerSpot(data.store.layout, data.store.level, nth)
 		return at(PlotLayout.storeLocal(cx, cy, PlotLayout.PLOT.store.floor), Vector3.new(-1, 0, 0))
 	elseif t == "Cashier" then
-		local id = registers(data.store)[nth]
-		local entry_ = id and data.store.layout[id]
+		local entry_ = till and data.store.layout[till]
 		local behind = entry_ and StoreLayout.behind(entry_)[1]
 		if behind then
 			local spot = PlotLayout.storeLocal(behind[1], behind[2], PlotLayout.PLOT.store.floor)
@@ -168,13 +174,14 @@ local function spotOf(index: number, data, entry, nth: number): (Vector3, Vector
 	return at(PlotLayout.PLOT.door, Vector3.new(0, 0, 1))
 end
 
--- The way along the store's aisles between two points, for a Stocker: the
--- corners to go by, or nil to go straight.
-local function aisle(index: number, data, from: Vector3, to: Vector3): { Vector3 }?
+-- The way along the store's aisles between two points, for a Stocker or (staff:
+-- by the cells behind the tills too) a Cashier: the corners to go by, or nil
+-- to go straight.
+local function aisle(index: number, data, from: Vector3, to: Vector3, staff: boolean?): { Vector3 }?
 	local store = data.store
 	local ax, ay = PlotLayout.storeCellAt(index, from)
 	local bx, by = PlotLayout.storeCellAt(index, to)
-	local cells = StoreLayout.path(store.layout, store.level, { math.round(ax), math.round(ay) }, { math.round(bx), math.round(by) })
+	local cells = StoreLayout.path(store.layout, store.level, { math.round(ax), math.round(ay) }, { math.round(bx), math.round(by) }, staff)
 	if not cells then
 		return nil
 	end
@@ -246,10 +253,11 @@ local function showCrew(player: Player, to: Player?)
 		end
 	end
 	local list, counts = {}, {}
+	local tills = cashierTills(st, data)
 	for _, entry in roster(data) do
 		local t = entry.worker.type
 		counts[t] = (counts[t] or 0) + 1
-		local position, face = spotOf(index, data, entry, counts[t])
+		local position, face = spotOf(index, data, entry, counts[t], tills[entry.uid])
 		local via = nil
 		if turned then
 			via = wayOut(index, data, entry, if striking then wasAt[entry.uid] or position else position)
@@ -345,15 +353,16 @@ local function leanOf(st, data, cropId: string): (string, () -> ())
 	end
 end
 
--- A plain barn stack the crew may take (routed, not kept; mutated ones wait
--- for you at the wash table) with a full crate's worth in it, or nil. takes:
--- only crops it says yes to.
+-- A barn stack the crew may take (PackRules.crewTakes) with a full crate's
+-- worth in it, or any at all of a mutated one (they come a few at a time, so
+-- their crates go part-full), or nil. takes: only crops it says yes to.
 local function nextStack(data, takes: ((string) -> boolean)?): (string?, string?)
 	local keys = {}
 	for key, units in data.inventory.crops do
 		local cropId = BarnRules.parse(key)
-		if Crops.ById[cropId] and CrateRules.storeable(key) and WarehouseRules.route(data.warehouse, cropId)
-			and units >= CrateRules.size(cropId) and (not takes or takes(cropId)) then
+		if Crops.ById[cropId] and PackRules.crewTakes(data.warehouse, key)
+			and (units >= CrateRules.size(cropId) or (units > 0 and not CrateRules.storeable(key)))
+			and (not takes or takes(cropId)) then
 			table.insert(keys, key)
 		end
 	end
@@ -777,7 +786,8 @@ local function crateOf(crate)
 end
 
 -- Builds the pipeline's state from the save: growth, the plain barn stacks
--- (mutated ones wait for you), the warehouse, trucks, store and crew.
+-- and washed batches (mutated ones wait until you're back: the time-away sums
+-- only know crops), the warehouse, trucks, store and crew.
 local function pipelineState(player: Player, data)
 	local info = WarehouseRules.level(data.warehouse.level)
 	local state = PipelineRules.newState()
@@ -794,7 +804,9 @@ local function pipelineState(player: Player, data)
 	end
 	state.barnRoom = math.max(0, BarnRules.capacityOf(data) - BarnRules.units(data.inventory))
 	for _, batch in data.warehouse.sorted do
-		state.sorted[batch.crop] = (state.sorted[batch.crop] or 0) + batch.units
+		if CrateRules.storeable(batch.key or "") then
+			state.sorted[batch.crop] = (state.sorted[batch.crop] or 0) + batch.units
+		end
 	end
 	-- the packed crates, by what the crew will do with them
 	for _, crate in data.store.stockroom do
@@ -870,6 +882,11 @@ local function settleAway(player: Player, data, away: number)
 	end
 	-- washed batches, the trucks' beds and runs on the road
 	local sorted = {}
+	for _, batch in data.warehouse.sorted do
+		if not CrateRules.storeable(batch.key or "") then
+			table.insert(sorted, batch) -- (mutated: as it was, it keeps its mutation)
+		end
+	end
 	for cropId, units in state.sorted do
 		local size = CrateRules.size(cropId)
 		while units > 0 do
@@ -1201,16 +1218,50 @@ function WorkerService.Start()
 
 	-- The store's crew, for StoreService.
 	StoreService.crew.cashier = function(player: Player, checkout: string)
-		local data = DataService.Get(player)
-		if not data or data.crew.strike then
+		local data, st = DataService.Get(player), crews[player]
+		if not data or not st or data.crew.strike then
 			return nil, nil
 		end
-		local nth = table.find(registers(data.store), checkout)
-		local entry = nth and ofType(data, "Cashier")[nth]
-		if not entry then
-			return nil, nil
+		local tills = cashierTills(st, data)
+		for _, entry in ofType(data, "Cashier") do
+			if tills[entry.uid] == checkout and now() >= (st.arrives[entry.uid] or 0) then
+				return entry, 60 / math.max(0.1, WorkerRules.speed(entry.worker))
+			end
 		end
-		return entry, 60 / math.max(0.1, WorkerRules.speed(entry.worker))
+		return nil, nil
+	end
+	-- A shopper's waiting at a till nobody's at: the first Cashier who isn't
+	-- tied up at their own walks over, and stays there (the user, 2026-11-05: 2
+	-- checkouts with 1 Cashier left shoppers waiting at the new one). Whether
+	-- one's coming. busy(till): they can't leave that till yet.
+	StoreService.crew.call = function(player: Player, checkout: string, busy: (string) -> boolean): boolean
+		local data, st, index = DataService.Get(player), crews[player], PlotService.plotOf(player)
+		if not data or not st or not index or data.crew.strike then
+			return false
+		end
+		local tills = cashierTills(st, data)
+		local cashiers = ofType(data, "Cashier")
+		for _, entry in cashiers do
+			if tills[entry.uid] == checkout then
+				return true -- (on the way)
+			end
+		end
+		for nth, entry in cashiers do
+			local uid, mine = entry.uid, tills[entry.uid]
+			if now() >= (st.arrives[uid] or 0) and not (mine and busy(mine)) then
+				local from = st.at[uid] or st.spots[uid]
+				local to = spotOf(index, data, entry, nth, checkout)
+				local way = from and aisle(index, data, from, to, true) -- (nil: no way round, and they never walk through things)
+				if way then
+					st.tills[uid] = checkout
+					-- (the walk first: a new post alone would put them there at once)
+					st.arrives[uid] = now() + goTo(index, st, uid, to, nil, true, nil, way)
+					showCrew(player)
+					return true
+				end
+			end
+		end
+		return false
 	end
 	StoreService.crew.boost = function(player: Player): number
 		local data = DataService.Get(player)
@@ -1249,7 +1300,7 @@ function WorkerService.Start()
 	end
 
 	PlotService.OnAssigned(function(player, _index, data)
-		crews[player] = { budgets = {}, routeAcc = {}, wageAt = now() + 60, told = {}, spots = {}, at = {}, trips = {}, worked = {}, loading = {} }
+		crews[player] = { budgets = {}, routeAcc = {}, wageAt = now() + 60, told = {}, spots = {}, at = {}, trips = {}, worked = {}, loading = {}, tills = {}, arrives = {} }
 		welcome(player, data)
 		showCrew(player)
 	end)

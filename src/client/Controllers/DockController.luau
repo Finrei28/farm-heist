@@ -122,7 +122,7 @@ local function makeRow(stack, action: string)
 	local crop = Crops.ById[stack.crop]
 	local frame = make("Frame", { Size = UDim2.new(1, 0, 0, 56), BackgroundColor3 = C.cream, ZIndex = 22, Parent = panel.list }, { UI.corner(3), UI.stroke(UI.SEAM, 2) })
 	make("Frame", { Size = UDim2.new(0, 8, 1, 0), BackgroundColor3 = Rarities.ById[crop.rarity].color, BorderSizePixel = 0, ZIndex = 23, Parent = frame })
-	UI.label({ Position = UDim2.fromOffset(14, 8), Size = UDim2.fromOffset(40, 40), Font = UI.HEAD, Text = crop.icon or "🌱", TextSize = 28, ZIndex = 23, Parent = frame })
+	UI.label({ Position = UDim2.fromOffset(14, 8), Size = UDim2.fromOffset(40, 40), Font = UI.HEAD, Text = crop.icon or "🌱", TextSize = 28, TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 23, Parent = frame })
 	local name = UI.fit(UI.label({ Position = UDim2.fromOffset(58, 5), Size = UDim2.new(1, -190, 0, 22), Font = UI.HEAD, TextSize = 17, ZIndex = 23, Parent = frame }), 11)
 	local line = UI.fit(UI.label({ Position = UDim2.fromOffset(58, 28), Size = UDim2.new(1, -190, 0, 20), Font = UI.HAND, TextSize = 18, ZIndex = 23, Parent = frame }), 11)
 	local holder, button = UI.button({ text = "", kind = "cream", size = UDim2.fromOffset(112, 40), anchor = Vector2.new(1, 0.5), position = UDim2.new(1, -10, 0.5, 0),

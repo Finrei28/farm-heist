@@ -206,6 +206,30 @@ function WorkerRules.context(data)
 	}
 end
 
+-- Which till each Cashier is at: { [uid] = till }. Each stays at the one they
+-- last went to (`at`), if it's still there and nobody's there before them; the
+-- rest take the free tills in order, so the first Cashier starts at the first.
+function WorkerRules.tills(cashiers: { string }, tills: { string }, at): { [string]: string }
+	local where, taken = {}, {}
+	for _, uid in cashiers do
+		local till = at[uid]
+		if till and table.find(tills, till) and not taken[till] then
+			where[uid], taken[till] = till, true
+		end
+	end
+	for _, uid in cashiers do
+		if not where[uid] then
+			for _, till in tills do
+				if not taken[till] then
+					where[uid], taken[till] = till, true
+					break
+				end
+			end
+		end
+	end
+	return where
+end
+
 -- How many of a type you can have. ctx = { warehouseLevel, storeLevel,
 -- farmLevel, openTiles, registers, trucks } (trucks: at the warehouse's level).
 function WorkerRules.slots(typeName: string, ctx): number

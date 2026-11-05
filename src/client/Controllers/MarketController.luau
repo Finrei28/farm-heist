@@ -125,7 +125,7 @@ local function cropRow(order: number, crop, t: number)
 		AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 6, 1, 0), Size = UDim2.new(1, -12, 0, 1),
 		BackgroundColor3 = C.chalk, BackgroundTransparency = 0.8, BorderSizePixel = 0, ZIndex = 23, Parent = frame,
 	})
-	chalk({ Position = UDim2.fromOffset(10, 0), Size = UDim2.fromOffset(34, 46), Font = UI.HEAD, TextSize = 26, Text = crop.icon or "🌱", Parent = frame })
+	chalk({ Position = UDim2.fromOffset(10, 0), Size = UDim2.fromOffset(34, 46), Font = UI.HEAD, TextSize = 26, TextXAlignment = Enum.TextXAlignment.Center, Text = crop.icon or "🌱", Parent = frame })
 	UI.fit(chalk({ Position = UDim2.fromOffset(48, 2), Size = UDim2.new(0.34, -50, 0, 24), TextSize = 22, Text = crop.name, Parent = frame }), 12)
 	local usual = chalk({ Position = UDim2.fromOffset(48, 24), Size = UDim2.new(0.34, -50, 0, 18), TextSize = 16, TextTransparency = 0.25,
 		Text = `usual {UI.formatNumber(crop.value)} · {crop.rarity}`, TextColor3 = Rarities.ById[crop.rarity].color:Lerp(C.chalk, 0.4), Parent = frame })

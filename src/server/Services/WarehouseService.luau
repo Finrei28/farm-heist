@@ -12,8 +12,9 @@
 -- they're full there's no packing: make room first.
 --
 -- WarehouseAction remote: "Wash" stackKey, then "Pack" · "Upgrade" · "Route"
--- "cropId|Truck" (Store, Keep, or a share for the truck 0–1) · "DriverRule"
--- share of the base value (0 = whenever full).
+-- "cropId|Truck" (Store, Keep, or a share for the truck 0–1) · "PackKind"
+-- "Golden|Pack" (or Keep; any mutation, or Giant) · "DriverRule" share of the
+-- base value (0 = whenever full).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
@@ -27,6 +28,7 @@ local PackRules = require(Shared.PackRules)
 local Remotes = require(Shared.Remotes)
 local Warehouse = require(Shared.Config.Warehouse)
 local WarehouseRules = require(Shared.WarehouseRules)
+local Weather = require(Shared.Config.Weather)
 local WorkerRules = require(Shared.WorkerRules)
 
 local Server = ServerScriptService.Server
@@ -247,6 +249,17 @@ function actions.Route(player, data, arg)
 		share = math.clamp(math.round(share * 10) / 10, 0, 1)
 		routes[cropId] = if share >= 1 then nil else share
 	end
+	DataService.NotifyState(player)
+	return nil
+end
+
+-- Whether the crew packs a kind of mutated crop (PackRules.crewTakes).
+function actions.PackKind(player, data, arg)
+	local kind, choice = string.match(arg or "", "^(%a+)|(%a+)$")
+	if not kind or (kind ~= "Giant" and not Weather.MUTATIONS[kind]) or (choice ~= "Pack" and choice ~= "Keep") then
+		return "BadRequest"
+	end
+	data.warehouse.packs[kind] = if choice == "Pack" then true else nil
 	DataService.NotifyState(player)
 	return nil
 end

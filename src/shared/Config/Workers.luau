@@ -23,7 +23,7 @@ return {
 		Loader = { name = "Loader", station = "Load", wage = 87.5, speed = 20, slots = { warehouse = { 5, 9, 15 } }, job = "Loads the crates routed to the trucks" },
 		Driver = { name = "Driver", station = "Truck", wage = 140, job = "Sends a truck by your rule; quicker trips with levels" }, -- 1 per truck, from Warehouse Level 5
 		Stocker = { name = "Stocker", station = "Shelves", wage = 87.5, speed = 80, slots = { store = { 2, 8, 14 } }, job = "Fills your store's displays" },
-		Cashier = { name = "Cashier", station = "Register", wage = 105, speed = 12, job = "Serves shoppers at a till" }, -- 1 per till (Counter or Register), from Store Level CASHIERS_FROM
+		Cashier = { name = "Cashier", station = "Register", wage = 105, speed = 12, job = "Serves shoppers at the tills" }, -- 1 per till (Counter or Register), from Store Level CASHIERS_FROM; a free one walks to a till nobody's at
 		Greeter = { name = "Greeter", station = "Door", wage = 87.5, slots = { store = { 8 } }, job = "Welcomes shoppers in: more shoppers" },
 		Watchman = { name = "Watchman", station = "Gatehouse", wage = 175, slots = { farm = { 20 } },
 			job = "Rings the bell on thieves, lights them up and shuts the gate on them" },

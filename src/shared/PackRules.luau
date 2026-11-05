@@ -11,7 +11,9 @@
 -- and Loaders load what's routed to the truck, Stockers put out what's routed
 -- to the store, and by hand you can use any crate either way. A crate from a
 -- split remembers which way it leans (crate.lean). A mutated crate only goes
--- by truck (CrateRules.storeable). tests/pack.test.luau.
+-- by truck (CrateRules.storeable). The crew leaves mutated and Giant crops in
+-- the barn unless you've chosen them (crewTakes). tests/pack.test.luau.
+local BarnRules = require(script.Parent.BarnRules)
 local CrateRules = require(script.Parent.CrateRules)
 local Crops = require(script.Parent.Config.Crops)
 local StoreLayout = require(script.Parent.StoreLayout)
@@ -29,6 +31,19 @@ end
 -- even past full).
 function PackRules.room(data): number
 	return math.max(0, PackRules.size(data) - #data.store.stockroom)
+end
+
+-- Whether the crew may pack a barn stack: its crop isn't kept, and if it's
+-- mutated or Giant you've picked 📦 Pack for that kind in the Routes tab
+-- (warehouse.packs; the user, 2026-11-05: "Allow selecting which mutated
+-- produce to pack or not pack"). A Giant mutated crop needs both picked.
+function PackRules.crewTakes(warehouse, key: string): boolean
+	local cropId, mutation, giant = BarnRules.parse(key)
+	if WarehouseRules.route(warehouse, cropId) == nil then
+		return false
+	end
+	local packs = warehouse.packs or {}
+	return (mutation == nil or packs[mutation] == true) and (not giant or packs.Giant == true)
 end
 
 -- What the crew does with a crate: "Truck", "Store", or nil (it's kept for

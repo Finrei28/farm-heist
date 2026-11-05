@@ -204,7 +204,7 @@ function DevCommandService.Start()
 			return
 		end
 		local count = math.clamp(math.floor(tonumber(args[3]) or crop.crate), 1, 99999)
-		BarnRules.addCrops(data.inventory, BarnRules.key(crop.id), count)
+		BarnRules.addCrops(data.inventory, BarnRules.key(crop.id, args[4]), count) -- (/crops Carrot 12 Golden: a mutated stack)
 		DataService.NotifyState(player)
 		reply(player, `+{Crops.count(crop.id, count)} in your barn`)
 	end)
@@ -450,7 +450,7 @@ function DevCommandService.Start()
 	register("DevShield", "/shield", function(player, _data, args)
 		local on = args[2] == "on"
 		DefenceService.DevShield(player, on)
-		reply(player, if on then "Sprout Shield on: 45 minutes, and 2 of arrival grace" else "Sprout Shield and arrival grace off: you can steal and be stolen from")
+		reply(player, if on then "Sprout Shield on: 45 minutes, and 1 of arrival grace" else "Sprout Shield and arrival grace off: you can steal and be stolen from")
 	end)
 
 	register("DevDefences", "/defences", function(player, _data, args)

@@ -8,8 +8,8 @@
 -- zooms in; drag (or WASD) moves the view. Tap a placed item to move, turn,
 -- put away (it stays yours) or sell it back for half; a double click moves
 -- it at once. On a keyboard each button shows its key: E moves (the item
--- you've picked, or the one under the mouse) and places, R turns, F puts
--- away, G sells, Q cancels. DONE sends the
+-- under the mouse, or the one you've picked) and places, R turns, F puts
+-- away, G sells, Q cancels. A moved item stays picked. DONE sends the
 -- draft to the server, which buys what's new and saves it; Cancel leaves
 -- everything as it was. While you're in here your store hangs "Back soon"
 -- (StoreService).
@@ -207,6 +207,8 @@ local function explain(reason: string, about: string?, self: string?): string
 		return if mine then "Leave the space in front of it free." else `That's in front of {nameOf(about :: string)}.`
 	elseif reason == "BehindBlocked" then
 		return if mine then "A till needs room behind it, for whoever serves." else `That's where you'd stand to serve at {nameOf(about :: string)}.`
+	elseif reason == "NoWayBehind" then
+		return if mine then "Whoever serves couldn't get behind it." else `This would block the way behind {nameOf(about :: string)}.`
 	elseif reason == "Unreachable" then
 		return if mine then "Shoppers couldn't reach it from the door." else `This would block the aisle to {nameOf(about :: string)}.`
 	elseif reason == "StaffDoor" then
@@ -360,6 +362,11 @@ local function drawItems()
 	for id, entry in draft do
 		local copy = copyOf(id, entry.item)
 		copy:PivotTo(PlotLayout.storeItemFrame(plot, entry, stage))
+		for _, p in copy:GetDescendants() do
+			if p:IsA("BasePart") then
+				p.CanQuery = p.Transparency < 1 -- (what you can see can be pointed at: itemAt)
+			end
+		end
 		copy.Parent = view
 		itemModels[id] = copy
 		if id == selected then
@@ -606,8 +613,22 @@ local function aim(screen: Vector2): boolean
 	return before ~= `{holding.x},{holding.y},{holding.side},{holding.at}`
 end
 
--- The item on the floor (or wall) at a screen point.
+-- The item at a screen point: the one drawn there, or else the one on that
+-- spot of the floor (or wall). (Only asking the floor missed what you saw: the
+-- top of a tall shelf is over a cell behind it.)
 local function itemAt(screen: Vector2): string?
+	local ray = workspace.CurrentCamera:ScreenPointToRay(screen.X, screen.Y)
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Include
+	params.FilterDescendantsInstances = { view }
+	local hit = workspace:Raycast(ray.Origin, ray.Direction * 500, params)
+	if hit then
+		for id, model in itemModels do
+			if hit.Instance:IsDescendantOf(model) then
+				return id
+			end
+		end
+	end
 	local cx, cy = cellAt(screen)
 	if not cx then
 		return nil
@@ -660,6 +681,7 @@ local function place()
 		setHint("Placed! Tap another spot for one more, or Cancel", GREEN)
 	else
 		holding = nil
+		selected = newId -- (still picked: another E moves it again, R turns it)
 		setHint("Moved. Tap an item to change it, or pick from the drawer", C.cream)
 	end
 	drawItems()
@@ -794,15 +816,34 @@ local function mouseAt(): Vector2
 	return UserInputService:GetMouseLocation() - inset
 end
 
-local KEYS = {
-	[Enum.KeyCode.E] = function()
-		if holding then
+-- E: places what's in hand, or picks up what you're pointing at. It always
+-- does something, or says why not.
+local function pressE()
+	local at = mouseAt()
+	if holding then
+		if holding.x == nil and holding.side == nil then
+			aim(at) -- (a new one just picked, or the next of a kind: not over the floor yet)
+		end
+		local under = if holding.id then nil else itemAt(at)
+		if not under or check() then
 			place()
 			return
 		end
-		selected = selected or itemAt(mouseAt()) -- (or the item under the mouse)
+		drop() -- (a new one can't go here, on what you're pointing at: you meant that)
+		selected = under
 		startMove()
-	end,
+		return
+	end
+	selected = itemAt(at) or selected
+	if selected then
+		startMove()
+	else
+		setHint("Point at an item, then press E to move it", RED)
+	end
+end
+
+local KEYS = {
+	[Enum.KeyCode.E] = pressE,
 	[Enum.KeyCode.R] = function()
 		if rotateHolder.Visible then
 			turn()

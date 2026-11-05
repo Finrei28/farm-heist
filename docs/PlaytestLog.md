@@ -19,6 +19,34 @@ Follow-ups: <what to test next time>
 
 ## Sessions
 
+### 2026-11-05 · E in Decorate, a Cashier over two tills, mutated crops, the shield, Invite, centred icons · build: uncommitted, on 53be864
+Testers: Claude, driving Studio · Setup: Server & Clients × 1 (Player1: test save) · Lag: 0 · Shots: [playtest/2026-11-05-store-crew/](playtest/2026-11-05-store-crew/)
+
+| Case | Result | Pass? | Notes |
+|---|---|---|---|
+| Just arrived shield | 28.3 s left about 31.7 s after joining: 60 s | ✓ | |
+| Invite sign | Shows beside Robux and Settings, fits an iPhone 17 Pro | ✓ | [phone](playtest/2026-11-05-store-crew/phone-top-bar.jpg) |
+| Pressing Invite | `CanSendGameInviteAsync` true, then Roblox's own window fails with its own error ("Too many re-renders") | ? | Inside Roblox's CorePackages, on a test player. Only the published game can show it working |
+| E on the top of a tall shelf | Picks it up | ✓ | The floor under the cursor there isn't the shelf's |
+| E on a red spot | Refuses, and says why, each time | ✓ | |
+| E on a green spot | "Moved.", and the shelf stays picked (Move, Turn, Put away showing) | ✓ | |
+| E straight after, over it | Picks it up again, again and again | ✓ | |
+| E with the mouse elsewhere | Moves the picked shelf | ✓ | |
+| E with nothing picked, over bare floor | "Point at an item, then press E to move it" | ✓ | |
+| Q | Puts it back | ✓ | |
+| A new Register, then E over it with the next in hand | Picks that Register up, rather than trying to place another on it | ✓ | [placed](playtest/2026-11-05-store-crew/decorate-new-register.jpg) |
+| 2 tills, 1 Cashier, 6 shoppers | First run: Otis stayed at till 1 until its queue was empty, and a shopper at till 2 gave up | ✗ → ✓ | Fixed: whoever's waited longest comes first. Second run: both tills paid (3 and 2), Otis went back and forth twice |
+| His route | First run: straight through the shelf, as the plant and Register shut the till's back cells in. Second run: 0 steps onto an item's cell | ✗ → ✓ | Fixed: `NoWayBehind` refuses that layout ("This would block the way behind your Register"), and with no way round he doesn't go. [message](playtest/2026-11-05-store-crew/decorate-way-behind.jpg) |
+| At the Register | Behind it, facing the shoppers | ✓ | [shot](playtest/2026-11-05-store-crew/cashier-at-register.jpg) |
+| Mutated crops on Keep | 12 s on: Golden 12, Frosted 12, Wet 6 all still in the barn | ✓ | The default |
+| Golden on Pack | Barn's Golden gone, one part-full crate of 12 in the stock, then on the Pickup; Frosted and Wet stay | ✓ | With carrots routed to the store: a mutated crate goes by truck. [rows](playtest/2026-11-05-store-crew/routes-mutated.jpg) |
+| Stock tab | `Packed crates: 1 / 16`, a row a kind, and it follows the crew live: `Golden Carrot ×12`, 1 crate, truck only; then the empty note | ✓ | [list](playtest/2026-11-05-store-crew/stock-tab.jpg), [Golden](playtest/2026-11-05-store-crew/stock-tab-golden.jpg). Fixed there: the Fill row's line was cut off (shorter now) |
+| Icons | Job icons in the middle of the Crew and Hire badges | ✓ | [badges](playtest/2026-11-05-store-crew/workers-badges.jpg). The Warehouse rows too; Store, Packing Shed, Dock and Market rows have the same change, not looked at |
+
+Not run: a mutated batch mid-wash through time away (needs Warehouse Level 5 with the Packers held up); two Cashiers on a big store.
+
+Flags: DONE ignored two clicks in Decorate, then took the third; the press never registered on the button (no toast, no save) and the server answered at once, so it looks like Studio's click timing (later: tell me if it happens by hand). A layout already saved with a shut-in till stays as it is, but every placement in Decorate shows red until it's fixed: the message says why (leave).
+
 ### 2026-11-05 · carrying arms, display flicker, the knocked out card · build: uncommitted, on 8b9d268
 Testers: Claude, driving Studio · Setup: Server & Clients × 1 and × 2 (Player1, Player2: test saves) · Lag: 0 · Shots: [playtest/2026-11-05-crates/](playtest/2026-11-05-crates/)
 

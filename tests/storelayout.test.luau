@@ -210,6 +210,33 @@ return function(spec, harness)
 			expect(reason).toBe("BehindBlocked")
 			expect(id).toBe("5")
 		end)
+		it("wants whoever serves to be able to get behind a till", function()
+			-- (the Register's back cells are free, but a plant and the wall shut them in)
+			local layout = {
+				a = { item = "ShopCounter", x = 2, y = 2, rot = 3 },
+				b = { item = "Register", x = 6, y = 4, rot = 0 },
+				c = { item = "PottedPlant", x = 5, y = 5, rot = 0 },
+			}
+			local ok, reason, about = StoreLayout.check(layout, 3)
+			expect(ok).toBe(false)
+			expect(reason).toBe("NoWayBehind")
+			expect(about).toBe("b")
+			layout.c = nil
+			expect(StoreLayout.check(layout, 3)).toBe(true)
+		end)
+		it("lets staff walk behind the tills, and not shoppers", function()
+			local layout = {
+				a = { item = "ShopCounter", x = 2, y = 2, rot = 3 },
+				b = { item = "Register", x = 6, y = 4, rot = 0 },
+			}
+			expect(StoreLayout.path(layout, 3, { 1, 2 }, { 6, 5 })).toBe(nil)
+			local path = StoreLayout.path(layout, 3, { 1, 2 }, { 6, 5 }, true)
+			expect(path ~= nil).toBe(true)
+			local taken = StoreLayout.occupied(layout)
+			for _, cell in path do
+				expect(taken[`{cell[1]},{cell[2]}`]).toBe(nil)
+			end
+		end)
 		it("queue at a Register from its till end, and send shoppers to the slot they want", function()
 			local register = { item = "Register", x = 4, y = 2, rot = 0 }
 			local till = StoreLayout.tillFront(register)

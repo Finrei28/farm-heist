@@ -260,7 +260,7 @@ local function row(order: number, key: string, units: number, state)
 		Size = UDim2.new(1, 0, 0, 76), BackgroundColor3 = C.cream, LayoutOrder = order, ZIndex = 22, Parent = panel.list,
 	}, { UI.corner(3), UI.stroke(UI.SEAM, 2) })
 	make("Frame", { Size = UDim2.new(0, 8, 1, 0), BackgroundColor3 = Rarities.ById[crop.rarity].color, BorderSizePixel = 0, ZIndex = 23, Parent = frame })
-	UI.label({ Position = UDim2.fromOffset(14, 18), Size = UDim2.fromOffset(40, 40), Font = UI.HEAD, Text = crop.icon or "🌱", TextSize = 28, ZIndex = 23, Parent = frame })
+	UI.label({ Position = UDim2.fromOffset(14, 18), Size = UDim2.fromOffset(40, 40), Font = UI.HEAD, Text = crop.icon or "🌱", TextSize = 28, TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 23, Parent = frame })
 	local name = `{if giant then "Giant " else ""}{if mutation then mutation .. " " else ""}{crop.name}`
 	UI.fit(UI.label({ Position = UDim2.fromOffset(58, 5), Size = UDim2.new(1, -200, 0, 22), Font = UI.HEAD, TextSize = 17, Text = string.upper(name), ZIndex = 23, Parent = frame }), 11)
 	UI.fit(UI.label({ Position = UDim2.fromOffset(58, 27), Size = UDim2.new(1, -200, 0, 20), Font = UI.HAND, TextSize = 18,
