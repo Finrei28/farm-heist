@@ -840,7 +840,7 @@ Each week builds its features *and* their look ([ArtDirection.md](ArtDirection.m
 | 6 ✅ | Defences, theft alarm, Home, Sprout Shield, arrival grace, raid caps, Trusted list (and the staff door for Trusted friends), MovementService, the Watchman (from week 4). Floodlights move to week 7, with night. **Look:** the defences (Built and played in Studio with 2 players 2026-11-02) | A defended farm catches most raids; an undefended one still survives |
 | 7 | Auction House, weather and mutations, Harvest Moon, Cropdex, quests. **Look:** the town (plaza, clocktower, building fronts), weather, day and night. Built 2026-11-03 with week 6's Floodlights and played in Studio the same day (2 players); the town's look built and checked in Studio 2026-11-04 | Auction rooms fill up on the bell |
 | 8 | Trading with logs and rollback, the MemoryStore supply factor, leaderboards (Top Store), the Farm Guide. **Look:** the valley (Terrain hills, woods, back-trail cover, the tunnel mouth). Built and checked in Studio 2026-11-04 (§10; 2 players) | 50-player test with no duplication or lost items |
-| 9 | Kraft & Crate UI polish, mobile layout, analytics, monetization, thumbnails and the Roblox page art. Settings, sounds and music, the Robux shop, analytics and the page art built and checked in Studio 2026-11-04 (§10; every window on a phone; the icon and four thumbnails made, the store's still to take) | Launch with a small sponsored-ad budget |
+| 9 | Kraft & Crate UI polish, mobile layout, analytics, monetization, thumbnails and the Roblox page art. Settings, sounds and music, the Robux shop, analytics and the page art built and checked in Studio 2026-11-04 (§10; every window on a phone; the icon and five thumbnails made, the store's on 2026-11-05) | Launch with a small sponsored-ad budget |
 
 ## 10. Design review log
 
@@ -1399,7 +1399,7 @@ Checked: 525 tests (settings parsed and stepped, the catalogue only selling weat
 | The VIP tag's ⭐ vanished on its gold pill | A dark tag with gold letters, just above the Roblox name others see |
 | VIP Gold in Metal looked dull olive at noon | A warm gold on the plain finish |
 
-Not checked yet: hearing the sounds (they need uploading), a real purchase prompt on the published game (the passes and products need making), the Baguette and Carrot Club in Studio, the store's thumbnail.
+Not checked yet: hearing the sounds (they need uploading), a real purchase prompt on the published game (the passes and products need making), the Baguette and Carrot Club in Studio. (The store's thumbnail was made on 2026-11-05: [RobloxPage.md](RobloxPage.md).)
 
 ### MVP week 8: the Farm Guide, trading, the market's supply, leaderboards, the valley (built 2026-11-04)
 The user: "continue" (after the town's look was pushed). Built as §4.0, §4.7, §4.13, §4.15 and ArtDirection §5 and §11 step 4 describe:

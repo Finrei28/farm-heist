@@ -224,6 +224,7 @@ def render(scene, eye, target, size, fov=40.0, ss=2, sun=(-0.35, 0.8, 0.5), sky=
     lit = np.ones(len(tid))
     if shadow_at is not None:
         near = np.linalg.norm(centres - np.asarray(shadow_at, dtype=float), axis=1) < shadow_radius
+        near &= ~np.array([bool(part.get("no_shadow")) for part in parts])[pid]
         lit = _shadows(tris[near], world, sun, n)
     # (a fill light on the characters: a shadow only half darkens them, so
     # a face under a held-up pumpkin still reads)
@@ -558,6 +559,12 @@ def overalls_side(w=320, h=640):
 def sleeve(w, h, upto, kind):
     if kind == "stripes":
         return stripes(w, h, (250, 250, 246, 255), (34, 34, 42, 255), 6, upto)
+    if isinstance(kind, tuple):  # (a plain shirt's)
+        img = canvas(w, h)
+        d = ImageDraw.Draw(img)
+        d.rectangle((0, 0, w, h * upto), fill=kind + (255,))
+        d.rectangle((0, h * upto - 0.07 * h, w, h * upto), fill=tuple(int(c * 0.78) for c in kind) + (255,))
+        return img
     img = plaid(w, h, upto)
     d = ImageDraw.Draw(img)
     end = round(h * upto)
@@ -570,6 +577,55 @@ def jeans(w=320, h=640, colour=DENIM, dark=DENIM_DARK):
     d = ImageDraw.Draw(img)
     d.rectangle((0, 0, w, h), fill=colour + (255,))
     d.line((w / 2, 0, w / 2, h), fill=dark + (255,), width=5)
+    return img
+
+
+def shopper_face(hair, look=(0.0, 0.0), mood="happy", w=640, h=576):
+    """A shopper: hair across the top, round eyes on `look`, a smile (mood
+    "happy") or a big open one ("delighted")."""
+    img = canvas(w, h)
+    d = ImageDraw.Draw(img)
+    d.rectangle((0, 0, w, 0.16 * h), fill=hair + (255,))
+    for cx in (0.31 * w, 0.69 * w):
+        eye(d, cx, 0.42 * h, 0.125 * w, 0.135 * h, look=look)
+    dark = tuple(int(c * 0.72) for c in hair) + (255,)
+    for sx in (-1, 1):
+        cx = w / 2 + sx * 0.19 * w
+        d.arc((cx - 0.13 * w, 0.17 * h, cx + 0.13 * w, 0.34 * h), 205, 335, fill=dark, width=20)
+    if mood == "delighted":
+        d.chord((0.3 * w, 0.5 * h, 0.7 * w, 0.92 * h), 0, 180, fill=(110, 26, 32, 255), outline=(40, 20, 18, 255), width=8)
+        d.rectangle((0.35 * w, 0.71 * h, 0.65 * w, 0.76 * h), fill=(255, 252, 240, 255))
+        d.ellipse((0.42 * w, 0.8 * h, 0.58 * w, 0.9 * h), fill=(226, 92, 96, 255))
+    else:
+        d.arc((0.33 * w, 0.52 * h, 0.67 * w, 0.84 * h), 20, 160, fill=(40, 20, 18, 255), width=16)
+    for x in (0.17 * w, 0.83 * w):
+        d.ellipse((x - 0.07 * w, 0.58 * h, x + 0.07 * w, 0.67 * h), fill=(240, 110, 100, 120))
+    return as_tex(img)
+
+
+def shopper_head_back(hair, w=640, h=576):
+    img = canvas(w, h)
+    ImageDraw.Draw(img).rectangle((0, 0, w, 0.72 * h), fill=hair + (255,))
+    return img
+
+
+def shopper_head_side(hair, back_at_right, w=576, h=576):
+    img = canvas(w, h)
+    d = ImageDraw.Draw(img)
+    d.polygon([(0, 0), (w, 0), (w, 0.74 * h), (0.68 * w, 0.68 * h), (0.6 * w, 0.3 * h), (0, 0.18 * h)], fill=hair + (255,))
+    return img if back_at_right else img.transpose(Image.FLIP_LEFT_RIGHT)
+
+
+def shirt(colour, side=False, w=640, h=640):
+    """A plain shirt: a darker hem, and on the front a collar and a pocket."""
+    img = canvas(w, h)
+    d = ImageDraw.Draw(img)
+    dark = tuple(int(c * 0.78) for c in colour) + (255,)
+    d.rectangle((0, 0, w, h), fill=colour + (255,))
+    d.rectangle((0, 0.88 * h, w, h), fill=dark)
+    if not side:
+        d.polygon([(0.32 * w, 0), (0.5 * w, 0.2 * h), (0.68 * w, 0)], fill=(250, 244, 230, 255), outline=dark, width=6)
+        d.rectangle((0.6 * w, 0.42 * h, 0.82 * w, 0.62 * h), outline=dark, width=8)
     return img
 
 
@@ -634,13 +690,70 @@ def crate_mesh():
     return m
 
 
-def character(scene, kind, at, yaw, pose, held=None, face=None, paddle_no=7, hand="r"):
+def basket_mesh():
+    """A shopper's wicker basket: woven, oval, narrower at the foot, dark
+    inside, its handle arching over; about 3 x 1.3 x 2.2, standing on y = 0."""
+    light, dark, rim = (222, 176, 112), (176, 126, 72), (150, 104, 60)
+
+    def weave(i, k, normal):
+        return light if (i + k // 2) % 2 == 0 else dark
+
+    squash = (1.0, 0.72)
+    m = Mesh()
+    wall = [(0.0, 1.05), (0.2, 1.14), (0.4, 1.22), (0.6, 1.3), (0.8, 1.36), (1.0, 1.42), (1.2, 1.47)]
+    m.add(lathe(wall, 28, weave, squash=squash, cap=False))
+    m.add(lathe([(1.14, 1.53), (1.32, 1.53), (1.33, 1.36)], 28, rim, squash=squash, cap=False))
+    m.add(lathe([(1.0, 1.36), (1.25, 1.36)], 24, (84, 56, 34), squash=squash))
+    for k in range(14):  # (the handle, in short lengths)
+        a0, a1 = math.pi * k / 14, math.pi * (k + 1) / 14
+        p0 = np.array([1.46 * math.cos(a0), 1.25 + 1.5 * math.sin(a0)])
+        p1 = np.array([1.46 * math.cos(a1), 1.25 + 1.5 * math.sin(a1)])
+        mid, along = (p0 + p1) / 2, p1 - p0
+        turn = math.degrees(math.atan2(along[1], along[0]))
+        m.add(rounded_box((np.linalg.norm(along) + 0.08, 0.17, 0.2), rim, 0.06, steps=1), mul(T(mid[0], mid[1], 0), R("z", turn)))
+    return m
+
+
+def piece(scene, name, m, longest, **part):
+    """A crop's mesh standing on `m`, scaled to `longest` studs at its longest."""
+    mesh = built_crop(name)
+    lo, hi = mesh.bounds()
+    k = longest / max(hi - lo)
+    return scene.add_mesh(mesh, mul(m, np.diag([k] * 3 + [1]), T(-(lo[0] + hi[0]) / 2, -lo[1], -(lo[2] + hi[2]) / 2)), **part)
+
+
+def coin_face(size=256):
+    img = canvas(size, size)
+    d = ImageDraw.Draw(img)
+    c = size / 2
+    d.ellipse((0, 0, size, size), fill=(250, 196, 62, 255))
+    d.ellipse((size * 0.11, size * 0.11, size * 0.89, size * 0.89), outline=(198, 130, 30, 255), width=round(size * 0.05))
+    pts = []
+    for k in range(10):
+        a = math.pi / 5 * k - math.pi / 2
+        r = size * (0.27 if k % 2 == 0 else 0.12)
+        pts.append((c + r * math.cos(a), c + r * math.sin(a)))
+    d.polygon(pts, fill=(255, 232, 140, 255), outline=(198, 130, 30, 255))
+    return as_tex(img)
+
+
+def coin(scene, at, tilt, turn, radius=0.8, **part):
+    """A gold coin in the air, turned and tilted."""
+    frame = mul(T(*at), R("y", turn), R("x", tilt), np.diag([radius] * 3 + [1]))
+    disc = lathe([(-0.13, 1.0), (0.13, 1.0)], 28, (232, 164, 44))
+    tex = coin_face()
+    return scene.add_mesh(disc, frame, tex={"+y": tex, "-y": tex}, half=(1.0, 0.13, 1.0), **part)
+
+
+def character(scene, kind, at, yaw, pose, held=None, face=None, paddle_no=7, hand="r", outfit=None, contents=()):
     """Adds a character to the scene; returns where things are (head top,
     hands, the bat's tip). pose: lean, head (yaw, pitch), arms
     (left, right): (swing, splay), legs (left, right): swing; degrees.
     face: the face's options (look, mood). held: "bat" or "paddle" (in
-    `hand`), "crate" (both hands, in front)."""
-    look = LOOKS[kind]
+    `hand`), "crate" or "basket" (both hands, in front; a basket's
+    `contents`: (crop mesh, x, y, z, longest, turn, roll), ...). A "shopper" wears
+    `outfit`: skin, shirt, legs, shoes, hair and style ("short", "bun", "cap")."""
+    look = LOOKS[kind] if kind != "shopper" else dict(outfit, arms=outfit["shirt"], arm_upto=0.42)
     anchors = {}
     face = face or {}
     lean = pose.get("lean", 0)
@@ -661,6 +774,10 @@ def character(scene, kind, at, yaw, pose, held=None, face=None, paddle_no=7, han
         st = as_tex(stripes(640, 640, (250, 250, 246, 255), (34, 34, 42, 255), 7))
         tex = {"+z": st, "-z": st, "+x": st, "-x": st}
         colour = (250, 250, 246)
+    elif kind == "shopper":
+        plain = as_tex(shirt(look["shirt"], side=True))
+        tex = {"+z": as_tex(shirt(look["shirt"])), "-z": plain, "+x": plain, "-x": plain}
+        colour = look["shirt"]
     else:
         tex = {"+z": as_tex(overalls_front()), "-z": as_tex(overalls_back()), "+x": as_tex(overalls_side()), "-x": as_tex(overalls_side())}
         colour = (196, 52, 44)
@@ -682,6 +799,10 @@ def character(scene, kind, at, yaw, pose, held=None, face=None, paddle_no=7, han
     if kind == "thief":
         side = as_tex(thief_head_side())
         tex = {"+z": thief_face(**face), "-z": as_tex(thief_head_back()), "+x": side, "-x": side}
+    elif kind == "shopper":
+        hair = look["hair"]
+        tex = {"+z": shopper_face(hair, **face), "-z": as_tex(shopper_head_back(hair)),
+               "+x": as_tex(shopper_head_side(hair, True)), "-x": as_tex(shopper_head_side(hair, False))}
     else:
         tex = {"+z": farmer_face(**face), "-z": as_tex(farmer_head_back()),
                "+x": as_tex(farmer_head_side(True)), "-x": as_tex(farmer_head_side(False))}
@@ -694,6 +815,15 @@ def character(scene, kind, at, yaw, pose, held=None, face=None, paddle_no=7, han
         scene.add_mesh(rounded_box((2.12, 0.98, 1.92), CHARCOAL, 0.4), mul(head, T(0, 0.58, -0.02)),
                        tex={"+z": bs, "-z": bs, "+x": bs, "-x": bs}, half=(1.06, 0.49, 0.96), **common)
         anchors["head_top"] = (head @ np.array([0, 1.07, 0, 1.0]))[:3]
+    elif kind == "shopper":
+        scene.add_mesh(rounded_box((2.06, 0.44, 1.86), look["hair"], 0.2), mul(head, T(0, 0.74, -0.02)), **common)
+        if look["style"] == "bun":
+            ball = [(0.46 * -math.cos(math.pi * k / 10), 0.46 * math.sin(math.pi * k / 10)) for k in range(11)]
+            scene.add_mesh(lathe(ball, 18, look["hair"]), mul(head, T(0, 1.26, -0.25)), **common)
+        elif look["style"] == "cap":
+            scene.add_mesh(rounded_box((2.2, 0.7, 2.0), look["cap"], 0.3), mul(head, T(0, 0.86, -0.02)), **common)
+            scene.add_mesh(rounded_box((1.7, 0.14, 1.0), look["cap"], 0.06), mul(head, T(0, 0.62, 1.2), R("x", 8)), **common)
+        anchors["head_top"] = (head @ np.array([0, 1.1, 0, 1.0]))[:3]
     else:
         hat = mul(head, T(0, 0.78, -0.05), R("x", -8))
         scene.add_mesh(lathe([(0.0, 0.0), (0.02, 1.95), (0.14, 2.0), (0.2, 1.7), (0.16, 0.0)], 28, (232, 192, 96)), hat, **common)
@@ -721,6 +851,18 @@ def character(scene, kind, at, yaw, pose, held=None, face=None, paddle_no=7, han
         for dx, dz, turn in ((-0.6, -0.2, 20), (0.5, 0.3, 80), (0.0, -0.4, 140)):
             crop(scene, "CarrotTop", mul(place, T(dx, 1.3, dz), R("y", turn), np.diag([0.42] * 3 + [1])), outline=True, rim=0.2)
         anchors["crate"] = (place @ np.array([0, 0.8, 0, 1.0]))[:3]
+    elif held == "basket":
+        mid = (anchors["hand_l"] + anchors["hand_r"]) / 2
+        place = mul(T(*mid), R("y", yaw), T(0, -0.8, 0.45))
+        scene.add_mesh(basket_mesh(), place, **common)
+        for name, x, y, z, longest, turn, roll in contents:
+            at = mul(place, T(x, 1.15 + y, z), R("y", turn), R("z", roll))
+            if name == "Carrot":  # (a whole one, standing in it, its leaves on)
+                whole = mul(at, np.diag([longest] * 3 + [1]), T(0, 1.25, 0))
+                crop(scene, "Carrot", whole, outline=True, rim=0.2)
+                crop(scene, "CarrotTop", whole, outline=True, rim=0.2)
+            else:
+                piece(scene, name, at, longest, outline=True, rim=0.2)
     return anchors
 
 
@@ -775,6 +917,47 @@ def add_farm(scene, parts, centre, radius):
             x0, z0 = centre[0] + i * 20, centre[1] + j * 20
             ground.quad((x0, 0.0, z0), (x0 + 20, 0.0, z0), (x0 + 20, 0.0, z0 + 20), (x0, 0.0, z0 + 20), (118, 186, 84), out=(0, 1, 0))
     scene.add_mesh(ground, np.eye(4))
+
+
+def lettered(p):
+    """A part with its words on (partdump's `text`), for the scene: price
+    tags and signs. Its mesh, its frame, its picture."""
+    from PIL import ImageFont
+    size = np.array(p["size"], dtype=float)
+    frame = np.eye(4)
+    frame[:3, :3] = np.array(p["cframe"][3:]).reshape(3, 3)
+    frame[:3, 3] = p["cframe"][:3]
+    w, h = max(64, round(size[0] * 120)), max(32, round(size[1] * 120))
+    img = Image.new("RGBA", (w, h), tuple(round(c * 255) for c in p["color"]) + (255,))
+    d = ImageDraw.Draw(img)
+    ink = tuple(round(c * 255) for c in p["textColor"]) + (255,)
+    font_file = "PatrickHand-Regular.ttf" if p.get("textFont") == "PatrickHand" else "FredokaOne-Regular.ttf"
+    text = p["text"]
+    icon = None
+    if ord(text[0]) > 0x2000:  # (a price tag: its crop's emoji, then the price)
+        icon, _, text = text.partition(" ")
+    room_w, room_h = w * 0.88, h * 0.8
+    if icon:
+        room_w -= h * 0.95
+    size_px = h
+    while size_px > 8:
+        font = ImageFont.truetype(_font(font_file), size_px)
+        box = d.multiline_textbbox((0, 0), text, font=font, align="center")
+        if box[2] - box[0] <= room_w and box[3] - box[1] <= room_h:
+            break
+        size_px -= 2
+    tw = box[2] - box[0]
+    left = (w - tw - (h * 0.95 if icon else 0)) / 2
+    if icon:
+        emoji = Image.new("RGBA", (136, 136), (0, 0, 0, 0))
+        ImageDraw.Draw(emoji).text((0, 0), icon, font=ImageFont.truetype(r"C:\Windows\Fonts\seguiemj.ttf", 109), embedded_color=True)
+        side = round(h * 0.84)
+        emoji = emoji.resize((side, side), Image.LANCZOS)
+        img.alpha_composite(emoji, (round(left), round((h - side) / 2)))
+        left += h * 0.95
+    d.multiline_text((left - box[0], (h - box[3] - box[1]) / 2), text, font=font, fill=ink, align="center")
+    mesh = rounded_box(tuple(size), tuple(round(c * 255) for c in p["color"]), 0.01, steps=1)
+    return mesh, frame, {"-z": as_tex(img)}
 
 
 # ---------------------------------------------------------------------------
@@ -995,6 +1178,61 @@ def trucks_scene():
     return grade(shot.image)
 
 
+def store_scene(size=(1920, 1080), ss=2):
+    """The Market Hall on a busy day: Hank beaming at the till, coins flying
+    out of it, shoppers queueing along the belt with full baskets (Sly among
+    them, buying like anyone else: only a farm's fields can be raided), the
+    displays rising behind them to the chillers on the back wall. The
+    camera's out past the front wall, on a long lens, so the produce fills
+    the picture."""
+    path = os.path.join(OUT, "store.json")
+    if not os.path.exists(path):
+        subprocess.run(["lune", "run", "tools/partdump", path, "5", "16", "1", "store"], cwd=ROOT, check=True)
+    # (no roof: inside, the game fades it and the room's lit by the open sky)
+    gone = {"Roof", "CeilingLamp", "StockroomRoof", "LanePole", "LaneLight"}
+    parts = [p for p in partview.load(path) if p["name"] not in gone and p["cframe"][2] > 0.5 and p["transparency"] < 0.5]
+    scene = Scene()
+    walled = ("Wall", "Timber", "Glass", "Frame", "Sill", "Door", "Mullion")
+    tris, cols = partview.world_of([p for p in parts if p["name"].startswith(walled) and not p.get("text")])
+    scene.add(tris, cols, no_shadow=True)
+    tris, cols = partview.world_of([p for p in parts if not p["name"].startswith(walled) and not p.get("text")])
+    scene.add(tris, cols)
+    for p in parts:
+        if p.get("text"):
+            mesh, frame, tex = lettered(p)
+            scene.add_mesh(mesh, frame, tex=tex, half=tuple(np.array(p["size"]) / 2))
+
+    floor = 0.6
+    eye, target = (-54.5, 10.5, -8.0), (-53.6, 2.9, 22.0)
+    character(scene, "farmer", (-48.9, floor, 13.4), yaw=-150, face=dict(look=(0.25, 0.1), mood="happy"), pose=dict(
+        lean=-3, head=(10, 3), arms=((-150, 16), (-150, 16)), legs=(0, 0)))
+    first = dict(skin=(240, 192, 150), shirt=(226, 84, 130), legs=(70, 66, 92), shoes=(90, 60, 40), hair=(84, 52, 38), style="bun")
+    second = dict(skin=(150, 100, 70), shirt=(236, 176, 60), legs=(62, 84, 130), shoes=(50, 46, 50), hair=(40, 30, 26), style="cap", cap=(58, 112, 196))
+    character(scene, "shopper", (-57.0, floor, 14.6), yaw=160, held="basket", outfit=first, face=dict(look=(-0.55, 0.0), mood="delighted"),
+              contents=(("Watermelon", 0.45, -0.1, -0.28, 1.9, 75, 0), ("Lettuce", -0.62, 0.0, -0.3, 1.6, 60, 0),
+                        ("Tomato", 0.72, -0.08, 0.28, 0.86, 80, 0), ("Tomato", 0.02, -0.06, 0.32, 0.9, 20, 0), ("BellPepper", -0.72, -0.05, 0.26, 0.9, 30, 0)),
+              pose=dict(lean=2, head=(-16, 2), arms=((-46, -6), (-46, -6)), legs=(6, -6)))
+    character(scene, "shopper", (-59.8, floor, 20.2), yaw=170, held="basket", outfit=second, face=dict(look=(-0.35, 0.0), mood="happy"),
+              contents=(("Pumpkin", 0.0, -0.1, 0.0, 1.7, 30, 0),),
+              pose=dict(lean=0, head=(-8, 2), arms=((-46, -6), (-46, -6)), legs=(0, 0)))
+    character(scene, "thief", (-54.9, floor, 25.6), yaw=176, held="basket", face=dict(look=(-0.75, 0.1), mood="smirk"),
+              contents=(("Carrot", 0.62, 0.12, -0.05, 0.5, 40, -18),),
+              pose=dict(lean=0, head=(-22, 2), arms=((-46, -6), (-46, -6)), legs=(0, 0)))
+    till = np.array([-52.4, floor + 4.6, 13.8])
+    coins = ((0.0, 0.8, 0.0, 62, 200, 0.46), (0.6, 1.5, 0.3, 40, 150, 0.48), (-0.5, 1.9, -0.5, 50, 215, 0.5), (1.0, 2.2, -0.4, 28, 190, 0.54), (0.2, 2.8, 0.2, 58, 150, 0.5),
+             (1.75, 3.45, 0.2, 34, 220, 0.54), (-0.8, 3.2, 0.4, 46, 170, 0.56), (1.0, 3.5, -0.6, 62, 205, 0.58), (2.7, 3.6, -0.4, 44, 160, 0.54))
+    for right, up, near, tilt, turn, r in coins:  # (out of the till, up between Hank and the queue)
+        coin(scene, till + np.array([-right, up, near]), tilt, turn, radius=r, outline=True, rim=0.3, glow=0.12)
+    shot = render(scene, eye, target, size, fov=25, ss=ss, sun=(0.32, 0.74, -0.55), sky=sky_gradient(),
+                  shadow_at=(-53.0, 3.0, 16.0), shadow_radius=26, outline=3.0 * size[0] / 1920, dof=(30, 54, 2.5 * size[0] / 1920))
+    img = grade(shot.image)
+    d = ImageDraw.Draw(img)
+    k = size[0] / 1920
+    for x, y, r in ((655, 235, 34), (1215, 150, 28), (780, 85, 22), (1010, 60, 20)):
+        sparkle(d, x * k, y * k, r * k, edge=(200, 150, 40))
+    return img
+
+
 SCENES = {
     # the icon: close and low, the two of them filling the square
     # (all inside one block of the field, so no frame beam crosses the front)
@@ -1006,6 +1244,7 @@ SCENES = {
     "raid": lambda: chase((1920, 1080), 48, eye=(-12.5, 3.3, 233.5), target=(-12.5, 8.9, 213.5),
                           thief_at=(-15.0, 0.99, 218.0), farmer_at=(-6.8, 0.99, 211.0), dof=(22, 50, 5), bat_out=30)[0],
     "farm": farm_scene,
+    "store": store_scene,
     "auction": auction_scene,
     "trucks": trucks_scene,
 }

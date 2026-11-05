@@ -450,7 +450,7 @@ PIECES = {
     "icon": ("renders/icon", rendered_icon),
     "farm": ("renders/farm", thumb("GROW CROPS · RUN YOUR FARM", GREEN, title=True, title_w=700, board_w=1000)),
     "raid": ("renders/raid", thumb("STEAL CROPS · BONK THIEVES!", RED, top=True)),
-    "store": ("store", thumb("BUILD YOUR OWN STORE", WOOD)),
+    "store": ("renders/store", thumb("BUILD YOUR OWN STORE", WOOD)),
     "auction": ("renders/auction", thumb("BID ON RARE SEEDS", GOLD)),
     "trucks": ("renders/trucks", thumb("SHIP TO THE CITY", WOOD)),
     # the community (Roblox's Communities > Configure > Information)

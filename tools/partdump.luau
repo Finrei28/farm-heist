@@ -1,12 +1,15 @@
 -- Dumps the parts the server builds for one farm (plot space) to JSON, so
 -- tools/crop_art/partview.py can render them with the meshes for a look
 -- before Studio. From the project folder:
---   lune run tools/partdump [out.json] [fieldLevel] [blocksOpen] [plot] [defences]
+--   lune run tools/partdump [out.json] [fieldLevel] [blocksOpen] [plot] [defences] [storeLevel]
 -- (every mesh stands in for its import; the field has `blocksOpen` blocks
 -- cleared, the rest overgrown; `defences`: every defence set out, the gate
 -- shut and locked, the Watchman's gatehouse; `dome`: those and a dome;
 -- `auction`: the Auction House instead of a farm, in its own frame;
 -- `warehouse`: the farm with its warehouse at Level 20 and its semis;
+-- `store`: just the store at `storeLevel` (14 unless given, the top of the
+-- Market Hall), every display full, on the layout below (made for that
+-- floor, and a real one: StoreLayout.check passes it);
 -- `town`: the whole town and the ring road, in world space; `valley`: the
 -- countryside, roads and trail with farms 1, 2 and 8, in world space).
 local fs = require("@lune/fs")
@@ -89,7 +92,91 @@ if extras == "warehouse" then
 end
 
 local sources = { plot }
-if extras == "auction" then
+if extras == "store" then
+	-- rows of displays rising toward the back wall, seen from the checkout:
+	-- tiered racks either side of the middle aisle, shelves, the wall's chillers
+	local StoreItems = Harness.loadServerWith("World/StoreItems", globals)
+	local StoreArt = Harness.loadServerWith("World/StoreArt", globals)
+	local Store = Harness.load("Config/Store")
+	local StoreLayout = Harness.load("StoreLayout")
+	local Crops = Harness.load("Config/Crops")
+	local catalog = roblox.Instance.new("Folder")
+	catalog.Name = "StoreCatalog"
+	for itemId in Store.ITEMS do
+		StoreItems.build(itemId).Parent = catalog
+	end
+	Harness.setStorageChild("StoreCatalog", catalog)
+
+	local level = tonumber(process.args[6]) or 14
+	local layout = {}
+	local function put(item, x, y, rot, crops)
+		local entry = { item = item, x = x, y = y, rot = rot or 0, slots = {} }
+		for n, cropId in crops or {} do
+			local crop = Crops.ById[cropId]
+			assert(StoreLayout.holds(item, crop.rarity), `{item} can't hold {cropId}`)
+			entry.slots[n] = { crop = cropId, units = Store.ITEMS[item].patches * crop.perPatch }
+		end
+		layout[`{item}{x}_{y}`] = entry
+	end
+	local function onWall(item, at)
+		layout[`{item}{at}`] = { item = item, side = "back", at = at }
+	end
+	local RACKS = {
+		{ "Pumpkin", "Corn", "Watermelon" },
+		{ "Tomato", "BellPepper", "Blueberry" },
+		{ "Watermelon", "Lettuce", "Pumpkin" },
+		{ "Strawberry", "Corn", "Tomato" },
+		{ "Pumpkin", "Blueberry", "BellPepper" },
+		{ "Watermelon", "Tomato", "Carrot" },
+	}
+	for i, x in { 1, 3, 5, 10, 12, 14 } do
+		put("TieredRack", x, 6, 0, RACKS[i])
+	end
+	local SHELVES = { { "Pumpkin", "Watermelon" }, { "BellPepper", "Tomato" }, { "Corn", "Blueberry" }, { "Lettuce", "Strawberry" }, { "Tomato", "Pumpkin" }, { "Watermelon", "Corn" } }
+	for i, x in { 1, 3, 5, 8, 10, 13 } do
+		put("WoodenShelf", x, 8, 0, SHELVES[i])
+	end
+	local CHILLERS = { { "Strawberry", "Pineapple" }, { "GrapeVine", "BellPepper" }, { "Dragonfruit", "Blueberry" } }
+	for i, x in { 1, 3, 5, 7, 9, 11, 13 } do
+		put("ChillerCabinet", x, 11, 0, CHILLERS[(i - 1) % 3 + 1])
+	end
+	put("PottedPlant", 15, 11)
+	put("Register", 8, 4, 3)
+	put("ProduceCrate", 10, 4, 1, { "Strawberry" }) -- (and so the till's queue turns to run along its belt)
+	put("ProduceCrate", 10, 3, 0, { "Carrot" })
+	for _, at in { 1, 2, 3, 5, 6, 10, 11, 13, 14, 15 } do
+		onWall("FairyLights", at)
+	end
+	onWall("PaintedSign", 4)
+	onWall("Mural", 7)
+	onWall("Clock", 9)
+	onWall("NeonSign", 12)
+	local fine, why, id = StoreLayout.check(layout, level)
+	assert(fine, `the store's layout: {why} {id}`)
+
+	local stage = StoreLayout.level(level).stage
+	plot:SetAttribute("PlotIndex", index)
+	StoreArt.buildBuilding(plot, level, "Hank's Market")
+	for id, entry in layout do -- (StoreArt.placeItems, but for Model:PivotTo, which Lune hasn't got)
+		local item = catalog[entry.item]:Clone()
+		item.Name = id
+		local at = PlotLayout.storeItemFrame(index, entry, stage)
+		for _, part in item:GetDescendants() do
+			if part:IsA("BasePart") then
+				part.CFrame = at * part.CFrame
+			end
+		end
+		item.Parent = plot.Store.Items
+	end
+	local prices = {}
+	for _, crop in Crops.List do
+		prices[crop.id] = crop.value
+	end
+	for itemId, entry in layout do
+		StoreArt.showDisplay(plot, itemId, entry, prices)
+	end
+	sources = { plot.Store }
+elseif extras == "auction" then
 	sources = { world.Town.AuctionHouse }
 	frame = PlotLayout.buildingFrame("Auction")
 elseif extras == "town" then
@@ -136,6 +223,13 @@ for _, part in all do
 			neon = part.Material == roblox.Enum.Material.Neon,
 			transparency = part.Transparency,
 		}
+		local gui = part:FindFirstChildOfClass("SurfaceGui")
+		local label = gui and gui:FindFirstChildOfClass("TextLabel")
+		if label and label.Text ~= "" then -- (what it says, for stage.py to letter)
+			entry.text = label.Text
+			entry.textColor = { label.TextColor3.R, label.TextColor3.G, label.TextColor3.B }
+			entry.textFont = label.Font.Name
+		end
 		if part:IsA("Part") then
 			entry.shape = part.Shape.Name
 			local special = part:FindFirstChildOfClass("SpecialMesh")
