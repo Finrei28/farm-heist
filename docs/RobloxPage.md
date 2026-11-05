@@ -112,6 +112,8 @@ Bigger Barn's description:
 | `MintPaint` | Mint Green truck paint | 49 |
 | `MidnightPaint` | Midnight Blue truck paint | 49 |
 
+All eleven were made on 2026-11-05, and their ids are in those files.
+
 Check after: buy one of each in a published test server (each item's price is spent on your account; the purchase comes back as a receipt in the game's Output), that a pass shows as Owned after a rejoin, and that Monetization > Shop has the passes in sensible categories and the products Not Listed.
 
 ## Sounds (`tools/sound_art/generate.py` → `art/sounds/`)

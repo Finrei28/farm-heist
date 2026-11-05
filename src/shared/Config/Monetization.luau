@@ -40,15 +40,15 @@ end
 
 --   grant  what one purchase gives: { weather = id } | { boostSeconds = n } | { cosmetic = id }
 Monetization.Products = {
-	{ id = "RainDance", name = "Rain Dance", icon = "🌧️", productId = 0, price = 49, grant = { weather = "Rain" }, blurb = weatherBlurb("Rain") },
-	{ id = "Thunderstorm", name = "Thunderstorm", icon = "⛈️", productId = 0, price = 79, grant = { weather = "Thunderstorm" }, blurb = weatherBlurb("Thunderstorm") },
-	{ id = "GoldenHour", name = "Golden Hour", icon = "🌇", productId = 0, price = 99, grant = { weather = "GoldenHour" }, blurb = weatherBlurb("GoldenHour") },
+	{ id = "RainDance", name = "Rain Dance", icon = "🌧️", productId = 3728392048, price = 49, grant = { weather = "Rain" }, blurb = weatherBlurb("Rain") },
+	{ id = "Thunderstorm", name = "Thunderstorm", icon = "⛈️", productId = 3728392094, price = 79, grant = { weather = "Thunderstorm" }, blurb = weatherBlurb("Thunderstorm") },
+	{ id = "GoldenHour", name = "Golden Hour", icon = "🌇", productId = 3728392198, price = 99, grant = { weather = "GoldenHour" }, blurb = weatherBlurb("GoldenHour") },
 	{
-		id = "HarvestMoon", name = "Harvest Moon", icon = "🌕", productId = 0, price = 149, grant = { weather = "HarvestMoon" },
+		id = "HarvestMoon", name = "Harvest Moon", icon = "🌕", productId = 3728392551, price = 149, grant = { weather = "HarvestMoon" },
 		blurb = weatherBlurb("HarvestMoon", " It's a Heist Night too: stealing is quicker for everyone!"),
 	},
 	{
-		id = "GrowthBoost", name = "Growth Boost", icon = "🚀", productId = 0, price = 79, grant = { boostSeconds = Monetization.BOOST_SECONDS },
+		id = "GrowthBoost", name = "Growth Boost", icon = "🚀", productId = 3728392583, price = 79, grant = { boostSeconds = Monetization.BOOST_SECONDS },
 		blurb = `Your field grows ×{Monetization.BOOST} as fast for {Monetization.BOOST_SECONDS // 60} minutes of play (it waits while you're away). Buy more to add time.`,
 	},
 }

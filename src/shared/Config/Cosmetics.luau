@@ -17,33 +17,33 @@ Cosmetics.KINDS = {
 
 Cosmetics.LIST = {
 	{
-		id = "GoldenBat", kind = "bat", name = "Golden Bat", icon = "🏆", price = 149, productId = 0,
+		id = "GoldenBat", kind = "bat", name = "Golden Bat", icon = "🏆", price = 149, productId = 3728392617,
 		blurb = "Glowing gold, set with rubies. It sparkles, swings with a gold trail and bonks in a burst of gold.",
 		-- (Neon brightens its colour a lot: this reads as gold on screen, anything lighter as lemon)
 		look = { shape = "golden", wood = Color3.fromRGB(205, 112, 22), dark = Color3.fromRGB(150, 92, 18) },
 	},
 	{
-		id = "Baguette", kind = "bat", name = "Baguette", icon = "🥖", price = 79, productId = 0,
+		id = "Baguette", kind = "bat", name = "Baguette", icon = "🥖", price = 79, productId = 3728392650,
 		blurb = "A long French loaf, crusty and scored. Thieves won't know what hit them.",
 		look = { shape = "baguette", wood = Color3.fromRGB(214, 150, 78), dark = Color3.fromRGB(164, 100, 46) },
 	},
 	{
-		id = "CarrotClub", kind = "bat", name = "Carrot Club", icon = "🥕", price = 79, productId = 0,
+		id = "CarrotClub", kind = "bat", name = "Carrot Club", icon = "🥕", price = 79, productId = 3728392679,
 		blurb = "A giant carrot, leafy top and all. Grown on your own farm, probably.",
 		look = { shape = "carrot", wood = Color3.fromRGB(240, 128, 40), dark = Color3.fromRGB(206, 100, 28) },
 	},
 	{
-		id = "CherryPaint", kind = "truck", name = "Cherry Red", icon = "🍒", price = 49, productId = 0,
+		id = "CherryPaint", kind = "truck", name = "Cherry Red", icon = "🍒", price = 49, productId = 3728392725,
 		blurb = "Shiny cherry red, like a farm truck from a picture book.",
 		look = { body = Color3.fromRGB(196, 40, 52) },
 	},
 	{
-		id = "MintPaint", kind = "truck", name = "Mint Green", icon = "🌿", price = 49, productId = 0,
+		id = "MintPaint", kind = "truck", name = "Mint Green", icon = "🌿", price = 49, productId = 3728392753,
 		blurb = "Soft mint green. Very ice-cream van.",
 		look = { body = Color3.fromRGB(130, 210, 175) },
 	},
 	{
-		id = "MidnightPaint", kind = "truck", name = "Midnight Blue", icon = "🌙", price = 49, productId = 0,
+		id = "MidnightPaint", kind = "truck", name = "Midnight Blue", icon = "🌙", price = 49, productId = 3728392772,
 		blurb = "Deep night blue, for farmers who deliver after dark.",
 		look = { body = Color3.fromRGB(40, 56, 110) },
 	},
