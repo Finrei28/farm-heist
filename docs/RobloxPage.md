@@ -120,11 +120,7 @@ Check after: buy one of each in a published test server (each item's price is sp
 
 Upload each `.wav` as the community (Studio: Assets > Import, or Creator Dashboard > Development Items > Audio), then paste its id as `"rbxassetid://..."` next to the same name in `src/shared/Config/Sounds.luau`. They're silent until then.
 
-**Uploaded 2026-11-05, ids in the config:** from `art/sounds/stock/` (`stock.py`, cut from downloaded effects the user picked; kept out of git, as this repository is public: run it again to make them from the downloads): Bonk · CashRegister (also `TillOpen`) · Harvest · Plant · LevelUp · ShopBell · CheckoutBell · Siren · DogAlert · Gavel · BidWon (the cheer: the applause and the yay the user picked, mixed). From `art/sounds/` (`generate.py`, our own): AuctionTick · Outbid.
-
-**Still to upload**, from `art/sounds/` (`generate.py`, our own):
-
-Error · Water · Scan · Tape · TruckHorn · Whistle · Rustle · AlarmBell · Rain · Birds · Crickets · FarmTheme
+**Uploaded 2026-11-05, ids in the config:** from `art/sounds/stock/` (`stock.py`, cut from downloaded effects the user picked; kept out of git, as this repository is public: run it again to make them from the downloads): Bonk · CashRegister (also `TillOpen`) · Harvest · Plant · LevelUp · ShopBell · CheckoutBell · Siren · DogAlert · Gavel · BidWon (the cheer: the applause and the yay the user picked, mixed). From `art/sounds/` (`generate.py`, our own): AuctionTick · Outbid · Error · Water · Scan · Tape · TruckHorn · Whistle · Rustle · AlarmBell · Rain · Birds · Crickets · FarmTheme. Every sound in the config has an id now.
 
 ## Before launch (PlaytestPlan Stage F)
 

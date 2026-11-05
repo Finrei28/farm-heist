@@ -19,6 +19,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local PlotLayout = require(Shared.PlotLayout)
 local ProgressionRules = require(Shared.ProgressionRules)
 local Remotes = require(Shared.Remotes)
+local TravelRules = require(Shared.TravelRules)
 
 local PlayerState = require(script.Parent.Parent.PlayerState)
 local Reasons = require(script.Parent.Parent.Reasons)
@@ -307,6 +308,43 @@ local signs = {}
 
 -- on arriving, turn the camera the way you now face (the town's spawn faces
 -- the Exchange's board; Roblox's camera would keep its old angle)
+-- The wait for Home with a thief on your farm (TravelRules.RAID_WAIT): the
+-- server sends you when it's up.
+local waitBar = make("Frame", {
+	Name = "TravelWait",
+	AnchorPoint = Vector2.new(0.5, 1),
+	Size = UDim2.fromOffset(300, 30),
+	BackgroundColor3 = C.cream,
+	Visible = false,
+	Parent = UI.screen,
+}, { UI.corner(4), UI.stroke(UI.SEAM, 2) })
+local waitFill = make("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = C.sky, Parent = waitBar }, { UI.corner(4) })
+UI.label({
+	Size = UDim2.fromScale(1, 1), Font = UI.HAND, TextSize = 21, TextXAlignment = Enum.TextXAlignment.Center,
+	Text = "Thief on your farm! Heading home...", ZIndex = 2, Parent = waitBar,
+})
+UI.onLayout(function()
+	waitBar.Position = UDim2.new(0.5, 0, 1, -(HudController.HOTBAR_HEIGHT + 104))
+end)
+
+local waitToken = 0
+local function showWait(seconds: number?)
+	waitToken += 1
+	if not seconds or seconds <= 0 then
+		waitBar.Visible = false
+		return
+	end
+	local token = waitToken
+	waitBar.Visible = true
+	waitFill.Size = UDim2.fromScale(1 - seconds / TravelRules.RAID_WAIT, 1)
+	TweenService:Create(waitFill, TweenInfo.new(seconds, Enum.EasingStyle.Linear), { Size = UDim2.fromScale(1, 1) }):Play()
+	task.delay(seconds + 0.3, function()
+		if waitToken == token then
+			waitBar.Visible = false
+		end
+	end)
+end
+
 local function faceArrival()
 	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 	if not root then
@@ -315,7 +353,7 @@ local function faceArrival()
 	local started, last = os.clock(), root.Position
 	local connection
 	connection = RunService.Heartbeat:Connect(function()
-		if os.clock() - started > 3 or not root.Parent then
+		if os.clock() - started > TravelRules.RAID_WAIT + 3 or not root.Parent then
 			connection:Disconnect()
 			return
 		end
@@ -339,7 +377,9 @@ local function travel(kind: string)
 		if text then
 			UI.toast(text, "Error")
 		end
+		return
 	end
+	showWait(result.result and result.result.seconds)
 end
 
 -- (other screens send you too: the auction's note has a Town button)

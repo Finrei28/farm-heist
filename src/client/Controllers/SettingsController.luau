@@ -40,7 +40,7 @@ make("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.Layo
 
 local ROWS = {
 	{ section = "Sound" },
-	{ key = "music", icon = "🎵", title = "Music", detail = "A gentle banjo tune while you farm" },
+	{ key = "music", icon = "🎵", title = "Music", detail = "A gentle banjo tune in town" },
 	{ key = "sfx", icon = "🔊", title = "Sound effects", detail = "Harvest pops, coins, the alarm's siren, bonks, the auction bell" },
 	{ key = "ambience", icon = "🐦", title = "Ambience", detail = "Birdsong by day, crickets at night, rain and thunder" },
 	{ section = "Screen" },

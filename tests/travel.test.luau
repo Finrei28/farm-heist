@@ -1,5 +1,5 @@
--- The travel buttons (shared/TravelRules): at once, no cooldowns, and no
--- escaping a raid by teleport.
+-- The travel buttons (shared/TravelRules): at once, no cooldowns, a moment
+-- for Home with a thief on your farm, and no escaping a raid by teleport.
 return function(spec, harness)
 	local describe, it, expect = spec.describe, spec.it, spec.expect
 	local TravelRules = harness.load("TravelRules")
@@ -20,6 +20,13 @@ return function(spec, harness)
 	end)
 
 	describe("raids", function()
+		it("Home takes a moment with a thief on your farm, and only Home", function()
+			expect(TravelRules.waitFor("Home", true)).toBe(TravelRules.RAID_WAIT)
+			expect(TravelRules.RAID_WAIT > 0).toBe(true)
+			expect(TravelRules.waitFor("Home", false)).toBe(0)
+			expect(TravelRules.waitFor("Town", true)).toBe(0)
+			expect(TravelRules.waitFor("Visit", true)).toBe(0)
+		end)
 		it("no teleports for Suspects, the knocked out, or anyone carrying loot", function()
 			for _, status in { { suspect = true }, { knockedOut = true }, { carrying = true } } do
 				for kind in TravelRules.KINDS do

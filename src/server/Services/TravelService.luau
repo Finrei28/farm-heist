@@ -1,9 +1,10 @@
 -- The travel buttons (docs/GameDesign.md §4.11, shared/TravelRules): Home
 -- (your farmhouse door), Town (the town spawn) and Visit (the sidewalk
 -- outside a player's gate). The server teleports you at once
--- (MovementService.Teleport), with no cooldown. Suspects, knocked-out players
--- and anyone carrying stolen crops can't travel (TravelService.status, set by
--- CrimeService).
+-- (MovementService.Teleport), with no cooldown, except Home with a thief on
+-- your farm, which takes a moment (TravelRules.RAID_WAIT). Suspects,
+-- knocked-out players and anyone carrying stolen crops can't travel
+-- (TravelService.status and .raided, set by CrimeService).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
@@ -15,11 +16,18 @@ local TravelRules = require(Shared.TravelRules)
 
 local Server = ServerScriptService.Server
 local ActionRemote = require(Server.Util.ActionRemote)
+local Notice = require(Server.Util.Notice)
 local DataService = require(script.Parent.DataService)
 local MovementService = require(script.Parent.MovementService)
 local PlotService = require(script.Parent.PlotService)
 
 local TravelService = {}
+
+local waits = {} -- [Player] = { ends }: a trip home that's waiting to go
+
+local function now(): number
+	return workspace:GetServerTimeNow()
+end
 
 local function townFrame(): CFrame
 	local at = PlotLayout.TOWN.spawn + Vector3.new(0, 3, 0)
@@ -34,11 +42,15 @@ end
 -- { suspect, knockedOut, carrying } for a player (CrimeService sets it).
 TravelService.status = nil :: ((Player) -> { [string]: boolean })?
 
+-- Whether there's a thief on a player's farm (CrimeService sets it).
+TravelService.raided = nil :: ((Player) -> boolean)?
+
 local function statusOf(player: Player)
 	return if TravelService.status then TravelService.status(player) else nil
 end
 
-local function go(player: Player, kind: string, destination: CFrame): string?
+-- Returns a failure reason, or nil and { seconds } if there's a wait.
+local function go(player: Player, kind: string, destination: CFrame): (string?, { seconds: number }?)
 	local ok, reason = TravelRules.check(kind, statusOf(player))
 	if not ok then
 		return reason
@@ -46,8 +58,33 @@ local function go(player: Player, kind: string, destination: CFrame): string?
 	if not MovementService.positionOf(player) then
 		return "NoCharacter"
 	end
-	MovementService.Teleport(player, destination)
-	return nil
+	local waiting = waits[player]
+	if waiting and kind == "Home" then
+		return nil, { seconds = waiting.ends - now() } -- (pressed again: it's on its way)
+	end
+	waits[player] = nil -- (going somewhere else instead)
+	local seconds = TravelRules.waitFor(kind, TravelService.raided ~= nil and TravelService.raided(player))
+	if seconds == 0 then
+		MovementService.Teleport(player, destination)
+		return nil
+	end
+	local trip = { ends = now() + seconds }
+	waits[player] = trip
+	task.delay(seconds, function()
+		if waits[player] ~= trip then
+			return
+		end
+		waits[player] = nil
+		if player.Parent ~= Players then
+			return
+		end
+		if TravelRules.check(kind, statusOf(player)) then
+			MovementService.Teleport(player, destination)
+		else
+			Notice.send(player, "You can't go home now: you're a Suspect, knocked out or carrying stolen crops.", "Error")
+		end
+	end)
+	return nil, { seconds = seconds }
 end
 
 local actions = {}
@@ -84,6 +121,9 @@ TravelService.visitFrame = visitFrame
 
 function TravelService.Start()
 	ActionRemote(Remotes.func("TravelAction"), actions, DataService, 0.2)
+	Players.PlayerRemoving:Connect(function(player)
+		waits[player] = nil
+	end)
 end
 
 return TravelService

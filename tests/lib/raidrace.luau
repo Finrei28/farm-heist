@@ -1,6 +1,6 @@
 -- The raid race (docs/GameDesign.md §4.11), timed from the real layout
 -- (shared/PlotLayout) and the real numbers (Config/Crime, Config/Defences,
--- Settings, Rarities). Used by tests/layout.test.luau and
+-- Settings, Rarities, TravelRules). Used by tests/layout.test.luau and
 -- tools/raidrace.luau.
 --
 -- A thief takes a Rare Pumpkin from the back row (column 8, row 4) and
@@ -31,6 +31,7 @@ return function(harness)
 	local Defences = harness.load("Config/Defences")
 	local Settings = harness.load("Config/Settings")
 	local Rarities = harness.load("Config/Rarities")
+	local TravelRules = harness.load("TravelRules")
 
 	local SHARP, SLOW = 1, 2.5 -- seconds an owner takes to react to the alarm: watching, or busy
 	local DT = 0.005
@@ -122,7 +123,8 @@ return function(harness)
 	-- thief climbs out.
 	local function ownerReach(where: string, notice: number): number
 		local from = starts[where] or starts.door
-		return notice + ((fence - from).Magnitude - reach) / Settings.RUN_SPEED
+		local wait = if where == "town" then TravelRules.waitFor("Home", true) else 0
+		return notice + wait + ((fence - from).Magnitude - reach) / Settings.RUN_SPEED
 	end
 
 	local function lead(d, where: string, notice: number): number

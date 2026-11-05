@@ -3,7 +3,7 @@
 -- (−, caught) as defences are added, against an owner at the farmhouse
 -- door, the warehouse or in town, reacting sharply (1 s) or slowly (2.5 s).
 -- Run after changing PlotLayout, Config/Crime, Config/Defences, walking
--- speeds or travel (from the project folder):
+-- speeds or the wait for Home in a raid (from the project folder):
 --   lune run tools/raidrace
 local Harness = require("../tests/lib/harness")
 local raidRace = require("../tests/lib/raidrace")

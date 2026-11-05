@@ -15,7 +15,7 @@
 return {
 	-- The interface
 	UiClick = { id = "rbxassetid://88442833509532", volume = 0.35 }, -- a button pressed (Toolbox: "ui-simple-button")
-	Error = { id = "", file = "Error", volume = 0.4 }, -- something didn't work (with the red note)
+	Error = { id = "rbxassetid://113054878201320", volume = 0.4 }, -- something didn't work (with the red note)
 	Pop = { id = "rbxassetid://132948338000932", volume = 0.45 }, -- a yellow note pinned up (Toolbox: "bubble pop")
 	Buy = { id = "rbxassetid://17161225362", volume = 0.6 }, -- spent coins on something (Toolbox: "Purchase")
 	QuestReward = { id = "rbxassetid://119804136935260", volume = 0.7 }, -- a quest or the streak paid out (Toolbox: "Quest Rewards")
@@ -23,13 +23,13 @@ return {
 
 	-- The field and selling
 	Plant = { id = "rbxassetid://125870602927631", volume = 0.7, range = 60 }, -- a seed pressed into the soil
-	Water = { id = "", file = "Water", volume = 0.55, range = 60 }, -- the watering can
+	Water = { id = "rbxassetid://127598229129673", volume = 0.55, range = 60 }, -- the watering can
 	Harvest = { id = "rbxassetid://116296368014389", volume = 0.75, range = 60 }, -- a ripe crop pulled up
-	Tape = { id = "", file = "Tape", volume = 0.6, range = 50 }, -- a crate taped shut at the bench
-	TruckHorn = { id = "", file = "TruckHorn", volume = 0.5, range = 160 }, -- a truck leaving for the City, BEEP BEEP
+	Tape = { id = "rbxassetid://91031127833052", volume = 0.6, range = 50 }, -- a crate taped shut at the bench
+	TruckHorn = { id = "rbxassetid://136188466468170", volume = 0.5, range = 160 }, -- a truck leaving for the City, BEEP BEEP
 	CashRegister = { id = "rbxassetid://78098348517133", volume = 0.75 }, -- a truck back with its pay (the receipt)
 	Coins = { id = "rbxassetid://330274138", volume = 0.45, range = 60 }, -- a shopper paying at your checkout (Toolbox: "Coin Drop")
-	Scan = { id = "", file = "Scan", volume = 0.45, range = 40 }, -- a thing scanned at a till (you serving, beep)
+	Scan = { id = "rbxassetid://92339580904806", volume = 0.45, range = 40 }, -- a thing scanned at a till (you serving, beep)
 	ShopBell = { id = "rbxassetid://96498594503125", volume = 0.55, range = 70 }, -- the bell over the door: a shopper coming in
 	CheckoutBell = { id = "rbxassetid://100820370804120", volume = 0.6, range = 70 }, -- a shopper waiting at a till rings its counter bell
 	TillOpen = { id = "rbxassetid://78098348517133", volume = 0.6, range = 50 }, -- a shopper paid at a till: the drawer pops open
@@ -38,9 +38,9 @@ return {
 	Siren = { id = "rbxassetid://74146667152417", volume = 0.5 }, -- the theft alarm, to the farm's owner
 	Swing = { id = "rbxassetid://127183292018512", volume = 0.5, range = 70 }, -- a bat swung (Toolbox: "whoosh!")
 	Bonk = { id = "rbxassetid://138623948792634", volume = 0.8, range = 120 }, -- a bat on a head
-	Whistle = { id = "", file = "Whistle", volume = 0.45 }, -- an arrest (the thief and the farmer hear it)
-	Rustle = { id = "", file = "Rustle", volume = 0.55, range = 50 }, -- a crop being stolen shakes
-	AlarmBell = { id = "", file = "AlarmBell", volume = 0.5, range = 220 }, -- the yard's alarm bell defence
+	Whistle = { id = "rbxassetid://122468852918635", volume = 0.45 }, -- an arrest (the thief and the farmer hear it)
+	Rustle = { id = "rbxassetid://110799075723352", volume = 0.55, range = 50 }, -- a crop being stolen shakes
+	AlarmBell = { id = "rbxassetid://83583675194808", volume = 0.5, range = 220 }, -- the yard's alarm bell defence
 	DogAlert = { id = "rbxassetid://79380366540360", volume = 0.7, range = 140 }, -- the guard dog's alert, with the ! over its head
 
 	-- The auction
@@ -52,12 +52,12 @@ return {
 
 	-- Weather
 	Thunder = { id = "rbxassetid://102164464566453", volume = 0.8 }, -- after a lightning flash (Toolbox: "thunderstorm 2")
-	Rain = { id = "", file = "Rain", volume = 0.3, kind = "ambience", loop = true }, -- rain and storms
+	Rain = { id = "rbxassetid://139353385715659", volume = 0.3, kind = "ambience", loop = true }, -- rain and storms
 
 	-- Ambience (AmbienceController: by the time of day)
-	Birds = { id = "", file = "Birds", volume = 0.35, kind = "ambience", loop = true }, -- songbirds and a breeze by day
-	Crickets = { id = "", file = "Crickets", volume = 0.3, kind = "ambience", loop = true }, -- crickets at night
+	Birds = { id = "rbxassetid://93154868192074", volume = 0.35, kind = "ambience", loop = true }, -- songbirds and a breeze by day
+	Crickets = { id = "rbxassetid://126041966128858", volume = 0.3, kind = "ambience", loop = true }, -- crickets at night
 
 	-- Music
-	FarmTheme = { id = "", file = "FarmTheme", volume = 0.25, kind = "music", loop = true }, -- a banjo rolling through G, C and D
+	FarmTheme = { id = "rbxassetid://122857322293981", volume = 0.25, kind = "music", loop = true }, -- a banjo rolling through G, C and D, out of doors in town
 }

@@ -1416,6 +1416,20 @@ end
 function CrimeService.Start()
 	ActionRemote(Remotes.func("CrimeAction"), actions, DataService, 0.1)
 	TravelService.status = CrimeService.Status
+	-- A Suspect in your farm (or climbing in) right now: Home takes a moment.
+	TravelService.raided = function(owner: Player): boolean
+		local plot = PlotService.plotOf(owner)
+		if not plot then
+			return false
+		end
+		for _, other in Players:GetPlayers() do
+			local inside = PlotService.inFarm(other) == plot or other:GetAttribute("Climbing") == plot
+			if other ~= owner and inside and (other:GetAttribute("SuspectOf") or 0) == plot then
+				return true
+			end
+		end
+		return false
+	end
 	DefenceService.raidFreeAt = function(ownerId: number, t: number): number
 		return CrimeRules.raidFreeAt(ledgerOf(ownerId), t, 1) -- (the Neighbourhood Watch dome: not even a Common can go)
 	end

@@ -19,6 +19,23 @@ Follow-ups: <what to test next time>
 
 ## Sessions
 
+### 2026-11-05 · the wait for Home in a raid, and the last sounds · build: uncommitted, on f3bca82
+Testers: Claude, driving Studio · Setup: Server & Clients × 2 (Player1 the owner, Player2 the Suspect from `/tp field 1` and `/suspect`) · Lag: 0
+
+| Case | Result | Pass? | Notes |
+|---|---|---|---|
+| Home, no thief | Arrived in 0.03 s | ✓ | |
+| Home, thief on the farm | Server says wait 3; arrived in 3.07 s; the bar shows "Thief on your farm! Heading home..." and fills | ✓ | Pressed from the command bar and the real HOME sign |
+| Town during a raid | Instant | ✓ | |
+| Town during the wait | Stays in town: the trip home is called off | ✓ | |
+| Home after the thief left | Arrived in 0.05 s, with their Suspect mark still running | ✓ | "On your farm" means inside it |
+| Sounds | All 12 ids checked by name; every sound in the config loaded, 0 failed | ✓ | Loading only: nobody has heard them in game, and music and ambience volumes are untested by ear |
+
+| Theme music (added after) | Volume read every 2 s: farm 0.00, town outdoors 0.25, in the Auction House 0.00 within 2 s, back outside 0.25, at Barley's counter 0.25, on the road outside your store 0.00, home 0.00 | ✓ | Measured, not heard. The Hiring Hall, Police Station and Exchange interiors are covered by a test, not walked into |
+
+Not run: the owner made a Suspect during the wait (`TravelRules.check` runs again as it ends); a real steal rather than `/suspect`.
+Changes made because of this session: none.
+
 ### 2026-11-05 · the picket line · build: uncommitted
 Testers: Claude, driving Studio · Setup: Server & Clients × 1 as Player1 (UserId -1), a real strike from `/coins -N` and its end from `/coins N` · Lag: 0 · Shot: [playtest/2026-11-05-checkout-prompt/picket.jpg](playtest/2026-11-05-checkout-prompt/picket.jpg)
 
