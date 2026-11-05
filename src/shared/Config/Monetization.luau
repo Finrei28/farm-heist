@@ -21,11 +21,11 @@ Monetization.BOOST_SECONDS = 30 * 60 -- ...for 30 minutes of play (online only)
 
 Monetization.Passes = {
 	{
-		id = "VIP", name = "VIP", icon = "⭐", passId = 0, price = 199, color = Color3.fromRGB(242, 179, 61),
+		id = "VIP", name = "VIP", icon = "⭐", passId = 2068706437, price = 199, color = Color3.fromRGB(242, 179, 61),
 		perks = { "+10% coins from every truck and store sale", "A gold VIP tag over your head and in chat", "VIP Gold truck paint and a gold store awning" },
 	},
 	{
-		id = "BiggerBarn", name = "Bigger Barn", icon = "🏚️", passId = 0, price = 99, color = Color3.fromRGB(200, 69, 45),
+		id = "BiggerBarn", name = "Bigger Barn", icon = "🏚️", passId = 2072390308, price = 99, color = Color3.fromRGB(200, 69, 45),
 		perks = { `Your barn holds {Monetization.BARN_MULT}× as many crops`, "Fewer trips to the warehouse when your field is big" },
 	},
 }

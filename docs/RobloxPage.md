@@ -73,6 +73,8 @@ Make each one with this name and price, then paste its id into the file named. T
 | `VIP` | VIP | 199 | `art/page/pass_vip.png` |
 | `BiggerBarn` | Bigger Barn | 99 | `art/page/pass_barn.png` |
 
+Both were made on 2026-11-05, and their ids are in that file.
+
 VIP's description:
 
 > ⭐ Farm in style and earn more!
