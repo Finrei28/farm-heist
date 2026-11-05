@@ -852,18 +852,23 @@ end
 -- the lowest shelf first, fuller with more units: the crop's own pieces
 -- (World/Meshes: carrots, punnets of strawberries, pumpkins), or until the
 -- meshes are imported a ball in its colour. Never more pieces than balls.
+-- The same crop keeps what's out and only adds or takes away (Meshes.settle).
 local function fillSlot(item: Model, n: number, slot, capacity: number)
+	local crop = if slot and slot.units > 0 then slot.crop else nil
 	local regions = {}
 	for _, child in item:GetChildren() do
 		if child.Name == `Slot{n}` or string.match(child.Name, `^Slot{n}_%d+$`) then
 			table.insert(regions, child)
-			child:ClearAllChildren()
+			if child:GetAttribute("ShowsCrop") ~= crop then
+				child:ClearAllChildren()
+				child:SetAttribute("ShowsCrop", crop)
+			end
 		end
 	end
 	table.sort(regions, function(a, b)
 		return a.Name < b.Name
 	end)
-	if not slot or not slot.crop or slot.units <= 0 then
+	if not crop then
 		return
 	end
 	local size = produceSize(slot.crop)
@@ -888,11 +893,10 @@ local function fillSlot(item: Model, n: number, slot, capacity: number)
 			end
 		end
 	end
-	local count = math.clamp(math.ceil(slot.units / capacity * #spots), 1, #spots)
-	for i = 1, count do
+	Meshes.settle(regions, math.clamp(math.ceil(slot.units / capacity * #spots), 1, #spots), function(i)
 		local spot = spots[i]
-		Parts.ball("Produce", spot.region.CFrame * CFrame.new(spot.offset), size, { Color = color }, spot.region)
-	end
+		return { Parts.ball("Produce", spot.region.CFrame * CFrame.new(spot.offset), size, { Color = color }, spot.region) }
+	end)
 end
 
 -- Shows a display's produce and price tags ("🥕 24"; "Empty").
@@ -940,19 +944,15 @@ function StoreArt.showStockroom(model: Model, crates, stage: number)
 	if not folder then
 		return
 	end
-	folder:ClearAllChildren()
 	local cells = Store.BUILDINGS[stage].cells
 	local w = cells[1] * CELL
 	local sf = storeFrame(model:GetAttribute("PlotIndex"))
 	local z = cells[2] * CELL + S.wall + 2.0
 	local columns = math.floor((w - 2) / 3.6)
-	for i, crate in crates do
+	YardArt.stack(folder, crates, function(i)
 		local column, layer = (i - 1) % columns, (i - 1) // columns
-		if layer >= 4 then
-			break
-		end
-		YardArt.crate(crate, sf * CFrame.new(-2.2 - column * 3.6, FLOOR - 0.1 + layer * 1.8, z) * CFrame.Angles(0, math.pi, 0), folder)
-	end
+		return if layer < 4 then sf * CFrame.new(-2.2 - column * 3.6, FLOOR - 0.1 + layer * 1.8, z) * CFrame.Angles(0, math.pi, 0) else nil
+	end)
 end
 
 ------------------------------------------------------------------------

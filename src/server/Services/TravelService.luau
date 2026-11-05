@@ -101,12 +101,15 @@ function actions.Town(player, _data, _arg)
 	return go(player, "Town", townFrame())
 end
 
--- "userId": to that player's gate.
-function actions.Visit(player, _data, arg)
+-- "userId": to that player's gate. Your own farm is Home, with Home's wait
+-- when there's a thief on it (Visit has none).
+function actions.Visit(player, data, arg)
 	local target = Players:GetPlayerByUserId(tonumber(arg) or 0)
 	local index = target and PlotService.plotOf(target)
 	if not index then
 		return "NoFarm"
+	elseif target == player then
+		return actions.Home(player, data, nil)
 	end
 	return go(player, "Visit", visitFrame(index))
 end

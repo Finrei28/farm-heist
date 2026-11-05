@@ -308,7 +308,7 @@ end
 -- The receipt logs "Bought". A few a second at most per player.
 local funnelAt = {} -- [Player] = os.clock() of the last note
 local function funnelNote(player: Player, arg)
-	if typeof(arg) ~= "string" or os.clock() - (funnelAt[player] or 0) < 0.1 then
+	if typeof(arg) ~= "string" or #arg > 40 or os.clock() - (funnelAt[player] or 0) < 0.1 then
 		return
 	end
 	funnelAt[player] = os.clock()
@@ -391,6 +391,11 @@ function MonetizationService.Start()
 	MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, passId, purchased)
 		if not purchased then
 			return
+		end
+		-- (a client can fake this signal: Roblox's own answer is what counts)
+		local ok, owns = pcall(MarketplaceService.UserOwnsGamePassAsync, MarketplaceService, player.UserId, passId)
+		if not RunService:IsStudio() and not (ok and owns) then
+			return -- (Studio's test purchases aren't real, so they're let through there)
 		end
 		local data = DataService.Get(player)
 		for _, pass in Monetization.Passes do

@@ -39,16 +39,17 @@ local TEMPLATE = {
 	seedStock = { index = -1, bought = {} }, -- packs bought in the current Barley's restock (shared/SeedStock)
 
 	-- The warehouse (shared/WarehouseRules, shared/TruckRules): its level and
-	-- a building going up (build = { to, left }), where each crop's crates go,
-	-- each truck's bed, the crates waiting for a truck (the rack, the Cold
-	-- Room), batches waiting for a Packer, truck runs on the road (paid when
-	-- they reach the City, even if you've left by then), the Drivers' rule.
-	warehouse = { level = 1, routes = {}, beds = { {} }, dock = {}, sorted = {}, trucks = {}, driverRule = 0 },
+	-- a building going up (build = { to, left }), what the crew does with each
+	-- crop, each truck's bed, batches waiting for a Packer, truck runs on the
+	-- road (paid when they reach the City, even if you've left by then), the
+	-- Drivers' rule.
+	warehouse = { level = 1, routes = {}, beds = { {} }, sorted = {}, trucks = {}, driverRule = 0 },
 	-- Your store (shared/ShopRules, shared/StoreLayout): its level, a new
 	-- building going up (build = { to, left } seconds of work), its name (nil:
 	-- "<you>'s <building>"), the layout (["id"] = item on the floor or a wall),
-	-- the items you own and how many of them were free, the stockroom's
-	-- crates, your prices, the last shoppers' scores. A new store's starter
+	-- the items you own and how many of them were free, your packed crates
+	-- (one stock for the trucks and the store: shared/PackRules), your prices,
+	-- the last shoppers' scores. A new store's starter
 	-- kit is laid out by SaveData.migrate (a layout in here would be filled
 	-- back in on every load by reconcile).
 	store = { level = 1, started = false, layout = {}, owned = {}, gifts = {}, nextId = 1,
@@ -167,11 +168,21 @@ end
 -- `shop`) move into the store, and week 2's warehouse tier and truck bed
 -- become a Warehouse Level and the first truck's bed: nothing lost.
 local function migrate(data)
+	-- (a purse that isn't a real number passes every price check: the police
+	-- desk could cause one until 2026-11-05)
+	if typeof(data.coins) ~= "number" or data.coins ~= data.coins or math.abs(data.coins) == math.huge then
+		data.coins = 0
+	end
 	if not data.store.started then
 		startStore(data.store)
 	end
 	honourBoxes(data.store)
 	WarehouseRules.migrate(data.warehouse)
+	-- crates that were waiting for a truck join the one stock (2026-11-05)
+	for _, crate in data.warehouse.dock or {} do
+		table.insert(data.store.stockroom, crate)
+	end
+	data.warehouse.dock = nil
 	local shop = data.shop
 	if shop then
 		for _, crate in shop.stockroom or {} do

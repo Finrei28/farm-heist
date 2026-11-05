@@ -9,10 +9,11 @@
 --   SeedAction     C→S  ("Buy" "cropId|count") -> { ok, reason? }   Barley's Seeds (shared/SeedStock)
 --   LandAction     C→S  ("Clear" block) -> { ok, reason? }   Land Permits (shared/LandRules; obstacles are server prompts)
 --   TravelAction   C→S  ("Home" | "Town" | "Visit" userId | "Cancel") -> { ok, reason? }   (shared/TravelRules)
---   WarehouseAction C→S ("Wash" "stackKey|Truck" or "stackKey|Store" | "Pack" | "Upgrade" | "Route" "cropId|Truck/Store/Keep/0.7"
+--   WarehouseAction C→S ("Wash" stackKey | "Pack" | "Upgrade" | "Route" "cropId|Truck/Store/Keep/0.7"
 --                        | "DriverRule" share) -> { ok, reason?, result? }   the warehouse (server/Services/WarehouseService):
---                        at the bench Wash starts the hold, Pack is letting go (result = { grade, units, crop, to })
---   TruckAction    C→S  ("Dispatch" [truck]) -> { ok, reason? }   send the loaded trucks (shared/TruckRules)
+--                        at the bench Wash starts the hold, Pack is letting go (result = { grade, units, crop })
+--   TruckAction    C→S  ("Dispatch" [truck] | "Load" "truck|stackKey|grade" | "Unload" "truck|stackKey|grade")
+--                        -> { ok, reason? }   send the loaded trucks; choose what's on one at its dock (shared/TruckRules, shared/PackRules)
 --   WorkerAction   C→S  ("Hire" candidateId | "Train" uid | "Fire" uid | "Replant" "same"/"cheapest"/"none") -> { ok, reason?, result? }
 --                        your crew (server/Services/WorkerService, shared/WorkerRules)
 --   WorkerEvent    S→C  ("Crew", { plot, workers = { { id, type, name, level, look, at, face, strike } } }) where each

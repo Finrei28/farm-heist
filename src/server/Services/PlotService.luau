@@ -113,13 +113,16 @@ local function friendPlots(player: Player): { number }
 end
 
 local function assign(player: Player, data)
+	-- (asking who's a friend waits on Roblox: the free farms are counted after
+	-- it, or two players joining together could get the same one)
+	local friends = friendPlots(player)
 	local free = {}
 	for index = 1, PlotLayout.COUNT do
 		if not owners[index] then
 			free[index] = true
 		end
 	end
-	local index = PlotRules.choose(free, friendPlots(player))
+	local index = PlotRules.choose(free, friends)
 	if player.Parent ~= Players then
 		return
 	end

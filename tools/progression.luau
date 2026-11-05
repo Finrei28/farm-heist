@@ -309,7 +309,7 @@ local function away(p, seconds, leftAt)
 	state.fieldYield = LandRules.fieldYield(p.land)
 	local speeds, wages = WorkerRules.crew(p.workers, { conveyors = info.conveyors })
 	state.speeds, state.wages = speeds, wages
-	state.holdSize = info.hold
+	state.packedRoom = info.hold
 	state.premium = info.premium
 	state.trucks = {}
 	local drivers = WorkerRules.count(p.workers, "Driver")

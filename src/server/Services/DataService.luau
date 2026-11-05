@@ -37,11 +37,13 @@ local reconcile = SaveData.reconcile
 local DataService = {}
 
 local LAST_ONLINE_INTERVAL = 60
+local STATE_ASK_GAP = 0.5 -- seconds between answers to GetState
 
 local profiles = {} -- [Player] = data
 local sessions = {} -- [Player] = ProfileStore profile
 local stateDirty = {} -- [Player] = true while a state sync is queued
 local awaySeconds = {} -- [Player] = seconds between their last session and this one
+local stateAskedAt = {} -- [Player] = os.clock() of the last GetState answered
 local loadedCallbacks = {}
 local levelUpCallbacks = {}
 local wipedCallbacks = {}
@@ -61,17 +63,30 @@ local function setStat(player, name: string, value: number)
 	end
 end
 
+-- Roblox's player list has shown stats under the wrong headings since its
+-- 2025 update, in games that rely on the order they're added (3.8M under
+-- Level and 2 under Coins here, the published game, 2026-11-05). So Coins
+-- comes first by every order it might use: added first, first by name,
+-- IsPrimary, highest Priority.
 local function createLeaderstats(player, data)
 	local leaderstats = Instance.new("Folder")
 	leaderstats.Name = "leaderstats"
-	local level = Instance.new("IntValue")
-	level.Name = "Level"
-	level.Value = data.level
-	level.Parent = leaderstats
-	local coins = Instance.new("IntValue")
-	coins.Name = "Coins"
-	coins.Value = data.coins
-	coins.Parent = leaderstats
+	for index, stat in { { "Coins", data.coins }, { "Level", data.level } } do
+		local value = Instance.new("IntValue")
+		value.Name = stat[1]
+		value.Value = stat[2]
+		local priority = Instance.new("NumberValue")
+		priority.Name = "Priority"
+		priority.Value = 3 - index
+		priority.Parent = value
+		if index == 1 then
+			local primary = Instance.new("BoolValue")
+			primary.Name = "IsPrimary"
+			primary.Value = true
+			primary.Parent = value
+		end
+		value.Parent = leaderstats
+	end
 	leaderstats.Parent = player
 end
 
@@ -160,11 +175,17 @@ function DataService.IsShuttingDown(): boolean
 	return shuttingDown
 end
 
+-- A real amount of coins. Not-a-number passes every "can they afford it?"
+-- (nothing is less than it), so one in a save would make everything free.
+local function isAmount(amount: number): boolean
+	return typeof(amount) == "number" and amount == amount and math.abs(amount) ~= math.huge
+end
+
 -- kind and sku say what the coins were for (Util/Analytics: Analytics.SHOP,
 -- GAMEPLAY or TIMED, and e.g. "TruckSale"), for the economy charts.
 function DataService.AddCoins(player, amount: number, kind: string?, sku: string?)
 	local data = profiles[player]
-	if not data then
+	if not data or not isAmount(amount) then
 		return
 	end
 	data.coins += amount
@@ -252,7 +273,7 @@ end
 -- Deducts coins if the player can afford it. Returns whether it succeeded.
 function DataService.SpendCoins(player, amount: number, kind: string?, sku: string?): boolean
 	local data = profiles[player]
-	if not data or amount < 0 or data.coins < amount then
+	if not data or not isAmount(amount) or amount < 0 or data.coins < amount then
 		return false
 	end
 	DataService.AddCoins(player, -amount, kind or Analytics.SHOP, sku)
@@ -316,10 +337,20 @@ function DataService.Start()
 		shuttingDown = true
 	end)
 
+	-- (once a second is plenty: the client only asks until the first state
+	-- arrives, and the whole state is a lot to send over and over)
 	GetState.OnServerInvoke = function(player)
+		local t = os.clock()
+		if t - (stateAskedAt[player] or -math.huge) < STATE_ASK_GAP then
+			return nil
+		end
+		stateAskedAt[player] = t
 		local data = profiles[player]
 		return data and getPublicState(data)
 	end
+	Players.PlayerRemoving:Connect(function(player)
+		stateAskedAt[player] = nil
+	end)
 
 	Players.PlayerAdded:Connect(loadPlayer)
 	for _, player in Players:GetPlayers() do

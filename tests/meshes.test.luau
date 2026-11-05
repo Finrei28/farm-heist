@@ -281,6 +281,75 @@ return function(spec, harness)
 			expect(inSlot(2) > 0 and inSlot(2) < inSlot(1)).toBe(true)
 		end)
 
+		it("tops a display up without touching what's already on it", function()
+			local plot = displays()
+			local id = "WoodenShelf"
+			local full = Store.ITEMS[id].patches * 6
+			local function show(crop, units)
+				StoreArt.showDisplay(plot, id, { item = id, slots = { { crop = crop, units = units } } }, {})
+			end
+			local function old()
+				local count = 0
+				for _, part in meshParts(plot.Store.Items[id]) do
+					if part:GetAttribute("Old") then
+						count += 1
+					end
+				end
+				return count
+			end
+			show("Carrot", full / 4)
+			local pieces = meshParts(plot.Store.Items[id])
+			for _, part in pieces do
+				part:SetAttribute("Old", true)
+			end
+			show("Carrot", full / 4) -- (nothing changed: nothing happens)
+			expect(old()).toBe(#pieces)
+			expect(#meshParts(plot.Store.Items[id])).toBe(#pieces)
+			show("Carrot", full) -- (topped up: only new pieces come)
+			expect(old()).toBe(#pieces)
+			expect(#meshParts(plot.Store.Items[id]) > #pieces).toBe(true)
+			show("Carrot", full / 4) -- (sold back down: the first ones stay)
+			expect(old()).toBe(#pieces)
+			expect(#meshParts(plot.Store.Items[id])).toBe(#pieces)
+			show("Tomato", full) -- (another crop: all new)
+			expect(old()).toBe(0)
+			show("Tomato", 0)
+			expect(#meshParts(plot.Store.Items[id])).toBe(0)
+		end)
+
+		it("leaves crates that haven't changed where they are", function()
+			local folder = roblox.Instance.new("Folder")
+			local function where(i)
+				return if i <= 3 then roblox.CFrame.new(i * 4, 0, 0) else nil
+			end
+			local function count(mark)
+				local n = 0
+				for _, child in folder:GetChildren() do
+					if not mark or child:GetAttribute("Old") then
+						n += 1
+					end
+				end
+				return n
+			end
+			local carrots = { crop = "Carrot", units = 72, grade = "A" }
+			YardArt.stack(folder, { carrots, carrots }, where)
+			expect(count()).toBe(2)
+			for _, child in folder:GetChildren() do
+				child:SetAttribute("Old", true)
+			end
+			YardArt.stack(folder, { carrots, carrots, carrots, carrots }, where) -- (three fit)
+			expect(count()).toBe(3)
+			expect(count(true)).toBe(2)
+			YardArt.stack(folder, { carrots }, where) -- (the end of the stack goes)
+			expect(count()).toBe(1)
+			expect(count(true)).toBe(1)
+			YardArt.stack(folder, { { crop = "Carrot", units = 72, grade = "B" } }, where) -- (another look)
+			expect(count()).toBe(1)
+			expect(count(true)).toBe(0)
+			YardArt.stack(folder, {}, where)
+			expect(count()).toBe(0)
+		end)
+
 		it("heaps a crate's produce on top, as full as the crate is", function()
 			local folder = roblox.Instance.new("Folder")
 			local fullCrate = YardArt.crate({ crop = "Tomato", units = 60, grade = "A" }, roblox.CFrame.new(), folder)

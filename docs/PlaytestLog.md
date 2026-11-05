@@ -19,6 +19,70 @@ Follow-ups: <what to test next time>
 
 ## Sessions
 
+### 2026-11-05 · carrying arms, display flicker, the knocked out card · build: uncommitted, on 8b9d268
+Testers: Claude, driving Studio · Setup: Server & Clients × 1 and × 2 (Player1, Player2: test saves) · Lag: 0 · Shots: [playtest/2026-11-05-crates/](playtest/2026-11-05-crates/)
+
+Hands are measured against the torso, frame by frame at about 60 fps.
+
+| Case | Result | Pass? | Notes |
+|---|---|---|---|
+| The old hold (Position IK), standing | Left hand jumps up to 0.55 studs and turns 125° in a frame | ✗ | The reported twitch, reproduced: one arm, even standing still. Position IK on a torso target, switched on live, so not quite the old target on the crop |
+| The old hold, walking | Both hands up to 0.70 studs and 180° in a frame | ✗ | Walking back and forth, so these include the turnarounds |
+| First fix (Transform IK), standing | 0.001 studs, 0.1° | ✓ | |
+| First fix, walking at 16 | Still up to 0.24 studs and 26° a frame, a hitch twice a stride | ✗ | Not good enough: the solver still follows the walk |
+| **Final fix (pose worked out once), standing** | 0.000 studs, 0.0°, over 189 frames | ✓ | `shared/ArmPose` |
+| **Final fix, walking at 16** | 0.000 studs, 0.0°, over 188 frames | ✓ | |
+| The same, seen from another player's client | 0.000 studs, 0.0°, over 240 frames | ✓ | Each client poses every character |
+| Pumpkin, carrots, watermelon, strawberry tray | Hands on the load, arms wider for the tray, swapping crops re-poses them | ✓ | [pumpkin](playtest/2026-11-05-crates/arms-pumpkin.jpg). Front, side and back, on a skinned avatar |
+| Crop gone | Arms back to the running animation, hand range 2.37 studs | ✓ | |
+| **Stocker tops up a display** | Parts added one at a time (+1 ×14), one gone per sale (−1 ×2), no rebuild | ✓ | Shoppers buying at the same time. [shelves](playtest/2026-11-05-crates/display-restocked.jpg) |
+| **Knocked out card** | "You got knocked out...", "You are down for 5 seconds", 4, 3, 2, "1 second", one second apart, text fits | ✓ | [innocent](playtest/2026-11-05-crates/ko-card.jpg), [Suspect](playtest/2026-11-05-crates/ko-card-suspect.jpg). The count was driven from the client: a real `/ko` showed the title, its count hidden by notes |
+
+Not run: crates on the rack, in the stockroom and on a truck weren't watched part by part (a unit test covers `YardArt.stack`); the bat and paddle arms weren't measured.
+
+Flags: `/ko` with a crop in hand puts two notes over the card, but both are test artefacts: the dev command's reply, and the farmer's "dropped" note, which only reaches the thief because `/ko` makes you your own farmer (leave). A note that happens to land during a real knockout would cover the count the same way (leave, watch for it). The bat and paddle use the same kind of IK as the old hold, so they may wobble when walking too (later: measure them).
+
+### 2026-11-05 · exploit fixes, one crate stock, the dock window, thieves running, Farmhand pace · build: uncommitted, on 8b9d268
+Testers: Claude, driving Studio · Setup: Server & Clients × 1 and × 2 (Player1, Player2: test saves, wiped) · Lag: 0 · Shots: [playtest/2026-11-05-crates/](playtest/2026-11-05-crates/)
+
+| Case | Result | Pass? | Notes |
+|---|---|---|---|
+| Player list headings | Coins −5.9M, Level 30, each under its own heading | ✓ | Only seen in Studio: the live list needs a look after publishing |
+| Bench: Pack, wash, grade A | Crate joins the stock, `Packed crates 1/12`, the note says where to go next | ✓ | [bench](playtest/2026-11-05-crates/bench.jpg) |
+| Dock window: Load, Take off, Send | 3 crates listed; on the truck, back off, on again; Send 2,484, receipt 2,484, paid +2,484 | ✓ | [dock](playtest/2026-11-05-crates/dock.jpg) |
+| A crate on the default Truck route, by hand at a display | `144 in stock`, FILL, display 72/72, stock 2 → 1 | ✓ | One stock for both |
+| **The reported bug:** carrots routed to the store, Shed Hands, pickup home and empty | Stock climbs to 12, bed stays 0, barn stops at 1,292 and stays there | ✓ | The note shows once |
+| Route changed to the truck | Crew loads the bed to 4, packing starts again, stock refills to 12 | ✓ | |
+| Mutated crate | The crew leaves `Carrot\|Golden\|` alone; by hand it packs, and the dock says `truck only` | ✓ | [list](playtest/2026-11-05-crates/dock-golden-carrot.jpg) |
+| Dock window on a phone | Fits, reads, scrolls | ✓ | [phone](playtest/2026-11-05-crates/dock-phone.jpg). The thumbstick touches a corner |
+| Warehouse Level 5 | Shed Hands become Packers, Loader fills the Box Truck, hand cart moves up to 4, capped at the room left, sign counts the stock | ✓ | [box truck](playtest/2026-11-05-crates/dock-box-truck.jpg) |
+| **Time away** | Found a bug: 1,326 + 78 harvested should be 1,404, was 1,164. Fixed: 720 before, 720 after with the Stocker moving hundreds | ✗ → ✓ | Old code too: what Stockers took came off twice |
+| **Dock clicks on a busy farm** | Found a bug: a press was lost when the row was rebuilt under it. Fixed: rows update in place; three presses in a row landed | ✗ → ✓ | Buttons now say how many they really move |
+| Walk out of the store, through the gate, round the yard, in by the staff door | 0 snaps | ✓ | Owner |
+| Climb the back fence out and in | Lands each side, 0 snaps, no Suspect mark on your own farm | ✓ | |
+| Knockout and wake · respawn · Home, Town, Visit | 0 snaps, respawn at the door | ✓ | |
+| Attack: teleport home right after travel | `InFarm` stays 0, pulled back to town | ✓ | |
+| Attack: climb out with a crop, teleport home on landing | `InFarm` 0, crop still in hand, back at the landing | ✓ | The worst movement hole |
+| Attack: hop through a hedge, back fence, front fence | Stays inside every time | ✓ | |
+| Attack: plain 120-stud teleport | Moves 61 | ✓ | The 60-stud lag allowance, left on purpose |
+| Attack: hover over a farm | Sent down after 1.7 s | ✓ | |
+| Attack: steal with a dead body | `NotInside`, `InFarm` 0 | ✓ | |
+| Attack: stranger through the staff door | Stays in the store | ✓ | |
+| Attack: bench from 23 studs | No seat | ✓ | An honest sit works |
+| Attack: Pay "nan" at the police desk | `NoCoins`, coins still a number | ✓ | |
+| Attack: 19,000-character store name, 500-character field action | Refused in 66 ms | ✓ | |
+| Attack: Visit your own farm in a raid | Takes the raid wait, 3.2 s | ✓ | |
+| Thief with a crop off farmland | 16, 24 with Shift, 314 studs in 14 s with 0 snaps | ✓ | |
+| Thief on a farm | 13.6 even with Shift held | ✓ | On the victim's and a neighbour's |
+| Legal run home | Climb in over your own fence: crop in the barn | ✓ | |
+| Farmhand pace | Level 1 tops 8.2 studs/s, Level 10 tops 26.6 | ✓ | |
+| Characters | All 17 parts in `Players`: no collision with each other, still with the world | ✓ | Read from the settings, not walked through |
+| `SoundService.RespectFilteringEnabled` | true | ✓ | |
+
+Not run: a real game pass purchase through the new check; two players joining at the same moment; the hire with a padded board number (a unit test covers it); the loading screen's new line, which needs a real stall; hearing anything.
+
+Flags: `Players.MaxPlayers` reads 60 in Studio, and a server has 8 farms (now: check the published server size). "Load crates" and the lever are close: `/tp dock` lands nearer the lever, so the lever's prompt shows first (leave). The Cold Room's sign counts the whole stock, so it can read more than the room shows (leave).
+
 ### 2026-11-05 · birds, crickets and rain, outdoors and in · build: uncommitted, on fd0ad93
 Testers: Claude, driving Studio · Setup: Server & Clients × 1 as Player1, `/weather Rain`, then `/weather Clear` and `/time noon` · Lag: 0
 

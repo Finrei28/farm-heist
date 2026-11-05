@@ -139,7 +139,14 @@ function LootRules.summary(items): string
 	return table.concat(parts, ", ")
 end
 
--- Walking speed with a stolen crop in your hands (and no running).
+-- Whether a stolen crop in your hands slows you where you are (`farm`: the
+-- farm you're in, 0 for none). Only on a farm, where someone can bonk you for
+-- it: off farmland nobody can stop you, so you can run (the user, 2026-11-05).
+function LootRules.slowed(carrying: boolean, farm: number): boolean
+	return carrying and farm > 0
+end
+
+-- Walking speed with a stolen crop in your hands on a farm (and no running).
 function LootRules.speed(walkSpeed: number, carrying: boolean): number
 	return if carrying then walkSpeed * Crime.CARRY_SPEED else walkSpeed
 end

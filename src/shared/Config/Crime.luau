@@ -7,12 +7,13 @@ return {
 	SAME_FARM_COOLDOWN = 180, -- seconds before you can steal from a farm you just left with loot, or were arrested in
 	RAID_CAP_WEIGHT = 10, -- the most raid weight (Config/Rarities raidWeight) a farm can lose ...
 	RAID_WINDOW = 600, -- ... in this many seconds, to all thieves together
-	CARRY_SPEED = 0.85, -- walk speed with a stolen crop in your hands (no sprinting); one crop at a time
+	CARRY_SPEED = 0.85, -- walk speed with a stolen crop in your hands on a farm (no sprinting there; off farmland you can run); one crop at a time
 	CLOCHE_HOLD = 1.4, -- steal holds take this many times longer under a Glass Cloche
 	HARVEST_MOON_HOLD = 0.75, -- ... and this much as long on a Harvest Moon (Heist Night)
 
 	GRAB_HOLD = 1.5, -- seconds to pick up a crop a bonked thief dropped: Take back (its owner, the farm's owner, their Trusted friends) or Grab (anyone else)
 	DROP_REACH = 6, -- studs from a dropped crop you can pick it up
+	REACH_HEIGHT = 11, -- studs above a crop you can take it from: a jump's top, and the farmer's bat still reaches you
 	DROP_SECONDS = 30, -- a dropped crop nobody picks up goes back to its owner's barn after this long
 	ALARM_GAP = 15, -- seconds between theft alarms about the same thief
 

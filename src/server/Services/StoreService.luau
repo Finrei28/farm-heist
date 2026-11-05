@@ -30,6 +30,7 @@ local Shared = ReplicatedStorage.Shared
 local Crops = require(Shared.Config.Crops)
 local DefenceRules = require(Shared.DefenceRules)
 local Growth = require(Shared.Config.Growth)
+local PackRules = require(Shared.PackRules)
 local Shop = require(Shared.Config.Shop)
 local Store = require(Shared.Config.Store)
 local PlotLayout = require(Shared.PlotLayout)
@@ -43,6 +44,7 @@ local Analytics = require(Server.Util.Analytics)
 local Notice = require(Server.Util.Notice)
 local StoreArt = require(Server.World.StoreArt)
 local StoreItems = require(Server.World.StoreItems)
+local YardArt = require(Server.World.YardArt)
 local DataService = require(script.Parent.DataService)
 local QuestService = require(script.Parent.QuestService)
 local GuideService = require(script.Parent.GuideService)
@@ -63,6 +65,8 @@ local BELL_NOTE_GAP = 25 -- seconds between "a shopper is waiting at your counte
 local SIDEWALK_Y, STEP_Y = 0.3, 0.35
 local FLOOR = PlotLayout.PLOT.store.floor
 local LAYOUT_MAX = 20_000 -- characters of a layout from Decorate
+local NAME_MAX_BYTES = 200 -- of a new name, before it's looked at (the trim below is slow on a long one)
+local HEAVY_GAP = 1 -- seconds between renames and layouts (each rebuilds the store; a rename goes to the text filter)
 
 local ShopperEvent = Remotes.event("ShopperEvent")
 local tickStore -- (below)
@@ -157,10 +161,15 @@ local function drawDisplays(player: Player)
 	end
 end
 
+-- Your packed crates where you'd look for them: what the crew will put out
+-- in the stockroom, the rest on the rack or in the Cold Room (PackRules.sides).
 local function drawStockroom(player: Player)
-	local st, data = stores[player], DataService.Get(player)
-	if st and data then
-		StoreArt.showStockroom(PlotService.model(st.index), data.store.stockroom, StoreLayout.level(data.store.level).stage)
+	local index, data = PlotService.plotOf(player), DataService.Get(player)
+	if index and data then
+		local model = PlotService.model(index)
+		local rack, shelf = PackRules.sides(data)
+		StoreArt.showStockroom(model, shelf, StoreLayout.level(data.store.level).stage)
+		YardArt.showHold(model, rack, `{#data.store.stockroom} / {PackRules.size(data)}`)
 	end
 end
 
@@ -194,7 +203,7 @@ local function redraw(player: Player)
 end
 StoreService.Redraw = redraw
 
--- After crates arrive in the stockroom (WarehouseService).
+-- After packed crates change, whoever moved them (WarehouseService).
 function StoreService.StockroomChanged(player: Player)
 	drawStockroom(player)
 	drawDisplays(player)
@@ -476,7 +485,7 @@ local function atDisplay(st, shopper, t: number)
 				st.soldOutTold = true
 				Notice.send(player, if #data.store.stockroom > 0
 					then "Your store sold out! Fill the displays from the stockroom."
-					else "Your store sold out! Send it more crates from the Packing Shed.")
+					else "Your store sold out! Pack more crates at the Packing Shed.")
 			end
 		else
 			say, mood = line(ShopRules.reaction(result, felt, 0) :: string)
@@ -785,7 +794,7 @@ function StoreService.Restock(player: Player, patches: number): number
 	if not st or not data or st.decorating or patches < 1 then
 		return 0
 	end
-	local moved = ShopRules.restockDisplays(data.store, MarketService.priceAt(), patches)
+	local moved = ShopRules.restockDisplays(data.store, MarketService.priceAt(), patches, PackRules.forStore(data.warehouse))
 	if moved > 0 then
 		drawDisplays(player)
 		drawStockroom(player)
@@ -830,12 +839,12 @@ function StoreService.Fill(player: Player, id: string): string?
 		return "BadRequest"
 	end
 	if #store.stockroom == 0 then
-		Notice.send(player, "The stockroom is empty. Pack crates at the bench and send them to your Store.", "Error")
+		Notice.send(player, "You have no packed crates. Pack some at the Packing Shed bench.", "Error")
 		return "Empty"
 	end
 	local moved = ShopRules.fill(store, id, MarketService.priceAt())
 	if moved == 0 then
-		Notice.send(player, "Nothing to put out here: it's full, or the stockroom has nothing this display can hold.", "Error")
+		Notice.send(player, "Nothing to put out here: it's full, or none of your packed crates can go on this display.", "Error")
 		return "Full"
 	end
 	st.soldOutTold = nil
@@ -1010,8 +1019,25 @@ function actions.Upgrade(player, data)
 	return nil
 end
 
+-- Whether this is too soon after the last rename or layout.
+local function tooSoon(st): boolean
+	local t = os.clock()
+	if st and t - (st.heavyAt or -math.huge) < HEAVY_GAP then
+		return true
+	end
+	if st then
+		st.heavyAt = t
+	end
+	return false
+end
+
 -- Your store's name ("" goes back to the default).
 function actions.Name(player, data, arg)
+	if #(arg or "") > NAME_MAX_BYTES then
+		return "BadName"
+	elseif tooSoon(stores[player]) then
+		return "Cooldown"
+	end
 	local text = string.gsub(string.gsub(arg or "", "[%c]", ""), "^%s*(.-)%s*$", "%1")
 	if text == "" then
 		data.store.name = nil
@@ -1067,6 +1093,8 @@ function actions.Layout(player, data, arg)
 	end
 	if #(arg or "") > LAYOUT_MAX then
 		return "BadRequest"
+	elseif tooSoon(st) then
+		return "Cooldown"
 	end
 	local ok, request = pcall(HttpService.JSONDecode, HttpService, arg)
 	if not ok or typeof(request) ~= "table" or typeof(request.items) ~= "table" then
@@ -1195,7 +1223,7 @@ end
 
 function StoreService.Start()
 	StoreItems.buildCatalog()
-	ActionRemote(Remotes.func("StoreAction"), actions, DataService, 0.1)
+	ActionRemote(Remotes.func("StoreAction"), actions, DataService, 0.1, LAYOUT_MAX)
 
 	PlotService.OnAssigned(function(player, index)
 		startStore(player, index)

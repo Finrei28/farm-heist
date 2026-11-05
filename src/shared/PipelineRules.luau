@@ -17,11 +17,12 @@
 --                                   pumpkins, punnets ... one by one)
 --   barnRoom   units the barn still holds (Farmhands stop when it's full)
 --   sorted     { [cropId] = units } washed and graded, waiting to be packed
---   hold       { crate }            crates waiting for a truck (rack / Cold Room) ...
---   holdSize   ... and how many it takes (packing for the truck pauses when full)
+-- The packed crates are one stock (shared/PackRules), here by what the crew
+-- does with them:
+--   hold       { crate }            the crates they'll load on a truck
+--   stockroom  { [cropId] = units } the units they'll put out in the store
+--   packedRoom crates the stock still takes (none left: packing waits)
 --   trucks     { { crates, roundTrip, backAt, driver, bed = { crate } } }
---   stockroom  { [cropId] = units } packed for the store ...
---   stockroomRoom ... and crates it still takes (then crates go to the truck)
 --   shelves    { [cropId] = units } on the store's displays
 -- The Sorters, Stockers and the store's displays work in patches' worth
 -- (shared/CrateRules.patches), so 72 carrots are as much work as 6 pumpkins.
@@ -87,9 +88,9 @@ end
 
 function PipelineRules.newState()
 	return {
-		tiles = {}, seeds = {}, replant = "same", fieldYield = 1, barn = {}, barnRoom = math.huge, sorted = {}, hold = {}, holdSize = 6,
+		tiles = {}, seeds = {}, replant = "same", fieldYield = 1, barn = {}, barnRoom = math.huge, sorted = {}, hold = {}, packedRoom = 12,
 		trucks = { { crates = 4, roundTrip = 60, backAt = 0, driver = false, bed = {} } },
-		stockroom = {}, stockroomRoom = math.huge, shelves = {}, routes = {}, speeds = {}, gradeA = 0, minPrice = 0, premium = 0,
+		stockroom = {}, shelves = {}, routes = {}, speeds = {}, gradeA = 0, minPrice = 0, premium = 0,
 		shop = { level = 1, stars = 3, prices = {}, capacity = 40, staffed = false, boost = 0 },
 		wages = 0, coins = math.huge,
 	}
@@ -121,7 +122,8 @@ end
 -- `startTime` at `rate` (Workers.OFFLINE_RATE). priceAt(cropId, t) gives the
 -- truck price (default: MarketPrice with supply 1). Returns a report:
 --   { minutes, harvested, crates, shippedCrates, truckCoins, runs = { run }, shopUnits, shopCoins,
---     sold = { [cropId] = units }, stocked, stockedPatches, wages, strikeMinutes, worked = { [station] = minutes } }
+--     sold = { [cropId] = units }, forStore = { [cropId] = units packed for the store }, stocked, stockedPatches,
+--     wages, strikeMinutes, worked = { [station] = minutes } }
 -- run = { truck, at, arriveAt, returnAt, crates = { crate + price + coins }, coins }
 function PipelineRules.simulate(state, seconds: number, rate: number, startTime: number, priceAt)
 	priceAt = priceAt or function(cropId, t)
@@ -133,10 +135,11 @@ function PipelineRules.simulate(state, seconds: number, rate: number, startTime:
 	state.salesAcc = state.salesAcc or {}
 	state.gradeAcc = state.gradeAcc or 0
 	state.yieldAcc = state.yieldAcc or 0
+	state.stockedAcc = state.stockedAcc or {}
 	local budget = { harvest = 0, shed = 0, sort = 0, pack = 0, load = 0, stock = 0, shoppers = 0, register = 0 }
 	local report = {
 		minutes = minutes, harvested = 0, crates = 0, shippedCrates = 0, truckCoins = 0, runs = {},
-		shopUnits = 0, shopCoins = 0, sold = {}, stocked = 0, stockedPatches = 0, wages = 0, strikeMinutes = 0, worked = {},
+		shopUnits = 0, shopCoins = 0, sold = {}, forStore = {}, stocked = 0, stockedPatches = 0, wages = 0, strikeMinutes = 0, worked = {},
 	}
 	local pending = {} -- runs on the road, not paid yet (their coins come in at arriveAt)
 
@@ -167,29 +170,36 @@ function PipelineRules.simulate(state, seconds: number, rate: number, startTime:
 		return whole
 	end
 
-	-- Room for one more crate waiting for a truck.
-	local function holdHasRoom(): boolean
-		return #state.hold < state.holdSize
+	-- Room for one more packed crate.
+	local function hasRoom(): boolean
+		return state.packedRoom > 0
 	end
 
-	-- A packed crate goes to the truck or the store, as the route says (shares
-	-- are kept exact over many crates); a full stockroom sends it to the truck.
+	-- A packed crate joins the stock, for the truck or the store as the route
+	-- says (shares are kept exact over many crates).
 	local function route(cropId: string, units: number)
 		report.crates += 1
+		state.packedRoom -= 1
 		local share = state.routes[cropId]
 		share = if type(share) == "number" then share else 1
 		local acc = (state.routeAcc[cropId] or 0) + share
-		local crate = { crop = cropId, units = units, grade = grade() }
+		local crate = { crop = cropId, units = units, grade = grade(), lean = "Truck" }
 		if acc >= 1 - 1e-9 then
 			acc -= 1
 			table.insert(state.hold, crate)
-		elseif state.stockroomRoom > 0 then
-			state.stockroomRoom -= 1
-			add(state.stockroom, cropId, units)
 		else
-			table.insert(state.hold, crate)
+			add(state.stockroom, cropId, units)
+			report.forStore[cropId] = (report.forStore[cropId] or 0) + units
 		end
 		state.routeAcc[cropId] = acc
+	end
+
+	-- A Stocker took units out of the stock: each crate's worth frees a crate's room.
+	local function stocked(cropId: string, units: number)
+		local size = crateSize(cropId)
+		local acc = (state.stockedAcc[cropId] or 0) + units
+		state.packedRoom += acc // size
+		state.stockedAcc[cropId] = acc % size
 	end
 
 	-- Crops the warehouse takes from the barn (not ones kept there).
@@ -261,7 +271,7 @@ function PipelineRules.simulate(state, seconds: number, rate: number, startTime:
 			local shedWorked = false
 			for _, cropId in keysOf(state.barn) do
 				local size = crateSize(cropId)
-				while routed(cropId) and budget.shed >= 1 and (state.barn[cropId] or 0) >= size and holdHasRoom() do
+				while routed(cropId) and budget.shed >= 1 and (state.barn[cropId] or 0) >= size and hasRoom() do
 					budget.shed -= 1
 					add(state.barn, cropId, -size)
 					route(cropId, size)
@@ -285,7 +295,7 @@ function PipelineRules.simulate(state, seconds: number, rate: number, startTime:
 			budget.pack = refill(budget.pack, (speeds.Pack or 0) * rate)
 			for _, cropId in keysOf(state.sorted) do
 				local size = crateSize(cropId)
-				while budget.pack >= 1 and (state.sorted[cropId] or 0) >= size and holdHasRoom() do
+				while budget.pack >= 1 and (state.sorted[cropId] or 0) >= size and hasRoom() do
 					budget.pack -= 1
 					add(state.sorted, cropId, -size)
 					route(cropId, size)
@@ -299,6 +309,7 @@ function PipelineRules.simulate(state, seconds: number, rate: number, startTime:
 				while budget.load >= 1 and #state.hold > 0 and t >= truck.backAt and #truck.bed < truck.crates do
 					budget.load -= 1
 					table.insert(truck.bed, table.remove(state.hold, 1))
+					state.packedRoom += 1
 					if (speeds.Load or 0) > 0 then
 						worked("Load")
 					else
@@ -358,6 +369,7 @@ function PipelineRules.simulate(state, seconds: number, rate: number, startTime:
 					report.stockedPatches += units / per
 					add(state.stockroom, cropId, -units)
 					add(state.shelves, cropId, units)
+					stocked(cropId, units)
 					worked("Shelves")
 				end
 			end

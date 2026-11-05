@@ -2,6 +2,28 @@
 -- fleeing, debt collected from income, and no coins created from nothing.
 return function(spec, harness)
 	local describe, it, expect = spec.describe, spec.it, spec.expect
+
+	describe("paying at the police desk", function()
+		local FineRules = harness.load("FineRules")
+		it("pays what's asked, up to the debt and the purse", function()
+			expect(FineRules.payAmount("all", 500, 900)).toBe(500)
+			expect(FineRules.payAmount("all", 500, 200)).toBe(200)
+			expect(FineRules.payAmount("120.7", 500, 900)).toBe(120)
+			expect(FineRules.payAmount("9999", 500, 900)).toBe(500)
+		end)
+		it("anything that isn't a real amount pays nothing", function()
+			for _, arg in { "nan", "NaN", "-nan", "-5", "-inf", "junk", "" } do
+				expect(FineRules.payAmount(arg, 500, 900)).toBe(0)
+			end
+			expect(FineRules.payAmount(nil, 500, 900)).toBe(0)
+		end)
+		it("infinity is only as much as the debt", function()
+			expect(FineRules.payAmount("inf", 500, 900)).toBe(500)
+		end)
+		it("a purse below zero pays nothing", function()
+			expect(FineRules.payAmount("all", 500, -40)).toBe(0)
+		end)
+	end)
 	local FineRules = harness.load("FineRules")
 	local Crime = harness.load("Config/Crime")
 

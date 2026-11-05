@@ -173,8 +173,7 @@ function actions.Pay(player, data, arg)
 	if total <= 0 then
 		return "NoDebt"
 	end
-	local amount = if arg == "all" then total else math.floor(tonumber(arg) or 0)
-	amount = math.min(amount, total, data.coins)
+	local amount = FineRules.payAmount(arg, total, data.coins)
 	if amount <= 0 then
 		return "NoCoins"
 	end

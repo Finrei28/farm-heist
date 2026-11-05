@@ -14,8 +14,8 @@
 --                roof fades while you're inside (RoofController)
 --   Bench        where you wash and pack by hand (WarehouseService's prompt)
 --   Docks        the platform, LoadSpot<n> and LeverBase<n> for each truck
---   Rack         crates waiting for a truck: on the dock at the Packing
---                Shed, in the Cold Room after that
+--   Rack         packed crates (those the crew won't take to the store): on
+--                the dock at the Packing Shed, in the Cold Room after that
 --   Stations     the warehouses' Intake, Sort, Pack and Load spots (where
 --                workers stand, WorkerService)
 --   Lanes        a paved lane per dock, its truck gate (Gate<n> with a Boom)
@@ -124,38 +124,28 @@ function YardArt.crate(crate, cframe: CFrame, parent: Instance): Model
 	return model
 end
 
--- Puts a crate in a character's arms (welded in front of their chest, a
--- LeftHold and RightHold on its sides for the hands), or takes it away
--- (crate = nil).
-function YardArt.carry(character: Model, crate)
-	local old = character:FindFirstChild("CarriedCrate")
-	if old then
-		old:Destroy()
+-- Shows `crates` in `folder`, each on the frame where(i) gives (nil: no more
+-- fit). One that looks the same in the same place stays put, so a stack
+-- doesn't blink each time a single crate moves.
+function YardArt.stack(folder: Instance, crates, where: (number) -> CFrame?)
+	local old = {}
+	for _, child in folder:GetChildren() do
+		old[child:GetAttribute("Look") or child] = child
 	end
-	local root = character:FindFirstChild("HumanoidRootPart")
-	if not crate or not root then
-		return
-	end
-	local model = YardArt.crate(crate, root.CFrame * CFrame.new(0, -0.6, -2.1), character)
-	model.Name = "CarriedCrate"
-	-- where the hands go (client/PoseController): the sides, toward the body
-	for _, side in { -1, 1 } do
-		local spot = Instance.new("Attachment")
-		spot.Name = if side < 0 then "LeftHold" else "RightHold"
-		spot.Position = Vector3.new(side * (CRATE.X / 2 + 0.15), 0.1, 0.8)
-		spot.Parent = model.Box
-	end
-	for _, child in model:GetDescendants() do
-		if child:IsA("BasePart") then
-			child.Anchored = false
-			child.Massless = true
-			child.CanCollide = false
-			child.CanQuery = false
-			local weld = Instance.new("WeldConstraint")
-			weld.Part0 = root
-			weld.Part1 = child
-			weld.Parent = child
+	for i, crate in crates do
+		local at = where(i)
+		if not at then
+			break
 		end
+		local look = `{crate.crop} {crate.units} {crate.grade} {at.Position}`
+		if old[look] then
+			old[look] = nil
+		else
+			YardArt.crate(crate, at, folder):SetAttribute("Look", look)
+		end
+	end
+	for _, child in old do
+		child:Destroy()
 	end
 end
 
@@ -167,46 +157,40 @@ local function frameOf(model: Model): CFrame
 	return PlotLayout.frame(model:GetAttribute("PlotIndex") or 1)
 end
 
--- Shows the crates waiting for a truck: on the dock rack at the Packing
--- Shed (up to 12), in stacks in the Cold Room after that, with a sign.
-function YardArt.showHold(model: Model, crates)
+-- Shows packed crates: on the dock rack at the Packing Shed (up to 12), in
+-- stacks in the Cold Room after that, with a sign saying how many you have
+-- in all (`count`: they're one stock with the store's stockroom).
+function YardArt.showHold(model: Model, crates, count: string)
 	local warehouse = warehouseModel(model)
 	local rack = warehouse and warehouse:FindFirstChild("Rack")
 	if not rack then
 		return
 	end
-	rack:ClearAllChildren()
 	local frame = frameOf(model)
 	local stage = warehouse:GetAttribute("Stage") or 1
 	if stage == 1 then
 		local at = PlotLayout.rackLocal()
-		for i, crate in crates do
-			if i > 12 then
-				break
-			end
+		YardArt.stack(rack, crates, function(i)
 			local spot = (i - 1) % 4
 			local layer = (i - 1) // 4
 			local offset = Vector3.new((spot % 2) * 3.4 - 1.7, P.dock.height + 0.2 + layer * CRATE.Y, (spot // 2) * -3.4 + 1.2) -- (on the rack's boards)
-			YardArt.crate(crate, frame * CFrame.new(at + offset), rack)
-		end
+			return if i <= 12 then frame * CFrame.new(at + offset) else nil
+		end)
 		return
 	end
 	local room = PlotLayout.WAREHOUSES[stage].coldRoom
 	local columns = math.max(1, math.floor((room.max.X - room.min.X - 2) / 3.6))
-	for i, crate in crates do
-		if i > SHOW_HOLD then
-			break
-		end
+	YardArt.stack(rack, crates, function(i)
 		local stack = (i - 1) // 3
 		local layer = (i - 1) % 3
 		local x = room.min.X + 2.6 + (stack % columns) * 3.6
 		local z = room.max.Z - 2.6 - (stack // columns) * 3.6
-		YardArt.crate(crate, frame * CFrame.new(x, FLOOR + layer * CRATE.Y, z), rack)
-	end
-	local count = warehouse:FindFirstChild("ColdRoomCount", true)
-	local words = count and count:FindFirstChild("Words", true) -- (the label in the sign's SurfaceGui)
+		return if i <= SHOW_HOLD then frame * CFrame.new(x, FLOOR + layer * CRATE.Y, z) else nil
+	end)
+	local sign = warehouse:FindFirstChild("ColdRoomCount", true)
+	local words = sign and sign:FindFirstChild("Words", true) -- (the label in the sign's SurfaceGui)
 	if words then
-		words.Text = `{#crates} / {WarehouseRules.level(warehouse:GetAttribute("Level") or 1).hold}`
+		words.Text = count
 	end
 end
 
@@ -399,20 +383,16 @@ end
 -- only its last few rows, through the open door).
 function YardArt.showBed(truck: Model, crates)
 	local bed = truck:FindFirstChild("Bed")
-	bed:ClearAllChildren()
 	local base = truck:GetPivot()
 	local floor = bed:GetAttribute("Floor") or 3
 	local back = bed:GetAttribute("Back") or 7.6
 	local open = truck:GetAttribute("Kind") == "Pickup"
-	for i, crate in crates do
-		if not open and i > SHOW_BED then
-			break
-		end
+	YardArt.stack(bed, crates, function(i)
 		local column, row = (i - 1) % 2, (i - 1) // 2
 		local layer = if open then 0 else row // 2
 		local depth = if open then row else row % 2
-		YardArt.crate(crate, base * CFrame.new(column * 3.6 - 1.8, floor + layer * CRATE.Y, back - depth * 3.6), bed)
-	end
+		return if open or i <= SHOW_BED then base * CFrame.new(column * 3.6 - 1.8, floor + layer * CRATE.Y, back - depth * 3.6) else nil
+	end)
 end
 
 ------------------------------------------------------------------------

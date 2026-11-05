@@ -95,16 +95,6 @@ return function(spec, harness)
 			expect(ShopRules.stockroomUnits(store).Carrot).toBe(180)
 			expect(#store.stockroom).toBe(3) -- 36 A, then 144 B in two full crates
 		end)
-		it("counts the stockroom's room at this level", function()
-			local store = newStore()
-			expect(ShopRules.stockroomRoom(store)).toBe(6)
-			for _ = 1, 7 do
-				table.insert(store.stockroom, crate("Carrot", 1))
-			end
-			expect(ShopRules.stockroomRoom(store)).toBe(0)
-			store.level = 3
-			expect(ShopRules.stockroomRoom(store)).toBe(3)
-		end)
 	end)
 
 	describe("a Stocker", function()

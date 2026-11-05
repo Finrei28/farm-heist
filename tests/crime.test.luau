@@ -8,6 +8,23 @@ return function(spec, harness)
 
 	local NOW = 1_000_000
 
+	describe("reaching a crop", function()
+		local crop = Vector3.new(100, 0, 100)
+		it("from the ground beside it, or in a jump", function()
+			expect(CrimeRules.inReach(Vector3.new(106, 3, 100), crop, 10)).toBe(true)
+			expect(CrimeRules.inReach(Vector3.new(106, 10.2, 100), crop, 10)).toBe(true)
+		end)
+		it("not from too far along the ground", function()
+			expect(CrimeRules.inReach(Vector3.new(120, 3, 100), crop, 10)).toBe(false)
+		end)
+		it("not from up in the air, out of the bat's reach", function()
+			expect(CrimeRules.inReach(Vector3.new(100, 30, 100), crop, 10)).toBe(false)
+		end)
+		it("not without a body", function()
+			expect(CrimeRules.inReach(nil, crop, 10)).toBe(false)
+		end)
+	end)
+
 	local function stealCtx(overrides)
 		local ctx = {
 			now = NOW, inside = true, knockedOut = false, thiefProtected = false, farmProtected = false,

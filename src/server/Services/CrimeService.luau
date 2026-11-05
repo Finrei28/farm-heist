@@ -152,12 +152,18 @@ end
 ------------------------------------------------------------------------
 -- The stolen crop in their hands
 
+-- Carrying a crop on a farm you only walk, slower; off farmland you can run
+-- (LootRules.slowed; the client sets the speed).
+local function pace(player: Player, state)
+	local slowed = LootRules.slowed(carrying(state), PlotService.inFarm(player))
+	MovementService.SetScale(player, if slowed then Settings.WALK_SPEED * Crime.CARRY_SPEED / Settings.RUN_SPEED else nil)
+end
+
 local function showCarried(player: Player, state)
 	local cropId, count = LootRules.crop(state.loot)
 	player:SetAttribute("StolenCrop", cropId)
 	player:SetAttribute("StolenCount", if cropId then count else nil)
-	-- carrying it you only walk, slower (shared/LootRules; the client sets the speed)
-	MovementService.SetScale(player, if cropId then Settings.WALK_SPEED * Crime.CARRY_SPEED / Settings.RUN_SPEED else nil)
+	pace(player, state)
 	if player.Character then
 		CrimeArt.showCarried(player.Character, cropId, count)
 	end
@@ -688,20 +694,18 @@ local function onExit(player: Player, state, plot: number, t: number)
 				table.insert(mine, item)
 			end
 		end
-		Notice.send(player, "Safe! Now get it home: it's yours as soon as you're back in your own farm.", "Good")
+		Notice.send(player, "Safe! You can run now: it's yours as soon as you're back in your own farm.", "Good")
 		Notice.send(owner, `{player.DisplayName} got away with {LootRules.summary(mine)}. Harvest ripe crops fast, and bonk thieves with your bat!`, "Error")
 	end
 end
 
 -- The bat is yours only while you're inside your own farm (§4.12), and
--- not while your hands are full (a stolen crop, or a crate: the Carrying
--- attribute, WarehouseService).
+-- not while your hands are full (a stolen crop).
 local function updateBat(player: Player, state)
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	local home = PlotService.plotOf(player)
 	local want = home ~= nil and state.farm == home and humanoid ~= nil and humanoid.Health > 0 and not carrying(state)
-		and player:GetAttribute("Carrying") == nil
 	local backpack = player:FindFirstChildOfClass("Backpack")
 	local tool = state.bat
 	if want and not (tool and tool.Parent) and backpack then
@@ -768,22 +772,20 @@ local function tick()
 			state.farm = farm
 			onExit(player, state, was, t)
 			onEnter(player, state, farm, t)
+			pace(player, state)
 		end
 		updateBat(player, state)
 		-- a hold stops if they walk out of reach
 		local hold = state.hold
 		if hold then
-			local position = MovementService.positionOf(player)
-			local centre = PlotLayout.tileWorld(hold.plot, hold.tile)
-			if not position or Vector2.new(position.X - centre.X, position.Z - centre.Z).Magnitude > FieldService.REACH + 2 then
+			if not CrimeRules.inReach(MovementService.positionOf(player), PlotLayout.tileWorld(hold.plot, hold.tile), FieldService.REACH + 2) then
 				cancelHold(state)
 			end
 		end
 		local pickup = state.pickup
 		local drop = pickup and drops[pickup.id]
 		if pickup then
-			local position = MovementService.positionOf(player)
-			if not drop or not position or Vector2.new(position.X - drop.at.X, position.Z - drop.at.Z).Magnitude > Crime.DROP_REACH + 2 then
+			if not drop or not CrimeRules.inReach(MovementService.positionOf(player), drop.at, Crime.DROP_REACH + 2) then
 				state.pickup = nil
 			end
 		end
@@ -842,9 +844,7 @@ function actions.Steal(player, _data, arg)
 	if not ownerData then
 		return "NotLoaded"
 	end
-	local position = MovementService.positionOf(player)
-	local centre = PlotLayout.tileWorld(plot, tile)
-	if not position or Vector2.new(position.X - centre.X, position.Z - centre.Z).Magnitude > FieldService.REACH then
+	if not CrimeRules.inReach(MovementService.positionOf(player), PlotLayout.tileWorld(plot, tile), FieldService.REACH) then
 		return "TooFar"
 	end
 	local cropId, count = FieldService.RipeCrop(owner, ownerData, tostring(tile))
@@ -895,9 +895,7 @@ function actions.StealDone(player, _data, _arg)
 	elseif isKnockedOut(state, t) then
 		return "KnockedOut"
 	end
-	local position = MovementService.positionOf(player)
-	local centre = PlotLayout.tileWorld(hold.plot, hold.tile)
-	if not position or Vector2.new(position.X - centre.X, position.Z - centre.Z).Magnitude > FieldService.REACH + 2 then
+	if not CrimeRules.inReach(MovementService.positionOf(player), PlotLayout.tileWorld(hold.plot, hold.tile), FieldService.REACH + 2) then
 		return "TooFar"
 	end
 	-- (the owner, a friend or a Farmhand may have picked it first: §4.10)
@@ -943,8 +941,7 @@ local function pickupOf(player: Player, arg: string?)
 	elseif PlotService.inFarm(player) ~= drop.plot then
 		return nil, nil, "NotInside"
 	end
-	local position = MovementService.positionOf(player)
-	if not position or Vector2.new(position.X - drop.at.X, position.Z - drop.at.Z).Magnitude > Crime.DROP_REACH then
+	if not CrimeRules.inReach(MovementService.positionOf(player), drop.at, Crime.DROP_REACH) then
 		return nil, nil, "TooFar"
 	end
 	local role = roleFor(player, drop)

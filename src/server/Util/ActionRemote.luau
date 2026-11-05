@@ -1,5 +1,7 @@
 -- Wires a RemoteFunction to a table of named actions, with argument checks,
--- a per-player cooldown and a { ok, reason? } response.
+-- a per-player cooldown and a { ok, reason? } response. arg is at most
+-- maxArg characters (default MAX_ARG): the actions run string patterns on it,
+-- and a pattern over a long enough string can stall the whole server.
 --
 -- Each action is action(player, data, arg) where arg is a string or nil, and
 -- returns nil on success or a failure reason string; on success it may also
@@ -7,11 +9,14 @@
 -- action triggers a state sync to the client.
 local Players = game:GetService("Players")
 
-return function(remote: RemoteFunction, actions, DataService, cooldown: number)
+local MAX_ARG = 200
+
+return function(remote: RemoteFunction, actions, DataService, cooldown: number, maxArg: number?)
 	local lastActionAt = {} -- [Player] = os.clock()
+	local longest = maxArg or MAX_ARG
 
 	remote.OnServerInvoke = function(player, actionName, arg)
-		if typeof(actionName) ~= "string" or not actions[actionName] or (arg ~= nil and typeof(arg) ~= "string") then
+		if typeof(actionName) ~= "string" or not actions[actionName] or (arg ~= nil and (typeof(arg) ~= "string" or #arg > longest)) then
 			return { ok = false, reason = "BadRequest" }
 		end
 		local now = os.clock()

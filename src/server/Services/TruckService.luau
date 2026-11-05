@@ -1,6 +1,7 @@
--- The trucks (docs/GameDesign.md §4.6, shared/TruckRules): loading crates at
--- each dock, dispatching (the dock's lever, or the Market window's Send now
--- from anywhere: every truck that's home and loaded), the receipt with the
+-- The trucks (docs/GameDesign.md §4.6, shared/TruckRules): loading the crates
+-- you pick at each dock (client DockController, from your packed crates:
+-- shared/PackRules), dispatching (the dock's lever, or the Market window's
+-- Send now from anywhere: every truck that's home and loaded), the receipt with the
 -- prices it locked, and the payout when it reaches the City. Runs are
 -- saved, so one that arrives after you've left is paid when you next join,
 -- on any server. A truck with a Driver (WorkerService) makes a shorter trip.
@@ -15,6 +16,7 @@ local BarnRules = require(Shared.BarnRules)
 local CrateRules = require(Shared.CrateRules)
 local Crops = require(Shared.Config.Crops)
 local Format = require(Shared.Format)
+local PackRules = require(Shared.PackRules)
 local Remotes = require(Shared.Remotes)
 local TruckRules = require(Shared.TruckRules)
 local Warehouse = require(Shared.Config.Warehouse)
@@ -104,52 +106,25 @@ end
 ------------------------------------------------------------------------
 -- Loading and dispatching
 
--- "Load crate" at dock `truck`: the crate in your arms or one from the rack
--- at the Packing Shed; at the warehouses, a hand cart's worth from the Cold Room.
-local function load(player: Player, truck: number)
+-- Standing at dock `truck` of your own farm.
+local function atDock(player: Player, truck: number): boolean
 	local index = PlotService.plotOf(player)
-	local data = DataService.Get(player)
-	if not index or not data then
-		return
-	end
-	local folder = docks(index)
+	local folder = index and docks(index)
 	local spot = folder and folder:FindFirstChild(`LoadSpot{truck}`)
 	local position = MovementService.positionOf(player)
-	if not spot or not position or (position - spot.Position).Magnitude > TruckService.DOCK_REACH then
-		return
-	end
-	local warehouse = data.warehouse
-	local info = WarehouseRules.level(warehouse.level)
-	local name = truckName(data)
-	local carried = WarehouseService.carried(player)
-	if not carried and #warehouse.dock == 0 then
-		Notice.send(player, if info.stage == 1 then "Pack a crate at the bench first (Truck), then bring it here."
-			else "The Cold Room is empty: wash and pack crates at the wash table (Truck), or let your crew do it.", "Error")
-		return
-	end
-	local failure = TruckRules.cannotLoadInto(warehouse, truck, now())
-	if failure then
-		Notice.send(player, if failure == "TruckFull" then `The {name} is full. Pull the lever to send it!`
-			else `The {name} is out on the road. {if carried then "Set the crate down and load it" else "Load it"} when it's back.`, "Error")
-		return
-	end
-	local count = if carried then 1 elseif info.handCart then Warehouse.HAND_CART else 1
-	local moved = 0
-	while moved < count and TruckRules.cannotLoadInto(warehouse, truck, now()) == nil do
-		local crate = if moved == 0 and carried then WarehouseService.takeCarried(player) else table.remove(warehouse.dock, 1)
-		if not crate then
-			break
-		end
-		TruckRules.loadInto(warehouse, truck, crate, now())
-		moved += 1
-		carried = nil
-	end
-	if moved > 1 then
-		Notice.send(player, `🛒 {moved} crates loaded with the hand cart.`)
-	end
+	return spot ~= nil and position ~= nil and (position - spot.Position).Magnitude <= TruckService.DOCK_REACH
+end
+
+-- "truck|stackKey|grade": the crates you pick at the dock.
+local function parseStack(arg: string?): (number?, string?, string?)
+	local truck, key, grade = string.match(arg or "", "^(%d+)|([%w|]+)|(%a)$")
+	return tonumber(truck), key, grade
+end
+
+-- After a crate moves between the stock and a truck.
+local function moved(player: Player)
 	WarehouseService.showHold(player)
 	TruckService.Refresh(player)
-	DataService.NotifyState(player)
 end
 
 -- Sends truck `truck` (nil: every truck that's home and loaded): the prices
@@ -207,6 +182,58 @@ local actions = {}
 -- "Dispatch" (every truck home and loaded) or "Dispatch" "2" (that truck).
 function actions.Dispatch(player, _data, arg)
 	return TruckService.Dispatch(player, tonumber(arg))
+end
+
+-- "truck|stackKey|grade": a crate of that stack onto the truck (with the hand
+-- cart, up to HAND_CART).
+function actions.Load(player, data, arg)
+	local truck, key, grade = parseStack(arg)
+	if not truck or not key or not grade then
+		return "BadRequest"
+	elseif not atDock(player, truck) then
+		return "TooFar"
+	end
+	local warehouse = data.warehouse
+	local failure = TruckRules.cannotLoadInto(warehouse, truck, now())
+	if failure then
+		return failure
+	end
+	local info = WarehouseRules.level(warehouse.level)
+	local room = info.truckCrates - #(warehouse.beds[truck] or {})
+	local crates = PackRules.take(data.store.stockroom, key, grade, math.min(room, if info.handCart then Warehouse.HAND_CART else 1))
+	if #crates == 0 then
+		return "NoCrate"
+	end
+	for _, crate in crates do
+		TruckRules.loadInto(warehouse, truck, crate, now())
+	end
+	moved(player)
+	return nil
+end
+
+-- "truck|stackKey|grade": a crate of that stack back off the truck, while
+-- it's home. (Goods coming back always fit.)
+function actions.Unload(player, data, arg)
+	local truck, key, grade = parseStack(arg)
+	if not truck or not key or not grade then
+		return "BadRequest"
+	elseif not atDock(player, truck) then
+		return "TooFar"
+	end
+	local warehouse = data.warehouse
+	if not TruckRules.isHome(warehouse, truck, now()) then
+		return "TruckAway"
+	end
+	local info = WarehouseRules.level(warehouse.level)
+	local crates = PackRules.take(warehouse.beds[truck] or {}, key, grade, if info.handCart then Warehouse.HAND_CART else 1)
+	if #crates == 0 then
+		return "NoCrate"
+	end
+	for _, crate in crates do
+		table.insert(data.store.stockroom, crate)
+	end
+	moved(player)
+	return nil
 end
 
 ------------------------------------------------------------------------
@@ -290,11 +317,9 @@ local function addPrompts(player: Player, index: number, data)
 	for truck = 1, info.trucks do
 		local spot = folder:FindFirstChild(`LoadSpot{truck}`)
 		if spot then
-			prompt(spot, "LoadPrompt", if info.handCart then "Load crates" else "Load crate", 0, player.UserId).Triggered:Connect(function(who)
-				if who == player then
-					load(player, truck)
-				end
-			end)
+			local load = prompt(spot, "LoadPrompt", "Load crates", 0, player.UserId)
+			load:SetAttribute("Opens", "Dock") -- (the client opens the dock window)
+			load:SetAttribute("Truck", truck)
 		end
 		local leverBase = folder:FindFirstChild(`LeverBase{truck}`)
 		if leverBase then
@@ -314,7 +339,7 @@ local function addPrompts(player: Player, index: number, data)
 end
 
 function TruckService.Start()
-	ActionRemote(Remotes.func("TruckAction"), actions, DataService, 0.5)
+	ActionRemote(Remotes.func("TruckAction"), actions, DataService, 0.15)
 
 	WarehouseService.OnRebuilt(addPrompts)
 	PlotService.OnReleased(function(player)

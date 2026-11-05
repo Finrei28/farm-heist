@@ -27,11 +27,11 @@ return {
 
 	-- Warehouse Levels: what each one changes.
 	--   trucks, truckCrates, roundTrip (s): the trucks
-	--   hold: crates waiting for a truck (the dock rack at the Packing Shed,
-	--         the Cold Room from Level 5); a crate you set down always fits
+	--   hold: packed crates the dock rack (the Packing Shed) or the Cold Room
+	--         (from Level 5) adds room for: shared/PackRules
 	--   conveyors: worker speed at the Sort, Pack and Load stations ×
 	--   handCart: you load up to HAND_CART crates at a time
-	--   splits: a crop's route can be split between the truck and the store
+	--   splits: the crew can split a crop between the truck and the store
 	--   washLine: Sorters' grade A chance + WASH_LINE
 	--   premium: Legendary and Mythic crates sell for this much more by truck
 	--   express: the express lane (the trip below)

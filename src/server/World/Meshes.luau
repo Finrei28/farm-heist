@@ -94,13 +94,18 @@ function Meshes.make(name: string, at: CFrame, scale: number | Vector3, parent: 
 	return copy
 end
 
-local function place(items, base: CFrame, parent: Instance, k: number?)
+local function place(items, base: CFrame, parent: Instance, k: number?): { MeshPart }
 	k = k or 1
+	local made = {}
 	for _, item in items do
 		local at = base * CFrame.new(item[2] * k, item[3] * k, item[4] * k) * CFrame.Angles(item[5], item[6], item[7])
 		local scale = if item[10] then Vector3.new(item[8], item[9], item[10]) * k else item[8] * k
-		Meshes.make(item[1], at, scale, parent)
+		local part = Meshes.make(item[1], at, scale, parent)
+		if part then
+			table.insert(made, part)
+		end
 	end
+	return made
 end
 
 -- Whether every mesh the items name is there.
@@ -111,6 +116,31 @@ local function have(items): boolean
 		end
 	end
 	return true
+end
+
+-- Brings a heap in `regions` to `count` pieces; build(i) makes piece i and
+-- returns its parts. Piece i is always the same piece, so what's there stays
+-- and only the end of the heap changes: rebuilding it all made every display
+-- blink each time a Stocker came by (the user, 2026-11-05).
+function Meshes.settle(regions: { BasePart }, count: number, build: (number) -> { BasePart })
+	local there = {}
+	for _, region in regions do
+		for _, child in region:GetChildren() do
+			local i = child:GetAttribute("Piece")
+			if i and i <= count then
+				there[i] = true
+			else
+				child:Destroy()
+			end
+		end
+	end
+	for i = 1, count do
+		if not there[i] then
+			for _, part in build(i) do
+				part:SetAttribute("Piece", i)
+			end
+		end
+	end
 end
 
 -- Lays out a patch. False (and nothing built) when the meshes aren't there
@@ -174,14 +204,13 @@ function Meshes.heap(cropId: string, regions: { BasePart }, fraction: number, sm
 			end
 		end
 	end
-	local count = math.clamp(math.ceil(fraction * #spots - 1e-9), 1, #spots)
-	for i = 1, count do
+	Meshes.settle(regions, math.clamp(math.ceil(fraction * #spots - 1e-9), 1, #spots), function(i)
 		local spot = spots[i]
 		-- (every other one turned round, all a little askew)
 		local turn = (if i % 2 == 0 then math.pi else 0) + ((i * 37) % 9 - 4) * 0.05
 		local at = spot.region.CFrame * CFrame.new(spot.x, spot.y, spot.z) * CFrame.Angles(0, turn, 0)
-		place(shelf.pieces[(i - 1) % #shelf.pieces + 1], at, spot.region, spot.k)
-	end
+		return place(shelf.pieces[(i - 1) % #shelf.pieces + 1], at, spot.region, spot.k)
+	end)
 	return true
 end
 

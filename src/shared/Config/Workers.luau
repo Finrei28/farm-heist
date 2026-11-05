@@ -20,7 +20,7 @@ return {
 			job = "Washes, packs and loads crates at the Packing Shed" },
 		Sorter = { name = "Sorter", station = "Sort", wage = 87.5, speed = 60, slots = { warehouse = { 5, 8, 12, 18 } }, job = "Washes and grades crops" },
 		Packer = { name = "Packer", station = "Pack", wage = 87.5, speed = 15, slots = { warehouse = { 5, 6, 10, 13, 16 } }, job = "Packs crates" },
-		Loader = { name = "Loader", station = "Load", wage = 87.5, speed = 20, slots = { warehouse = { 5, 9, 15 } }, job = "Loads the trucks from the Cold Room" },
+		Loader = { name = "Loader", station = "Load", wage = 87.5, speed = 20, slots = { warehouse = { 5, 9, 15 } }, job = "Loads the crates routed to the trucks" },
 		Driver = { name = "Driver", station = "Truck", wage = 140, job = "Sends a truck by your rule; quicker trips with levels" }, -- 1 per truck, from Warehouse Level 5
 		Stocker = { name = "Stocker", station = "Shelves", wage = 87.5, speed = 80, slots = { store = { 2, 8, 14 } }, job = "Fills your store's displays" },
 		Cashier = { name = "Cashier", station = "Register", wage = 105, speed = 12, job = "Serves shoppers at a till" }, -- 1 per till (Counter or Register), from Store Level CASHIERS_FROM
@@ -39,6 +39,13 @@ return {
 	-- level); the wage from 60% to 100%, so a trained worker costs less per job.
 	MAX_LEVEL = 10,
 	EFFICIENCY_MIN = 0.4,
+	WALK = 10, -- studs a second, a worker's walk
+	-- A Farmhand's pace at Level 1 and at the top level (WorkerRules.walkSpeed,
+	-- 2 more a level). It's a race with thieves for ripe crops: a new one is
+	-- slower than a thief with their hands full, Level 5 matches a player
+	-- walking (Config/Settings.WALK_SPEED), Level 9 one running (RUN_SPEED),
+	-- and at the top they outpace a running thief (the user, 2026-11-05).
+	FARMHAND_WALK = { 8, 26 },
 	WAGE_MIN = 0.6,
 	-- Experience: XP_PER_MINUTE of real work (a crate moves on, a shopper is
 	-- served), OFFLINE_RATE of it while you're away. A full bar waits for

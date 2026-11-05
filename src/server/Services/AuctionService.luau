@@ -63,6 +63,7 @@ local AuctionService = {}
 
 local TICK = 0.2
 local START_LATE = 5 -- seconds: a server that wasn't up when the clock struck waits for the next one
+local SIT_REACH = 12 -- studs from a bench you can sit on it from (a client can trigger a prompt from anywhere)
 
 local board = Instance.new("Folder")
 board.Name = "Auction"
@@ -194,7 +195,7 @@ local function bang()
 end
 
 -- Everyone in the hall holds their bidder paddle in their right hand; it
--- goes when they leave (or carry something, which takes both hands).
+-- goes when they leave (or carry a stolen crop, which takes both hands).
 local function updatePaddles()
 	for _, player in Players:GetPlayers() do
 		local character = player.Character
@@ -203,7 +204,7 @@ local function updatePaddles()
 		local paddle = character and character:FindFirstChild("BidderPaddle")
 		local position = MovementService.positionOf(player)
 		local inHall = position ~= nil and PlotLayout.insideBuilding("Auction", position, 0)
-		local busy = character ~= nil and (character:FindFirstChild("CarriedCrop") or character:FindFirstChild("CarriedCrate")) ~= nil
+		local busy = character ~= nil and character:FindFirstChild("CarriedCrop") ~= nil
 		local wanted = inHall and not busy and hand ~= nil and humanoid ~= nil and humanoid.Health > 0
 		if wanted and not paddle then
 			paddle = AuctionArt.paddle(paddleNumber(player))
@@ -234,7 +235,13 @@ local function sitDown(player: Player, seat: Seat)
 	if not humanoid or humanoid.Health <= 0 or seat.Occupant ~= nil or humanoid.SeatPart == seat then
 		return
 	end
-	if character:FindFirstChild("CarriedCrop") or character:FindFirstChild("CarriedCrate") then
+	-- (sitting moves you to the seat, so it has to be close, and you have to be free to go)
+	local position = MovementService.positionOf(player)
+	if not position or (position - seat.Position).Magnitude > SIT_REACH
+		or player:GetAttribute("KnockedOut") or player:GetAttribute("Climbing") or player:GetAttribute("Busted") then
+		return
+	end
+	if character:FindFirstChild("CarriedCrop") then
 		Notice.send(player, "Your hands are full: take it home first.", "Error")
 		return
 	end

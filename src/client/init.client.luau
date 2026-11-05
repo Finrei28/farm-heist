@@ -42,6 +42,16 @@ do
 		AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.6), Size = UDim2.fromOffset(520, 34),
 		BackgroundTransparency = 1, Font = UI.HAND, Text = "Heading to your farm...", TextSize = 30, TextColor3 = UI.C.ink, Parent = paper,
 	})
+	-- (a save can only be open in one place: after a quick rejoin or a crash it
+	-- may still be closing on another server, and that can take up to a minute)
+	local hint = UI.make("TextLabel", {
+		AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.6, 24), Size = UDim2.fromOffset(520, 64),
+		BackgroundTransparency = 1, Font = UI.HAND, TextSize = 24, TextWrapped = true, TextColor3 = UI.C.ink, Visible = false,
+		Text = "Still opening your farm. If you've just left another server, this can take up to a minute.", Parent = paper,
+	})
+	task.delay(8, function()
+		hint.Visible = true -- (gone by now if you've arrived)
+	end)
 	task.spawn(function()
 		local character = player.Character or player.CharacterAdded:Wait()
 		character:WaitForChild("HumanoidRootPart")
@@ -51,6 +61,7 @@ do
 		TweenService:Create(sign, info, { Position = UDim2.fromScale(0.5, -0.3) }):Play() -- (the sign is hauled up out of sight)
 		TweenService:Create(title, info, { TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
 		TweenService:Create(subtitle, info, { TextTransparency = 1 }):Play()
+		TweenService:Create(hint, info, { TextTransparency = 1 }):Play()
 		task.wait(0.5)
 		cover:Destroy()
 	end)
@@ -72,7 +83,7 @@ end
 local Controllers = script.Controllers
 for _, name in {
 	"HudController", "HotbarController", "FieldController", "SeedRackController", "BarnController", "StoreController", "ShelfController", "DecorateController",
-	"MarketController", "ShedController", "TruckController", "ShopperController", "CheckoutController", "PromptController", "SprintController", "RoofController",
+	"MarketController", "ShedController", "DockController", "TruckController", "ShopperController", "CheckoutController", "PromptController", "SprintController", "RoofController",
 	"WarehouseController", "WorkersController", "WorkerController", "PoseController", "CrimeController", "PoliceController",
 	"GateController", "WatchController", "DefenceController", "SkyController", "AuctionController", "QuestsController", "GuideController", "TradeController",
 	"SettingsController", "AmbienceController", "RobuxController",

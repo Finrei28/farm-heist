@@ -61,7 +61,7 @@ return function(spec, harness)
 			local data = newData()
 			data.inventory.crops[BarnRules.key("Carrot")] = 10
 			data.inventory.seeds.Corn = 2
-			data.warehouse.dock = { { crop = "Pumpkin", key = BarnRules.key("Pumpkin"), units = 3 } }
+			data.store.stockroom = { { crop = "Pumpkin", key = BarnRules.key("Pumpkin"), units = 3 } }
 			data.warehouse.level = 3
 			data.store.level = 2
 			data.store.owned.ProduceCrate = 3 -- (one bought)

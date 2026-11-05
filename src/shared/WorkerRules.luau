@@ -37,6 +37,23 @@ function WorkerRules.efficiency(level: number): number
 	return Workers.EFFICIENCY_MIN + (1 - Workers.EFFICIENCY_MIN) * climb(level)
 end
 
+-- Studs a second this worker walks: a Farmhand quicker with each level, the
+-- rest at the same pace.
+function WorkerRules.walkSpeed(worker): number
+	if worker.type ~= "Farmhand" then
+		return Workers.WALK
+	end
+	local low, high = Workers.FARMHAND_WALK[1], Workers.FARMHAND_WALK[2]
+	return low + (high - low) * (math.clamp(worker.level, 1, Workers.MAX_LEVEL) - 1) / (Workers.MAX_LEVEL - 1)
+end
+
+-- Seconds a walk of `length` studs takes at `pace` (default a worker's walk).
+-- most: no longer than this, for a job that has to keep up (a Loader running
+-- crates): nothing else hurries, or a Farmhand could outrun a thief to a crop.
+function WorkerRules.walkTime(length: number, pace: number?, most: number?): number
+	return math.max(0.4, math.min(length / (pace or Workers.WALK), most or math.huge))
+end
+
 -- Station units a minute (Config/Workers explains the units). opts: night
 -- (Night Owls are quicker), conveyors (the warehouse's, for Sort, Pack and
 -- Load), away (while you're away: a Tireless worker does twice the usual
@@ -298,6 +315,12 @@ function WorkerRules.traitsFor(typeName: string): { string }
 end
 
 -- The board's window number at unix time t (a new board every BOARD_SECONDS).
+-- What a hire off the board is remembered by, from the numbers (never the
+-- client's own text: "0012" and "12" are the same board).
+function WorkerRules.hireKey(window: number, typeName: string, slot: number): string
+	return `{window}:{typeName}:{slot}`
+end
+
 function WorkerRules.boardWindow(t: number): number
 	return t // Workers.BOARD_SECONDS
 end

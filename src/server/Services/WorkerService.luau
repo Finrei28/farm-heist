@@ -25,6 +25,7 @@ local Crops = require(Shared.Config.Crops)
 local Format = require(Shared.Format)
 local GrowthRules = require(Shared.GrowthRules)
 local LandRules = require(Shared.LandRules)
+local PackRules = require(Shared.PackRules)
 local PipelineRules = require(Shared.PipelineRules)
 local PlotLayout = require(Shared.PlotLayout)
 local Remotes = require(Shared.Remotes)
@@ -58,7 +59,6 @@ local XP_SECOND = Workers.XP_PER_MINUTE / 60
 local HIRE_LEVEL = 2 -- Farm Level to hire (§4.9)
 local WELCOME_AWAY = 120 -- seconds away before the Welcome back card
 local SORTED_MAX = 12 -- batches Sorters wash ahead of the Packers
-local WALK = 10 -- studs a second, a worker's walk
 local PAUSE = 0.6 -- seconds at the far end of a walk out and back (client/WorkerController's)
 local PULL = 0.3 -- seconds a Farmhand bends over a crop before it comes up
 local STOCK_ROUND = 8 -- patches' worth a Stocker can take out in one go
@@ -281,16 +281,16 @@ local function showCrew(player: Player, to: Player?)
 end
 WorkerService.ShowCrew = showCrew
 
--- How long a walk takes, by way of the points in `via`, and no longer than
--- `most` seconds (a good worker hurries to keep up with their speed).
-local function walkTime(from: Vector3, via: { Vector3 }?, to: Vector3, most: number?): number
+-- How long a walk takes, by way of the points in `via`, at `pace` (default
+-- a worker's walk), and no longer than `most` seconds (WorkerRules.walkTime).
+local function walkTime(from: Vector3, via: { Vector3 }?, to: Vector3, most: number?, pace: number?): number
 	local length, last = 0, from
 	for _, point in via or {} do
 		length += (point - last).Magnitude
 		last = point
 	end
 	length += (to - last).Magnitude
-	return math.clamp(math.min(length / WALK, most or math.huge), 0.4, 6)
+	return WorkerRules.walkTime(length, pace, most)
 end
 
 -- A worker walks to a world point and back (a crate to a truck), by way of
@@ -305,8 +305,8 @@ end
 -- A worker walks one way and stays there (a Farmhand from crop to crop, a
 -- Stocker from display to display), and home with `home`. Returns how long
 -- it takes.
-local function goTo(index: number, st, uid: string, to: Vector3, carry: string?, home: boolean?, most: number?, via: { Vector3 }?): number
-	local seconds = walkTime(st.at[uid] or st.spots[uid] or to, via, to, most)
+local function goTo(index: number, st, uid: string, to: Vector3, carry: string?, home: boolean?, most: number?, via: { Vector3 }?, pace: number?): number
+	local seconds = walkTime(st.at[uid] or st.spots[uid] or to, via, to, most, pace)
 	st.at[uid] = to
 	WorkerEvent:FireAllClients("Do", { plot = index, id = uid, at = now(), to = to, via = via, seconds = seconds, carry = carry, stay = true, home = home })
 	return seconds
@@ -328,33 +328,32 @@ local function rest(st, uid: string)
 	st.budgets[uid] = math.min(st.budgets[uid] or 0, 0)
 end
 
--- Where the next crate of a crop goes by its route (shares kept exact over
--- many crates): "Truck" or "Store" (a full stockroom sends it to the
--- truck), and the route's count to keep once it's packed (commit).
-local function destination(st, data, cropId: string): (string, () -> ())
+-- Which way the next crate of a crop leans by its route, "Truck" or "Store"
+-- (a split's shares kept exact over many crates), and the route's count to
+-- keep once it's packed (commit). It says what the crew does with the crate,
+-- not where it can go: it joins the stock either way (shared/PackRules).
+local function leanOf(st, data, cropId: string): (string, () -> ())
 	local share = WarehouseRules.route(data.warehouse, cropId) or 1
 	local acc = (st.routeAcc[cropId] or 0) + share
-	local to = "Store"
+	local lean = "Store"
 	if acc >= 1 - 1e-9 then
 		acc -= 1
-		to = "Truck"
+		lean = "Truck"
 	end
-	local function commit()
+	return lean, function()
 		st.routeAcc[cropId] = acc
 	end
-	if to == "Store" and ShopRules.stockroomRoom(data.store) <= 0 then
-		return "Truck", commit
-	end
-	return to, commit
 end
 
--- A barn stack the warehouse may take (routed, not kept) with a full crate's
--- worth in it, or nil.
-local function nextStack(data): (string?, string?)
+-- A plain barn stack the crew may take (routed, not kept; mutated ones wait
+-- for you at the wash table) with a full crate's worth in it, or nil. takes:
+-- only crops it says yes to.
+local function nextStack(data, takes: ((string) -> boolean)?): (string?, string?)
 	local keys = {}
 	for key, units in data.inventory.crops do
 		local cropId = BarnRules.parse(key)
-		if Crops.ById[cropId] and WarehouseRules.route(data.warehouse, cropId) and units >= CrateRules.size(cropId) then
+		if Crops.ById[cropId] and CrateRules.storeable(key) and WarehouseRules.route(data.warehouse, cropId)
+			and units >= CrateRules.size(cropId) and (not takes or takes(cropId)) then
 			table.insert(keys, key)
 		end
 	end
@@ -363,8 +362,13 @@ local function nextStack(data): (string?, string?)
 	return key, key and BarnRules.parse(key)
 end
 
-local function holdRoom(data): number
-	return WarehouseRules.level(data.warehouse.level).hold - #data.warehouse.dock
+-- The packed crates are full, so the crew has stopped packing (the user,
+-- 2026-11-05: "wait for space ... and not just pack for the truck"). Said once.
+local function tellFull(player: Player, st)
+	if not st.told.packedFull then
+		st.told.packedFull = true
+		Notice.send(player, "📦 Your packed crates are full, so your crew has stopped packing. Load a truck or fill your displays to make room.", "Error")
+	end
 end
 
 local JOBS = {}
@@ -391,11 +395,11 @@ end
 
 -- Nothing to do for a while: back to their post, with the last crop;
 -- route(from, to) gives the way if they can't walk straight there.
-local function headHome(index: number, st, uid: string, route: ((Vector3, Vector3) -> { Vector3 }?)?)
+local function headHome(index: number, st, uid: string, route: ((Vector3, Vector3) -> { Vector3 }?)?, pace: number?)
 	local spot, last = st.spots[uid], st.worked[uid]
 	if spot and last and now() - last.at >= HOME_AFTER then
 		st.worked[uid] = nil
-		goTo(index, st, uid, spot, last.crop, true, nil, route and route(st.at[uid] or spot, spot))
+		goTo(index, st, uid, spot, last.crop, true, nil, route and route(st.at[uid] or spot, spot), pace)
 	end
 end
 
@@ -425,8 +429,13 @@ local function carryToTruck(player: Player, data, st, uid: string, speed: number
 	end)
 end
 
+-- A Farmhand walks at their own pace, quicker with each level
+-- (WorkerRules.walkSpeed): they used to hurry to keep up with their speed, and
+-- outran a thief to the crop (the user, 2026-11-05). A long way to the next
+-- crop takes as long as it takes.
 function JOBS.Farmhand(player, data, st, entry, speed, index)
 	local uid = entry.uid
+	local pace = WorkerRules.walkSpeed(entry.worker)
 	if st.trips[uid] then
 		charge(st, uid, speed, 1)
 		return true
@@ -442,12 +451,12 @@ function JOBS.Farmhand(player, data, st, entry, speed, index)
 	end
 	if #st.ripe == 0 then
 		rest(st, uid)
-		headHome(index, st, uid)
+		headHome(index, st, uid, nil, pace)
 		return false
 	end
 	if not BarnRules.hasRoom(data, 1) then
 		rest(st, uid)
-		headHome(index, st, uid)
+		headHome(index, st, uid, nil, pace)
 		if not st.told.barnFull then
 			st.told.barnFull = true
 			Notice.send(player, "Barn full: your Farmhands are waiting. Sell or pack some crops.", "Error")
@@ -468,51 +477,58 @@ function JOBS.Farmhand(player, data, st, entry, speed, index)
 	end))
 	st.budgets[uid] = budget - 1
 	st.trips[uid] = key
-	task.delay(goTo(index, st, uid, tile(key), nil, nil, 60 / speed - PULL) + PULL, reachCrop, player, st, uid, key)
+	task.delay(goTo(index, st, uid, tile(key), nil, nil, nil, nil, pace) + PULL, reachCrop, player, st, uid, key)
 	return true
 end
 
--- The Shed Hand: loads the pickup from the rack when it's home, and packs
--- full crates from the barn (to the pickup, the rack, or the store).
+-- The Shed Hand: loads the pickup when it's home with the crates routed to
+-- it, and packs full crates from the barn into the stock. A crate for the
+-- truck goes straight on when there's room on it, stock full or not; anything
+-- else waits for space.
 function JOBS.ShedHand(player, data, st, entry, speed, index)
 	local warehouse = data.warehouse
 	local t = now()
-	local loadable = #warehouse.dock > 0 and TruckRules.cannotLoad(warehouse, t) == nil
-	local key, cropId = nextStack(data)
-	local canPack = key ~= nil and (TruckRules.cannotLoad(warehouse, t) == nil or holdRoom(data) > 0 or ShopRules.stockroomRoom(data.store) > 0)
-	if not loadable and not canPack then
+	local truckHome = TruckRules.cannotLoad(warehouse, t) == nil
+	local ready = if truckHome then PackRules.nextForTruck(data) else nil
+	local room = PackRules.room(data) > 0
+	local key, cropId = nextStack(data, function(id: string): boolean
+		return room or (truckHome and WarehouseRules.route(warehouse, id) == 1)
+	end)
+	if room then
+		st.told.packedFull = nil
+	elseif not key and nextStack(data) then
+		tellFull(player, st)
+	end
+	if not ready and not key then
 		rest(st, entry.uid)
 		return false
 	end
 	local budget = charge(st, entry.uid, speed, 1)
 	local changed, carried = false, nil
-	if budget >= 1 and loadable then
+	if budget >= 1 and ready then
 		budget -= 1
-		local crate = table.remove(warehouse.dock, 1)
+		local crate = table.remove(data.store.stockroom, ready)
 		TruckRules.load(warehouse, crate, t)
 		changed, carried = true, crate.crop
 	end
-	if budget >= 1 and canPack and key and cropId then
-		local to, commit = destination(st, data, cropId)
-		if to == "Truck" and TruckRules.cannotLoad(warehouse, t) ~= nil and holdRoom(data) <= 0 then
-			to = "Wait"
-		end
-		if to ~= "Wait" then
+	if budget >= 1 and key and cropId then
+		local lean, commit = leanOf(st, data, cropId)
+		local straight = lean == "Truck" and TruckRules.cannotLoad(warehouse, t) == nil
+		if straight or PackRules.room(data) > 0 then
 			commit()
 			budget -= 1
 			local grade = if rng:NextNumber() < WorkerRules.gradeAChance(entry.worker) then "A" else "B"
 			local crate = CrateRules.pack(data.inventory, key, grade)
-			if crate and to == "Store" then
-				table.insert(data.store.stockroom, crate)
-				StoreService.StockroomChanged(player)
-			elseif crate then
-				if TruckRules.load(warehouse, crate, t) ~= nil then
-					table.insert(warehouse.dock, crate)
-				else
+			if crate then
+				crate.lean = lean
+				if straight then
+					TruckRules.load(warehouse, crate, t)
 					carried = crate.crop
+				else
+					table.insert(data.store.stockroom, crate)
 				end
+				changed = true
 			end
-			changed = true
 		end
 	end
 	st.budgets[entry.uid] = budget
@@ -548,53 +564,47 @@ function JOBS.Sorter(_player, data, st, entry, speed, _index)
 	return true
 end
 
--- Packers turn washed batches into crates: to the Cold Room or the store.
+-- Packers turn washed batches into crates, while there's room for them.
 function JOBS.Packer(player, data, st, entry, speed, _index)
 	local batch = data.warehouse.sorted[1]
 	if not batch then
 		rest(st, entry.uid)
 		return false
 	end
-	local to, commit = destination(st, data, batch.crop)
-	if to == "Truck" and holdRoom(data) <= 0 then
+	if PackRules.room(data) <= 0 then
 		rest(st, entry.uid)
-		if not st.told.coldRoomFull then
-			st.told.coldRoomFull = true
-			Notice.send(player, "The Cold Room is full: packing has paused until a truck takes some.", "Error")
-		end
+		tellFull(player, st)
 		return false
 	end
-	st.told.coldRoomFull = nil
+	st.told.packedFull = nil
 	local budget = charge(st, entry.uid, speed, 1)
 	if budget >= 1 then
 		budget -= 1
+		local lean, commit = leanOf(st, data, batch.crop)
 		commit()
 		local crate = table.remove(data.warehouse.sorted, 1)
-		if to == "Store" then
-			table.insert(data.store.stockroom, crate)
-			StoreService.StockroomChanged(player)
-		else
-			table.insert(data.warehouse.dock, crate)
-			st.holdChanged = true
-		end
+		crate.lean = lean
+		table.insert(data.store.stockroom, crate)
+		st.holdChanged = true
 	end
 	st.budgets[entry.uid] = budget
 	return true
 end
 
--- Loaders take crates from the Cold Room to the trucks that are home.
+-- Loaders take the crates routed to the trucks to the ones that are home.
 function JOBS.Loader(player, data, st, entry, speed, index)
 	local warehouse = data.warehouse
 	local t = now()
-	local truck = #warehouse.dock > 0 and TruckRules.loadable(warehouse, t)
-	if not truck then
+	local truck = TruckRules.loadable(warehouse, t)
+	local ready = truck and PackRules.nextForTruck(data)
+	if not ready then
 		rest(st, entry.uid)
 		return false
 	end
 	local budget = charge(st, entry.uid, speed, 1)
 	if budget >= 1 then
 		budget -= 1
-		local crate = table.remove(warehouse.dock, 1)
+		local crate = table.remove(data.store.stockroom, ready)
 		TruckRules.load(warehouse, crate, t)
 		st.holdChanged = true
 		carryToTruck(player, data, st, entry.uid, speed, index, truck, crate.crop)
@@ -645,8 +655,8 @@ local function reachDisplay(player: Player, st, uid: string)
 	end
 end
 
--- Stockers take crates from the stockroom to the emptiest displays, along
--- the aisles, and go back to their spot when there's nothing left to do.
+-- Stockers take the crates routed to the store to the emptiest displays,
+-- along the aisles, and go back to their spot when there's nothing left to do.
 function JOBS.Stocker(player, data, st, entry, speed, index, nth)
 	local uid = entry.uid
 	if st.trips[uid] then
@@ -656,7 +666,8 @@ function JOBS.Stocker(player, data, st, entry, speed, index, nth)
 	local function route(from: Vector3, to: Vector3): { Vector3 }?
 		return aisle(index, data, from, to)
 	end
-	if #data.store.stockroom == 0 or StoreService.IsDecorating(player) then
+	local first = PackRules.nextForStore(data)
+	if not first or StoreService.IsDecorating(player) then
 		rest(st, uid)
 		headHome(index, st, uid, route)
 		return false
@@ -669,7 +680,7 @@ function JOBS.Stocker(player, data, st, entry, speed, index, nth)
 	for _, id in st.trips do
 		taken[id] = true
 	end
-	local id = ShopRules.nextDisplay(data.store, taken)
+	local id = ShopRules.nextDisplay(data.store, taken, PackRules.forStore(data.warehouse))
 	if not id then
 		rest(st, uid)
 		headHome(index, st, uid, route)
@@ -680,7 +691,7 @@ function JOBS.Stocker(player, data, st, entry, speed, index, nth)
 	local to = PlotLayout.storeWorld(index, front[1], front[2], PlotLayout.PLOT.store.floor)
 	local via = route(st.at[uid] or st.spots[uid] or to, to)
 	st.trips[uid] = id
-	task.delay(goTo(index, st, uid, to, data.store.stockroom[1].crop, nil, nil, via) + PULL, reachDisplay, player, st, uid)
+	task.delay(goTo(index, st, uid, to, data.store.stockroom[first].crop, nil, nil, via) + PULL, reachDisplay, player, st, uid)
 	return true
 end
 
@@ -762,7 +773,7 @@ local STATIONS = {
 }
 
 local function crateOf(crate)
-	return { crop = crate.crop, key = crate.key or `{crate.crop}||`, units = crate.units, grade = crate.grade or "B" }
+	return { crop = crate.crop, key = crate.key or `{crate.crop}||`, units = crate.units, grade = crate.grade or "B", lean = crate.lean }
 end
 
 -- Builds the pipeline's state from the save: growth, the plain barn stacks
@@ -785,10 +796,16 @@ local function pipelineState(player: Player, data)
 	for _, batch in data.warehouse.sorted do
 		state.sorted[batch.crop] = (state.sorted[batch.crop] or 0) + batch.units
 	end
-	for _, crate in data.warehouse.dock do
-		table.insert(state.hold, crateOf(crate))
+	-- the packed crates, by what the crew will do with them
+	for _, crate in data.store.stockroom do
+		local use = PackRules.crewUse(data.warehouse, crate)
+		if use == "Truck" then
+			table.insert(state.hold, crateOf(crate))
+		elseif use == "Store" then
+			state.stockroom[crate.crop] = (state.stockroom[crate.crop] or 0) + crate.units
+		end
 	end
-	state.holdSize = info.hold
+	state.packedRoom = PackRules.room(data)
 	local drivers = ofType(data, "Driver")
 	state.trucks = {}
 	for i = 1, info.trucks do
@@ -814,8 +831,6 @@ local function pipelineState(player: Player, data)
 	state.minPrice = data.warehouse.driverRule or 0
 	state.premium = info.premium
 	local store = data.store
-	state.stockroom = ShopRules.stockroomUnits(store)
-	state.stockroomRoom = ShopRules.stockroomRoom(store)
 	for cropId, out in ShopRules.onDisplay(store) do
 		state.shelves[cropId] = out.units
 	end
@@ -837,8 +852,8 @@ end
 -- Works out the time away and writes it back into the save. Returns the
 -- report for the card.
 local function settleAway(player: Player, data, away: number)
-	local before = { barn = {}, stockroom = ShopRules.stockroomUnits(data.store) }
 	local state = pipelineState(player, data)
+	local before = { barn = {} }
 	for cropId, units in state.barn do
 		before.barn[cropId] = units
 	end
@@ -853,7 +868,7 @@ local function settleAway(player: Player, data, away: number)
 			data.inventory.crops[BarnRules.key(cropId)] = units
 		end
 	end
-	-- washed batches, crates waiting, the trucks' beds and runs on the road
+	-- washed batches, the trucks' beds and runs on the road
 	local sorted = {}
 	for cropId, units in state.sorted do
 		local size = CrateRules.size(cropId)
@@ -863,11 +878,6 @@ local function settleAway(player: Player, data, away: number)
 		end
 	end
 	data.warehouse.sorted = sorted
-	local dock = {}
-	for _, crate in state.hold do
-		table.insert(dock, crateOf(crate))
-	end
-	data.warehouse.dock = dock
 	for i, truck in state.trucks do
 		local bed = {}
 		for _, crate in truck.bed do
@@ -885,25 +895,38 @@ local function settleAway(player: Player, data, away: number)
 			departAt = run.at, arriveAt = run.arriveAt, returnAt = run.returnAt, paid = false,
 		})
 	end
-	-- the store: new crates in the stockroom, then the Stockers' work and the
-	-- sales in rounds (as they went), paid for what really left the displays
+	-- the packed crates: those the crew was to load are where they ended up,
+	-- the ones still waiting go back with the rest, and new crates for the
+	-- store join them. Then the Stockers' work and the sales in rounds (as
+	-- they went), paid for what really left the displays
 	local store = data.store
-	for cropId, units in state.stockroom do
-		local new = units - (before.stockroom[cropId] or 0)
-		if new > 0 then
-			local a = math.floor(new * state.gradeA + 0.5)
-			if a > 0 then
-				ShopRules.restock(store, cropId, a, "A")
-			end
-			if new - a > 0 then
-				ShopRules.restock(store, cropId, new - a, "B")
-			end
+	local stock = {}
+	for _, crate in store.stockroom do
+		if PackRules.crewUse(data.warehouse, crate) ~= "Truck" then
+			table.insert(stock, crate)
+		end
+	end
+	for _, crate in state.hold do
+		table.insert(stock, crateOf(crate))
+	end
+	store.stockroom = stock
+	-- (what was packed for the store, not what's left of it: what the Stockers
+	-- took comes off once, below, when it really goes out. Working it out from
+	-- what was left took it off twice, and those crops were gone: 240 of them
+	-- in Studio, 2026-11-05)
+	for cropId, new in report.forStore do
+		local a = math.floor(new * state.gradeA + 0.5)
+		if a > 0 then
+			ShopRules.restock(store, cropId, a, "A", "Store")
+		end
+		if new - a > 0 then
+			ShopRules.restock(store, cropId, new - a, "B", "Store")
 		end
 	end
 	local stockLeft, soldLeft, storeCoins, storeUnits = report.stockedPatches, table.clone(report.sold), 0, 0
 	local price = MarketService.priceAt()
 	for _ = 1, 100 do
-		local moved = if stockLeft > 0 then ShopRules.restockDisplays(store, price, stockLeft) else 0
+		local moved = if stockLeft > 0 then ShopRules.restockDisplays(store, price, stockLeft, PackRules.forStore(data.warehouse)) else 0
 		stockLeft -= moved
 		local sold = 0
 		for cropId, units in soldLeft do
@@ -1014,7 +1037,8 @@ function actions.Hire(player, data, arg)
 		hired.window = current
 		hired.ids = {}
 	end
-	if hired.ids[arg] then
+	local key = WorkerRules.hireKey(window, typeName, tonumber(slot) :: number)
+	if hired.ids[key] then
 		return "Hired"
 	end
 	local ok, why = WorkerRules.canHire(data.workers, typeName, context(data))
@@ -1030,7 +1054,7 @@ function actions.Hire(player, data, arg)
 		return "NoCoins"
 	end
 	data.freeHireUsed = true
-	hired.ids[arg] = true
+	hired.ids[key] = true
 	local uid = tostring(data.crew.nextId)
 	data.crew.nextId += 1
 	data.workers[uid] = {

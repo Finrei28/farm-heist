@@ -267,26 +267,33 @@ local function target(step, state): (Vector3?, string, string, string?)
 		local dock = PlotLayout.WAREHOUSES[stage(state)].docks[1]
 		local bed = state.warehouse.beds[1] or {}
 		if #bed == 0 then
-			return PlotLayout.toWorld(plot(), PlotLayout.loadLocal(dock)), "Load here", "Carry your crate to the truck and press Load, then pull the lever.", nil
+			if #state.store.stockroom == 0 then
+				if BarnRules.units(state.inventory) == 0 then
+					local at, label, text = growMore(state, "pack them at the Packing Shed")
+					return at, label, text, nil
+				end
+				return benchWorld(state), "Pack here", "Pack a crate first, then load it at the dock.", nil
+			end
+			return PlotLayout.toWorld(plot(), PlotLayout.loadLocal(dock)), "Load here", "Press Load at the dock and pick your crate, then pull the lever.", nil
 		end
 		return PlotLayout.toWorld(plot(), PlotLayout.leverLocal(dock)), "Pull the lever", "Pull the lever to send it: the price locks now.", nil
 	elseif where == "barley" then
 		return PlotLayout.frontOf("Seeds", 4), "Barley", hint, nil
 	elseif where == "display" then
 		if #state.store.stockroom > 0 then
-			return firstDisplay(state), "Stock", "Your crate's in the store's stockroom: press Stock at a display and pick it.", nil
+			return firstDisplay(state), "Stock", "You have a crate packed: press Stock at a display and pick it.", nil
 		elseif BarnRules.units(state.inventory) == 0 then
-			local at, label, text = growMore(state, "pack a crate for 🏪 Store")
+			local at, label, text = growMore(state, "pack a crate")
 			return at, label, text, nil
 		end
-		return benchWorld(state), "Pack here", "Pack a crate and pick 🏪 Store, then press Stock at a display.", nil
+		return benchWorld(state), "Pack here", "Pack a crate, then press Stock at a display.", nil
 	elseif where == "till" then
 		local at, stocked = tillSpot(state)
 		if not stocked then
 			if #state.store.stockroom > 0 then
 				return firstDisplay(state), "Stock", "Shoppers only come when something's out: press Stock at a display.", nil
 			end
-			return benchWorld(state), "Pack here", "Pack a crate and pick 🏪 Store, then press Stock at a display: shoppers come for it.", nil
+			return benchWorld(state), "Pack here", "Pack a crate, then press Stock at a display: shoppers come for it.", nil
 		end
 		return at, "Serve here", hint, nil
 	elseif where == "jobboard" then

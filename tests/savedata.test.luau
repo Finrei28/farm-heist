@@ -5,6 +5,39 @@ return function(spec, harness)
 	local SaveData = harness.loadServer("Util/SaveData")
 	local Settings = harness.load("Config/Settings")
 
+	describe("crates that were waiting for a truck", function()
+		it("join the one stock, with what was in the stockroom", function()
+			local data = SaveData.deepCopy(SaveData.TEMPLATE)
+			data.warehouse.dock = { { crop = "Carrot", key = "Carrot||", units = 72, grade = "A" } }
+			data.store.stockroom = { { crop = "Wheat", key = "Wheat||", units = 12, grade = "B" } }
+			data.store.started = true
+			SaveData.migrate(data)
+			expect(#data.store.stockroom).toBe(2)
+			expect(data.warehouse.dock).toBe(nil)
+		end)
+		it("a new save has no second pile", function()
+			expect(SaveData.TEMPLATE.warehouse.dock).toBe(nil)
+		end)
+	end)
+
+	describe("a purse that isn't a number", function()
+		local function loaded(coins)
+			local data = SaveData.deepCopy(SaveData.TEMPLATE)
+			data.coins = coins
+			SaveData.migrate(data)
+			return data.coins
+		end
+		it("is emptied, or it would pass every price check", function()
+			expect(loaded(0 / 0)).toBe(0)
+			expect(loaded(math.huge)).toBe(0)
+			expect(loaded(-math.huge)).toBe(0)
+		end)
+		it("a real one is left alone, even below zero", function()
+			expect(loaded(4200)).toBe(4200)
+			expect(loaded(-950)).toBe(-950)
+		end)
+	end)
+
 	describe("a new save", function()
 		it("starts with 100 coins, 5 Carrot seeds and level 1", function()
 			local data = SaveData.deepCopy(SaveData.TEMPLATE)

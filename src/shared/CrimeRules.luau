@@ -147,6 +147,16 @@ function CrimeRules.canGrab(ctx): (boolean, string?)
 	return true, nil
 end
 
+-- Whether someone at `position` can reach a crop at `at`: within `reach`
+-- across the ground and not up out of the bat's reach.
+function CrimeRules.inReach(position: Vector3?, at: Vector3, reach: number): boolean
+	if not position then
+		return false
+	end
+	local dx, dz = position.X - at.X, position.Z - at.Z
+	return math.sqrt(dx * dx + dz * dz) <= reach and position.Y - at.Y <= Crime.REACH_HEIGHT
+end
+
 -- The server times every hold: done only once the full time has passed.
 function CrimeRules.holdDone(startedAt: number, now: number, seconds: number): boolean
 	return now - startedAt >= seconds - 0.05

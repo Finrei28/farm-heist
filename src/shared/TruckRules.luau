@@ -8,7 +8,6 @@
 --
 -- In the save (shared/WarehouseRules has the rest of `warehouse`):
 --   beds[truck]: crates loaded on that truck, waiting to leave (shared/CrateRules)
---   dock:        crates waiting for a truck (the rack, the Cold Room)
 --   trucks:      runs on the road { id, truck, crates = { crate + price + coins }, coins, departAt, arriveAt, returnAt, paid }
 local Crops = require(script.Parent.Config.Crops)
 local CrateRules = require(script.Parent.CrateRules)

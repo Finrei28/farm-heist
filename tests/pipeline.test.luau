@@ -123,7 +123,7 @@ return function(spec, harness)
 	describe("the warehouse and the trucks", function()
 		local function crew(state)
 			state.speeds.Sort, state.speeds.Pack, state.speeds.Load = 30, 7.5, 10
-			state.holdSize = 20
+			state.packedRoom = 20
 			state.trucks[1].driver = true
 		end
 
@@ -149,7 +149,7 @@ return function(spec, harness)
 			local state = PipelineRules.newState()
 			crew(state)
 			state.trucks[1].driver = false
-			state.holdSize = 3
+			state.packedRoom = 3
 			state.barn.Carrot = 1440
 			local report = PipelineRules.simulate(state, HOUR, 1, NOW, flat(20))
 			expect(report.shippedCrates).toBe(0)
@@ -193,11 +193,22 @@ return function(spec, harness)
 			expect(state.stockroom.Carrot).toBe(720)
 			expect(state.barn.Tomato).toBe(40)
 		end)
-		it("send store crates to the truck once the stockroom is full", function()
+		it("say how much they packed for the store, even what the Stockers then put out", function()
 			local state = PipelineRules.newState()
 			crew(state)
 			state.routes.Carrot = 0
-			state.stockroomRoom = 2
+			state.speeds.Shelves = 80
+			state.barn.Carrot = 288
+			local report = PipelineRules.simulate(state, HOUR, 1, NOW, flat(20))
+			expect(report.forStore.Carrot).toBe(288)
+			expect(report.stocked > 0).toBe(true)
+			expect((state.stockroom.Carrot or 0) + report.stocked).toBe(288)
+		end)
+		it("stop packing once the stock is full: a store crate never goes to the truck", function()
+			local state = PipelineRules.newState()
+			crew(state)
+			state.routes.Carrot = 0
+			state.packedRoom = 2
 			state.barn.Carrot = 288
 			PipelineRules.simulate(state, HOUR, 1, NOW, flat(20))
 			expect(state.stockroom.Carrot).toBe(144)
@@ -206,7 +217,7 @@ return function(spec, harness)
 			local state = PipelineRules.newState()
 			crew(state)
 			state.trucks[1].driver = false
-			state.holdSize = 100
+			state.packedRoom = 100
 			state.gradeA = 0.5
 			state.barn.Carrot = 720
 			PipelineRules.simulate(state, HOUR, 1, NOW, flat(20))

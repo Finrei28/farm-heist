@@ -208,7 +208,7 @@ local function render()
 		tag = if anyHere then "FILL" else "OUT OF STOCK", tagColor = if anyHere then C.green else C.soil,
 		press = function()
 			if not anyHere then
-				UI.toast(`Nothing in your stockroom this {def.name} can hold. Pack a crate for 🏪 Store at the Packing Shed bench.`, "Error", 3.5)
+				UI.toast(`No packed crates this {def.name} can hold. Pack some at the Packing Shed bench.`, "Error", 3.5)
 				return
 			end
 			stock("Auto", def)
@@ -234,7 +234,7 @@ local function render()
 					if not canHold then
 						UI.toast(`{crop.icon or ""} {rarity.name or crop.rarity} crops don't go on a {def.name}: put them on a {holder or "bigger display"}.`, "Error", 3.5)
 					elseif count <= 0 then
-						UI.toast(`No {many(crop.id)} in your stockroom: pack a crate of them for 🏪 Store at the Packing Shed bench.`, "Error", 3.5)
+						UI.toast(`No packed {many(crop.id)}: pack a crate of them at the Packing Shed bench.`, "Error", 3.5)
 					else
 						stock(crop.id, def)
 					end

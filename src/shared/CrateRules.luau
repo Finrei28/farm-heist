@@ -2,9 +2,9 @@
 -- packed from one barn stack, up to the crop's crate size (a crate can go
 -- out part-full), and washed by hand to grade A (×1.15) or B. A crate is
 --   { crop = cropId, key = barn stack key, units = n, grade = "A" | "B" }
--- (units: how many carrots, pumpkins, punnets ... are in it) and goes to
--- the truck (priced when it leaves) or your store's stockroom
--- (shared/ShopRules). A crate of a mutated crop (its key says which, §4.14)
+-- (units: how many carrots, pumpkins, punnets ... are in it) and joins your
+-- packed crates, for a truck (priced when it leaves) or your store
+-- (shared/PackRules). A crate of a mutated crop (its key says which, §4.14)
 -- goes by truck only and sells at its mutation's multiplier.
 -- tests/crate.test.luau.
 local BarnRules = require(script.Parent.BarnRules)

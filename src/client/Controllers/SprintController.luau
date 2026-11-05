@@ -2,8 +2,9 @@
 -- left stick (gamepad); on touch screens a Run button above the jump button
 -- (a wooden stamp with a boot) toggles it. Changing WalkSpeed here is enough: each client moves its own
 -- character, and MovementService allows for running speed. Carrying a
--- stolen crop (the StolenCrop attribute, CrimeService) you only walk, at 85%,
--- and the boot greys out; the server's movement check holds you to it.
+-- stolen crop (the StolenCrop attribute, CrimeService) on a farm you only
+-- walk, at 85%, and the boot greys out; the server's movement check holds you
+-- to it. Off farmland nobody can stop you, so you can run (LootRules.slowed).
 -- Defences slow you too (§4.11): the guard dog has you by the trousers
 -- (Slow until SlowUntil, DefenceService), or you're in someone's mud
 -- (GateController calls setMud).
@@ -22,6 +23,11 @@ local running = false
 local mud = 0
 local GAP = 10 -- pixels between the Run button and the jump button
 
+-- Whether the stolen crop in your hands slows you here.
+local function burdened(): boolean
+	return LootRules.slowed(player:GetAttribute("StolenCrop") ~= nil, player:GetAttribute("InFarm") or 0)
+end
+
 -- What slows you now (0–1 of your speed taken away, the dog and mud together).
 local function slowed(): number
 	local keep = 1 - mud
@@ -34,8 +40,7 @@ end
 local function applySpeed()
 	local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 	if humanoid then
-		local carrying = player:GetAttribute("StolenCrop") ~= nil
-		local speed = if carrying then LootRules.speed(Settings.WALK_SPEED, true)
+		local speed = if burdened() then LootRules.speed(Settings.WALK_SPEED, true)
 			elseif running then Settings.RUN_SPEED
 			else Settings.WALK_SPEED
 		speed *= 1 - slowed()
@@ -107,10 +112,12 @@ function SprintController.Start()
 		character:WaitForChild("Humanoid")
 		applySpeed()
 	end)
-	player:GetAttributeChangedSignal("StolenCrop"):Connect(function()
-		holder.BackgroundTransparency = if player:GetAttribute("StolenCrop") ~= nil then 0.5 else 0
+	local function cropChanged()
+		holder.BackgroundTransparency = if burdened() then 0.5 else 0
 		applySpeed()
-	end)
+	end
+	player:GetAttributeChangedSignal("StolenCrop"):Connect(cropChanged)
+	player:GetAttributeChangedSignal("InFarm"):Connect(cropChanged)
 	applySpeed()
 end
 

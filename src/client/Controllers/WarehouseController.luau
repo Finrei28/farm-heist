@@ -5,8 +5,9 @@
 --             minute it manages; the slowest is marked orange with a tip.
 --             Each truck with its load, Send (and the price it would lock),
 --             and the Drivers' rule.
---   Routes:   where each crop's crates go: 🚚 Truck, 🏪 Store or ✋ Keep (the
---             crew leaves it in the barn), or a split from Warehouse Level 5.
+--   Routes:   what the crew does with each crop: 🚚 load it on the trucks,
+--             🏪 put it out in your store or ✋ leave it in the barn, or a split
+--             from Warehouse Level 5. (By hand any crate goes either way.)
 --   Upgrade:  the next Warehouse Level on blueprint paper, and the ladder.
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
@@ -18,6 +19,7 @@ local CrateRules = require(Shared.CrateRules)
 local Crops = require(Shared.Config.Crops)
 local LandRules = require(Shared.LandRules)
 local MarketPrice = require(Shared.MarketPrice)
+local PackRules = require(Shared.PackRules)
 local Remotes = require(Shared.Remotes)
 local TruckRules = require(Shared.TruckRules)
 local Warehouse = require(Shared.Config.Warehouse)
@@ -151,17 +153,18 @@ local function pipelineTab(state)
 		end
 	end
 	local avgCrate = if count > 0 then sizes / count else 12
+	local packed = `📦 {#state.store.stockroom}/{PackRules.size(state)} packed`
 	local stations = {}
 	if info.stage == 1 then
 		table.insert(stations, { id = "ShedHand", icon = "📦", title = "Bench: wash, pack, load", rate = crewSpeed(state, "ShedHand", info), unit = "crates a minute",
-			detail = `{slotsText(state, "ShedHand")} · barn: enough for {math.floor(crates)} crates · rack {#warehouse.dock}/{info.hold}` })
+			detail = `{slotsText(state, "ShedHand")} · barn: enough for {math.floor(crates)} crates · {packed}` })
 	else
 		table.insert(stations, { id = "Sorter", icon = "💦", title = "Wash & Sort", rate = crewSpeed(state, "Sorter", info) / avgCrate, unit = "crates a minute",
 			detail = `{slotsText(state, "Sorter")} · {waiting} crops waiting in the barn` })
 		table.insert(stations, { id = "Packer", icon = "📦", title = "Pack", rate = crewSpeed(state, "Packer", info), unit = "crates a minute",
 			detail = `{slotsText(state, "Packer")} · {#warehouse.sorted} washed batches waiting` })
 		table.insert(stations, { id = "Loader", icon = "🛒", title = "Load", rate = crewSpeed(state, "Loader", info), unit = "crates a minute",
-			detail = `{slotsText(state, "Loader")} · ❄ Cold Room {#warehouse.dock}/{info.hold}` })
+			detail = `{slotsText(state, "Loader")} · {packed}` })
 	end
 	local drivers = 0
 	for _, worker in state.workers do
@@ -231,7 +234,7 @@ local function pipelineTab(state)
 		-- the Drivers' rule: every choice on show, the current one green
 		local rule = warehouse.driverRule or 0
 		local text = if rule <= 0 then "as soon as it's full" else `once it's full and prices are at least {math.floor(rule * 100 + 0.5)}% of normal`
-		local frame = labelRow(40, 92, "🧢", "When Drivers send a truck", `Now: {text}. Waiting for good prices earns more, but the Cold Room fills meanwhile.`, C.soil)
+		local frame = labelRow(40, 92, "🧢", "When Drivers send a truck", `Now: {text}. Waiting for good prices earns more, but your packed crates fill up meanwhile.`, C.soil)
 		local options = make("Frame", { Position = UDim2.new(0, 58, 1, -42), Size = UDim2.new(1, -68, 0, 36), BackgroundTransparency = 1, ZIndex = 23, Parent = frame },
 			{ make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }) })
 		for i, choice in DRIVER_RULES do
@@ -277,13 +280,13 @@ local function routesTab(state)
 		end
 		return a < b
 	end)
-	labelRow(0, 50, "🧭", "Where your crew sends each crop",
-		if info.splits then "🚚 by truck, 🏪 to your store, or ✋ keep it in the barn for you. − and + split a crop between truck and store." else "🚚 by truck, 🏪 to your store, or ✋ keep it in the barn for you. Splitting a crop comes with Warehouse Level 5.", C.sky)
+	labelRow(0, 66, "🧭", "What your crew does with each crop",
+		`🚚 loads it on the trucks, 🏪 puts it out in your store, or ✋ leaves it in the barn. By hand you can send any crate either way. {if info.splits then "− and + split a crop between truck and store." else "Splitting a crop comes with Warehouse Level 5."}`, C.sky)
 	for i, cropId in list do
 		local crop = Crops.ById[cropId]
 		local route = warehouse.routes[cropId]
 		local share = if route == "Keep" then nil elseif type(route) == "number" then route else 1
-		local detail = if share == nil then "✋ kept in the barn" elseif share >= 1 then "🚚 all by truck" elseif share <= 0 then "🏪 all to your store"
+		local detail = if share == nil then "✋ left in the barn" elseif share >= 1 then "🚚 crew loads the trucks" elseif share <= 0 then "🏪 crew fills your store"
 			else `🚚 {math.floor(share * 100 + 0.5)}% · 🏪 {math.floor((1 - share) * 100 + 0.5)}%`
 		local frame = labelRow(i, 56, crop.icon or "🌱", crop.name, detail, C.kraft, if info.splits then 360 else 290)
 		local choices = { { "🚚 Truck", "Truck", share ~= nil and share >= 1 }, { "🏪 Store", "Store", share ~= nil and share <= 0 }, { "✋ Keep", "Keep", share == nil } }
@@ -376,7 +379,7 @@ local function render(force: boolean?)
 	local info = WarehouseRules.level(state.warehouse.level)
 	local _, wages = WorkerRules.crew(state.workers)
 	panel.toolbar.Text = `🏭 {info.building.name} · Level {state.warehouse.level}{if state.crew.strike then "  ·  🪧 your crew is on strike: no coins for wages" elseif wages > 0 then `  ·  wages {rate(wages)} coins a minute` else ""}`
-	local signature = HttpService:JSONEncode({ panel.tab, state.warehouse, state.workers, state.crew, state.level, state.coins >= (if state.warehouse.level < WarehouseRules.MAX_LEVEL then WarehouseRules.level(state.warehouse.level + 1).cost else 0),
+	local signature = HttpService:JSONEncode({ panel.tab, state.warehouse, #state.store.stockroom, state.workers, state.crew, state.level, state.coins >= (if state.warehouse.level < WarehouseRules.MAX_LEVEL then WarehouseRules.level(state.warehouse.level + 1).cost else 0),
 		state.inventory.crops, math.floor(now() / 5) })
 	if signature == shown and not force then
 		return

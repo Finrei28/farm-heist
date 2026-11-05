@@ -148,6 +148,17 @@ function FineRules.garnish(crime, income: number, now: number)
 	return income - share + left, payments
 end
 
+-- What a payment at the police desk comes to: `arg` is the client's "all" or
+-- a number, `total` what they owe, `coins` their purse. 0 for anything that
+-- isn't a real amount ("nan" is a number to tonumber, and to math.min).
+function FineRules.payAmount(arg: string?, total: number, coins: number): number
+	local amount = if arg == "all" then total else tonumber(arg)
+	if amount == nil or amount ~= amount then
+		return 0
+	end
+	return math.max(0, math.floor(math.min(amount, total, coins)))
+end
+
 -- Paying early at the police desk with `coins`. Returns change and payments.
 function FineRules.payEarly(crime, coins: number, now: number)
 	FineRules.expire(crime, now)

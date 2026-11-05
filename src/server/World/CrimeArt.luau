@@ -302,9 +302,9 @@ end
 -- The stolen crops a thief carries, `count` of them (a whole patch: a bunch
 -- of carrots, a basket of tomatoes, a pumpkin), held up over their head in
 -- both hands (CrimeService; nil takes them away). They rest just over their
--- head (or their hat), welded to their torso; LeftHold and RightHold
--- attachments on the sides are where each client's PoseController puts the
--- hands, placed low enough for this character's arms to reach.
+-- head (or their hat), welded to their torso; the model's LeftHold and
+-- RightHold attributes (in the torso's frame) are where each client's
+-- PoseController puts the hands, low enough for this character's arms to reach.
 function CrimeArt.showCarried(character: Model, cropId: string?, count: number?)
 	local old = character:FindFirstChild("CarriedCrop")
 	if old then
@@ -342,12 +342,8 @@ function CrimeArt.showCarried(character: Model, cropId: string?, count: number?)
 		end
 		holdY = y
 	end
-	for _, name in { "LeftHold", "RightHold" } do
-		local spot = Instance.new("Attachment")
-		spot.Name = name
-		spot.Position = Vector3.new(if name == "LeftHold" then -side else side, holdY - core:GetAttribute("HoldY"), 0)
-		spot.Parent = core
-	end
+	model:SetAttribute("LeftHold", Vector3.new(-side, bottom + holdY, -0.05))
+	model:SetAttribute("RightHold", Vector3.new(side, bottom + holdY, -0.05))
 	local at = torso.CFrame * CFrame.new(0, bottom, -0.05)
 	for _, p in model:GetDescendants() do
 		if p:IsA("BasePart") then

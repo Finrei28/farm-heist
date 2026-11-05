@@ -256,7 +256,7 @@ function DevCommandService.Start()
 		for i, bed in w.beds do
 			table.insert(beds, `{i}:{#bed}`)
 		end
-		print(`[state] coins {data.coins} · auction held {data.auctionHeld or 0} · Warehouse {w.level}{if w.build then ` (building to {w.build.to}, {math.ceil(w.build.left)} s)` else ""} · hold {#w.dock} · sorted {#w.sorted} · beds {table.concat(beds, " ")} · runs {#w.trucks} · strike {data.crew.strike}`)
+		print(`[state] coins {data.coins} · auction held {data.auctionHeld or 0} · Warehouse {w.level}{if w.build then ` (building to {w.build.to}, {math.ceil(w.build.left)} s)` else ""} · packed {#data.store.stockroom} · sorted {#w.sorted} · beds {table.concat(beds, " ")} · runs {#w.trucks} · strike {data.crew.strike}`)
 		for key, units in data.inventory.crops do
 			print(`[state] barn {key} ×{units}`)
 		end

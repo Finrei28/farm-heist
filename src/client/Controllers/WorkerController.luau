@@ -194,7 +194,8 @@ local function step()
 			-- (a crate out to the truck, a harvested crop on the way back: `back`)
 			local walk = worker.walk
 			local carrying = walking and walk ~= nil and walk.carry ~= nil and returning == (walk.back == true)
-			local swing = if walking then math.sin(t * 9) * 0.6 else 0
+			-- (their legs keep up with their pace: a trained Farmhand fairly flies)
+			local swing = if walking then math.sin(t * 9 * (walk and walk.stride or 1)) * 0.6 else 0
 			local busy = if not walking and not worker.strike then math.sin(t * 4 + worker.phase) * 0.35 else 0
 			local picketing = worker.strike and not walking -- (the banner goes up once they're there: it's taller than the doors)
 			local cframes = worker.cframes
@@ -295,8 +296,13 @@ local function onDo(event)
 			table.insert(points, point)
 		end
 		table.insert(points, event.to)
+		local length = 0
+		for i = 2, #points do
+			length += (points[i] - points[i - 1]).Magnitude
+		end
 		worker.walk = { at = event.at, points = points, to = event.to, seconds = event.seconds, carry = event.carry,
-			back = event.back == true, stay = event.stay == true, home = event.home == true }
+			back = event.back == true, stay = event.stay == true, home = event.home == true,
+			stride = math.clamp(length / math.max(event.seconds, 0.1) / WALK, 0.7, 2.6) }
 		if event.carry and Crops.ById[event.carry] then
 			worker.load.Color = Color3.fromRGB(150, 108, 70)
 		end

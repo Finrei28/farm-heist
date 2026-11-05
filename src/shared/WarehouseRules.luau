@@ -2,12 +2,13 @@
 -- level gives, added up from the table, what's new at each one, and
 -- levelling up. tests/warehouse.test.luau.
 --
--- warehouse (in the save) = { level, build?, routes, beds, dock, sorted, trucks, driverRule }
+-- warehouse (in the save) = { level, build?, routes, beds, sorted, trucks, driverRule }
 --   build:  { to, left } a new building going up (seconds of work left)
---   routes: [cropId] = share for the truck (0–1; 1 = all, the default) or "Keep"
+--   routes: [cropId] = what the crew does with a crop: share for the truck
+--           (0–1; 1 = all, the default) or "Keep" (shared/PackRules)
 --   beds:   [truck] = { crate } loaded on each truck (shared/TruckRules)
---   dock:   { crate } waiting for a truck (the rack, the Cold Room)
 --   sorted: { batch } washed and graded, waiting for a Packer
+-- (Packed crates are in data.store.stockroom, with the store's: shared/PackRules.)
 --   driverRule: the Drivers send a truck once it's full and the price is at
 --               least this × the base value (0: whenever it's full)
 local Warehouse = require(script.Parent.Config.Warehouse)
@@ -188,8 +189,8 @@ function WarehouseRules.work(warehouse, seconds: number): boolean
 	return false
 end
 
--- Where a crop's crates go: the share for the truck (0–1), or nil to keep
--- it in the barn (workers leave it alone). Without split routes a split
+-- What the crew does with a crop: the share for the truck (0–1), or nil to
+-- keep it in the barn (workers leave it alone). Without split routes a split
 -- counts as all to the truck.
 function WarehouseRules.route(warehouse, cropId: string): number?
 	local route = warehouse.routes[cropId]
@@ -213,6 +214,7 @@ function WarehouseRules.migrate(warehouse)
 		if #(warehouse.beds[1] or {}) == 0 then
 			warehouse.beds[1] = warehouse.bed
 		else
+			warehouse.dock = warehouse.dock or {} -- (SaveData.migrate moves these into the stock)
 			for _, crate in warehouse.bed do
 				table.insert(warehouse.dock, crate)
 			end

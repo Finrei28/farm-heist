@@ -277,6 +277,64 @@ function PlotLayout.storeZone(index: number, stage: number?)
 	}
 end
 
+-- The plot a world position is over (fences and hedges aside), or nil.
+function PlotLayout.plotAt(position: Vector3): number?
+	for index = 1, PlotLayout.COUNT do
+		local p = PlotLayout.frame(index):PointToObjectSpace(position)
+		if math.abs(p.X) <= PlotLayout.WIDTH / 2 and p.Z >= 0 and p.Z <= PlotLayout.DEPTH then
+			return index
+		end
+	end
+	return nil
+end
+
+local WALL_LINE = 0.5 -- studs into a fence's thickness: where inside stops (a character's middle never gets this close)
+local GATE_SLACK = 1 -- studs either side of the gateway a step may pass
+local STAFF_DOOR_REACH = 10 -- studs from the staff door a step through it may start or end
+
+-- Whether a point in plot space is on the farm: inside the hedges and
+-- fences, and not in the store (a public place on the road, §3).
+local function onFarm(p: Vector3, stage: number?): boolean
+	if math.abs(p.X) > PlotLayout.WIDTH / 2 or p.Z < -WALL_LINE or p.Z > PlotLayout.DEPTH + WALL_LINE then
+		return false
+	end
+	local box = PlotLayout.storeBox(stage)
+	return not (p.X >= box.min.X and p.X <= box.max.X and p.Z <= box.max.Z)
+end
+
+-- Where a step from `from` to `to` (world) goes through this farm's edge:
+-- nil (it doesn't, or it's through the gateway), "StaffDoor" (between the
+-- farm and the store, at the staff door: for the owner and Trusted friends)
+-- or "Wall". Height doesn't matter: the only ways over are the server's
+-- climbs, and a character's client can't be trusted to have stopped at an
+-- invisible wall (MovementService; docs/GameDesign.md §4.12).
+function PlotLayout.wallCrossing(index: number, from: Vector3, to: Vector3, stage: number?): string?
+	local frame = PlotLayout.frame(index)
+	local a, b = frame:PointToObjectSpace(from), frame:PointToObjectSpace(to)
+	local aOn, bOn = onFarm(a, stage), onFarm(b, stage)
+	if aOn == bOn then
+		return nil
+	end
+	local inside, outside = if aOn then a else b, if aOn then b else a
+	if outside.Z < -WALL_LINE then
+		-- where the step passes the front fence's line
+		local share = (-WALL_LINE - outside.Z) / (inside.Z - outside.Z)
+		local x = outside.X + (inside.X - outside.X) * share
+		local gate = PlotLayout.PLOT.gate
+		if math.abs(x - gate.across) <= gate.width / 2 + GATE_SLACK then
+			return nil
+		end
+		return "Wall"
+	end
+	local door = PlotLayout.storeLocal(0.5, Store.STAFF_Y)
+	local function nearDoor(p: Vector3): boolean
+		return Vector2.new(p.X - door.X, p.Z - door.Z).Magnitude <= STAFF_DOOR_REACH
+	end
+	local box = PlotLayout.storeBox(stage)
+	local inStore = outside.X >= box.min.X and outside.X <= box.max.X and outside.Z <= box.max.Z
+	return if inStore and nearDoor(inside) and nearDoor(outside) then "StaffDoor" else "Wall"
+end
+
 -- The middle of a field tile (1–64, row by row; column 1 is nearest the
 -- farmhouse, row 1 the farmhouse side), in plot space. Matches the numbering
 -- in shared/LandRules.

@@ -100,7 +100,7 @@ function LeaderRules.netWorth(data): number
 		end
 	end
 	local warehouse = data.warehouse
-	total += crateWorth(warehouse.dock) + crateWorth(data.store.stockroom)
+	total += crateWorth(data.store.stockroom)
 	for _, bed in warehouse.beds or {} do
 		total += crateWorth(bed)
 	end

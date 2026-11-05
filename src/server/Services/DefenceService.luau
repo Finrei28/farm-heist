@@ -340,7 +340,7 @@ local function tickFarm(owner: Player, index: number, data, t: number)
 			continue
 		end
 		local p = frame:PointToObjectSpace(position)
-		local nearGate = math.abs(p.X - P.gate.across) <= P.gate.width / 2 + 2 and math.abs(p.Z) <= GATE_NEAR and math.abs(p.Y) < 12
+		local nearGate = math.abs(p.X - P.gate.across) <= P.gate.width / 2 + 2 and math.abs(p.Z) <= GATE_NEAR and math.abs(p.Y) < PlotLayout.ZONE_HEIGHT
 		local inside = PlotService.inFarm(other) == index
 		if nearGate and not open and not DefenceService.gateBlocks(index, other, if inside then "Out" else "In") then
 			open = true

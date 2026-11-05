@@ -911,17 +911,17 @@ local koGui = make("Frame", {
 	Visible = false, ZIndex = 50, Parent = UI.screen,
 })
 local koCard = make("Frame", { -- (high up: your character lies in the middle of the screen)
-	AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0.2), Size = UDim2.fromOffset(380, 0), AutomaticSize = Enum.AutomaticSize.Y,
+	AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0.2), Size = UDim2.fromOffset(420, 0), AutomaticSize = Enum.AutomaticSize.Y,
 	BackgroundColor3 = C.cream, Rotation = -2, ZIndex = 51, Parent = koGui,
 }, { UI.corner(6), UI.stroke(C.soilDark, 3), make("UIPadding", { PaddingTop = UDim.new(0, 14), PaddingBottom = UDim.new(0, 16), PaddingLeft = UDim.new(0, 16), PaddingRight = UDim.new(0, 16) }),
 	make("UIListLayout", { Padding = UDim.new(0, 8), HorizontalAlignment = Enum.HorizontalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder }) })
-local koTitle = UI.label({
-	Size = UDim2.new(1, 0, 0, 52), Font = UI.HEAD, TextSize = 50, Text = "BONK!", TextColor3 = C.gold, TextStrokeColor3 = C.soilDark,
+UI.fit(UI.label({
+	Size = UDim2.new(1, 0, 0, 40), Font = UI.HEAD, TextSize = 32, Text = "You got knocked out...", TextColor3 = C.gold, TextStrokeColor3 = C.soilDark,
 	TextStrokeTransparency = 0, TextXAlignment = Enum.TextXAlignment.Center, LayoutOrder = 1, ZIndex = 52, Parent = koCard,
-})
-local koCount = UI.label({
+}), 20)
+local koCount = UI.fit(UI.label({
 	Size = UDim2.new(1, 0, 0, 30), Font = UI.HEAD, TextSize = 26, Text = "", TextXAlignment = Enum.TextXAlignment.Center, LayoutOrder = 2, ZIndex = 52, Parent = koCard,
-})
+}), 16)
 local koLine = UI.label({
 	Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, TextWrapped = true, Font = UI.HAND, TextSize = 24, Text = "",
 	TextXAlignment = Enum.TextXAlignment.Center, LayoutOrder = 3, ZIndex = 52, Parent = koCard,
@@ -948,7 +948,6 @@ local function updateKnockout()
 	local out = untilAt > now()
 	if out and not koGui.Visible then
 		leaving = false
-		koTitle.Text = "BONK!"
 		leaveButton.Text = "Leave farm"
 		UI.setButtonKind(leaveHolder, "green")
 		koGui.Visible = true
@@ -973,7 +972,8 @@ local function updateKnockout()
 		koLine.Text = if suspect then "You're a Suspect: the farmer can arrest you!" else "You're just stunned. You did nothing wrong."
 		koLine.TextColor3 = if suspect then Color3.fromRGB(170, 40, 30) else C.ink
 		leaveHolder.Visible = not suspect
-		koCount.Text = `💫 Waking up in {math.max(1, math.ceil(untilAt - now()))}...`
+		local left = math.max(1, math.ceil(untilAt - now()))
+		koCount.Text = `You are down for {left} second{if left == 1 then "" else "s"}`
 	end
 end
 

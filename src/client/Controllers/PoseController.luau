@@ -1,11 +1,12 @@
 -- How characters hold things (docs/ArtDirection.md §9), drawn by each client
 -- for every character (the server only puts the things there). R15 only:
--- an R6 character keeps Roblox's own animations. Both are IKControls (the
--- Animator applies them after its animations, so walking legs keep going):
+-- an R6 character keeps Roblox's own animations. Walking legs keep going under
+-- all of them:
 --   * Something carried (a stolen crop held up over the head: CarriedCrop,
---     World/CrimeArt; a crate in the arms: CarriedCrate, World/YardArt):
---     each hand on the LeftHold / RightHold attachment on its sides, the
---     elbows out.
+--     World/CrimeArt): each hand on its side (the crop's LeftHold / RightHold,
+--     spots in the torso's frame), palm in, the elbows out. The pose never
+--     changes against the torso, so it's worked out once (shared/ArmPose) and
+--     set on the arm's joints each frame, after the Animator.
 --   * The bat (a Tool named Bat in the right hand): the right hand follows
 --     a target this moves each frame. At rest the bat leans back over the
 --     right shoulder; a swing (PoseController.swing for your own, at once;
@@ -17,9 +18,13 @@
 --     everyone else's) snaps it up over the head with a shake, holds it
 --     there while the bid's called, and brings it down. Winning a lot
 --     (Cheer) waves it overhead, the other arm up too.
+-- The bat and the paddle are IKControls (the Animator applies them after its
+-- animations).
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local ArmPose = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("ArmPose"))
 local Sfx = require(script.Parent.Parent.Sfx)
 
 local PoseController = {}
@@ -58,6 +63,9 @@ local CHEER = 1.8 -- seconds of waving after winning a lot
 local CHEER_LEFT = Vector3.new(-0.95, 1.65, -0.3) -- (the other hand, up)
 local SHOULDER = Vector3.new(1, 0.56, 0) -- (a standard R15 right shoulder, and its arm's reach)
 local REACH = 2.3
+local HOLD_WRIST = 0.2 -- how far out from straight down the wrist comes into a hand on a carried crop
+local HOLD_ELBOW = Vector3.new(3, 1.2, -0.6) -- which way a carrying elbow points (the right one; torso space)
+local HOLD_IN = 0.2 -- seconds for the arms to go up
 
 -- In Studio, a pose can be tried out from the command bar without a
 -- restart: workspace:SetAttribute("Pose_rest_hand", Vector3.new(...)) (or
@@ -132,7 +140,7 @@ end
 
 ------------------------------------------------------------------------
 
-local rigs = {} -- [character] = { humanoid, torso, shoulder, reach, swingAt, holding, iks, bat = { ik, target, pole }, paddle = { ik, target, pole, left? } }
+local rigs = {} -- [character] = { humanoid, torso, shoulder, reach, swingAt, holding, heldAt, arms = { { motor, pose } }, bat = { ik, target, pole }, paddle = { ik, target, pole, left? } }
 
 -- An IKControl moving one arm's hand to `target`, the elbow toward `pole`.
 local function armIK(rig, character: Model, side: string, kind: Enum.IKControlType, target: Attachment, pole: Attachment): IKControl?
@@ -163,46 +171,33 @@ local function newPole(rig, name: string, position: Vector3): Attachment
 	return pole
 end
 
--- Hands on something carried. Returns false while its hand spots haven't
--- arrived yet (it's tried again next frame).
-local function hold(character: Model, rig, held: Instance): boolean
-	local targets = {}
+-- Hands on something carried: each arm's pose, worked out here and held by
+-- holdArms.
+local function hold(character: Model, rig, held: Instance)
+	rig.arms = {}
 	for _, side in { "Left", "Right" } do
-		local target = held:FindFirstChild(`{side}Hold`, true)
-		if not target or not target:IsA("Attachment") then
-			return false
-		end
-		targets[side] = target
-	end
-	rig.iks = {}
-	for side, target in targets do
-		local out = if side == "Left" then -1 else 1
-		-- (an IKControl gives up near full stretch: lower the spot, on this
-		-- screen, until this character's arm reaches it easily)
-		local shoulder = Vector3.new(out * math.abs(rig.shoulder.X), rig.shoulder.Y, rig.shoulder.Z)
-		for _ = 1, 40 do
-			if (rig.torso.CFrame:PointToObjectSpace(target.WorldPosition) - shoulder).Magnitude <= rig.reach * 0.8 then
-				break
-			end
-			target.Position -= Vector3.new(0, 0.05, 0)
-		end
-		local high = rig.torso.CFrame:PointToObjectSpace(target.WorldPosition).Y > 0.8 -- (over the head: elbows out wide; in front: out and back)
-		local pole = newPole(rig, `{side}HoldPole`, if high then Vector3.new(out * 3, 1.2, -0.6) else Vector3.new(out * 2.4, -0.8, 0.8))
-		table.insert(rig.iks, pole)
-		local ik = armIK(rig, character, side, Enum.IKControlType.Position, target, pole)
-		if ik then
-			table.insert(rig.iks, ik)
+		local at = held:GetAttribute(`{side}Hold`)
+		local upper = character:FindFirstChild(`{side}UpperArm`)
+		local lower = character:FindFirstChild(`{side}LowerArm`)
+		local hand = character:FindFirstChild(`{side}Hand`)
+		local shoulder = upper and upper:FindFirstChild(`{side}Shoulder`)
+		local elbow = lower and lower:FindFirstChild(`{side}Elbow`)
+		local wrist = hand and hand:FindFirstChild(`{side}Wrist`)
+		if typeof(at) == "Vector3" and shoulder and elbow and wrist then
+			local out = if side == "Left" then -1 else 1
+			local frame = CFrame.lookAt(at, at + Vector3.new(0, 0, 1), Vector3.new(out * HOLD_WRIST, -1, 0)) -- (the arm raised in front and on up: palm in)
+			local a, b, c = ArmPose.solve(shoulder, elbow, wrist, frame, HOLD_ELBOW * Vector3.new(out, 1, 1))
+			table.insert(rig.arms, { motor = shoulder, pose = a })
+			table.insert(rig.arms, { motor = elbow, pose = b })
+			table.insert(rig.arms, { motor = wrist, pose = c })
 		end
 	end
 	rig.holding = held
-	return true
+	rig.heldAt = os.clock()
 end
 
 local function letGo(rig)
-	for _, thing in rig.iks or {} do
-		thing:Destroy()
-	end
-	rig.iks = nil
+	rig.arms = nil
 	rig.holding = nil
 end
 
@@ -402,7 +397,7 @@ local function step()
 	local clock = os.clock()
 	for character, rig in rigs do
 		-- carrying: hands on it
-		local held = character:FindFirstChild("CarriedCrop") or character:FindFirstChild("CarriedCrate")
+		local held = character:FindFirstChild("CarriedCrop")
 		if held ~= rig.holding then
 			letGo(rig)
 			if held then
@@ -450,6 +445,19 @@ local function step()
 	end
 end
 
+-- (after the Animator: this frame's walk is under these already)
+local function holdArms()
+	local clock = os.clock()
+	for _, rig in rigs do
+		if rig.arms then
+			local up = smooth(math.min(1, (clock - rig.heldAt) / HOLD_IN))
+			for _, arm in rig.arms do
+				arm.motor.Transform = if up < 1 then arm.motor.Transform:Lerp(arm.pose, up) else arm.pose
+			end
+		end
+	end
+end
+
 function PoseController.Start()
 	local function watch(other: Player)
 		other.CharacterAdded:Connect(function(character)
@@ -464,6 +472,7 @@ function PoseController.Start()
 		watch(other)
 	end
 	RunService.PreAnimation:Connect(step)
+	RunService.PreSimulation:Connect(holdArms)
 end
 
 return PoseController

@@ -141,7 +141,7 @@ local function cropRow(order: number, crop, t: number)
 	rows[crop.id] = { price = price, change = change, usual = usual, crop = crop }
 end
 
--- Crops you have somewhere: barn, truck bed, dock, stockroom, shelves, seeds.
+-- Crops you have somewhere: barn, truck bed, packed crates, shelves, seeds.
 local function yours(state)
 	local set = {}
 	for key, units in state.inventory.crops do
@@ -154,7 +154,7 @@ local function yours(state)
 			set[cropId] = true
 		end
 	end
-	local lists = { state.warehouse.dock, state.store.stockroom }
+	local lists = { state.store.stockroom }
 	for _, bed in state.warehouse.beds do
 		table.insert(lists, bed)
 	end

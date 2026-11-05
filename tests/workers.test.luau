@@ -2,6 +2,49 @@
 -- and training, station slots, and the hiring board.
 return function(spec, harness)
 	local describe, it, expect = spec.describe, spec.it, spec.expect
+
+	describe("how fast a Farmhand walks", function()
+		local Rules = harness.load("WorkerRules")
+		local Config = harness.load("Config/Workers")
+		local Crime = harness.load("Config/Crime")
+		local Settings = harness.load("Config/Settings")
+		local function farmhand(level)
+			return { type = "Farmhand", level = level, xp = 0 }
+		end
+
+		it("a new one is slower than a thief with their hands full", function()
+			expect(Rules.walkSpeed(farmhand(1)) < Settings.WALK_SPEED * Crime.CARRY_SPEED).toBe(true)
+		end)
+		it("gets quicker with every level", function()
+			for level = 2, Config.MAX_LEVEL do
+				expect(Rules.walkSpeed(farmhand(level)) > Rules.walkSpeed(farmhand(level - 1))).toBe(true)
+			end
+		end)
+		it("Level 5 matches a player walking, Level 9 one running", function()
+			expect(Rules.walkSpeed(farmhand(5))).toBe(Settings.WALK_SPEED)
+			expect(Rules.walkSpeed(farmhand(9))).toBe(Settings.RUN_SPEED)
+		end)
+		it("at the top they outpace a running thief", function()
+			expect(Rules.walkSpeed(farmhand(Config.MAX_LEVEL)) > Settings.RUN_SPEED).toBe(true)
+		end)
+		it("the rest of the crew keeps the usual pace", function()
+			expect(Rules.walkSpeed({ type = "Stocker", level = 10, xp = 0 })).toBe(Config.WALK)
+		end)
+		it("a long walk takes as long as it takes: nobody is squeezed into a time limit", function()
+			expect(Rules.walkTime(120, 8)).toBe(15)
+			expect(Rules.walkTime(120)).toBe(12)
+		end)
+		it("a job that has to keep up can still hurry", function()
+			expect(Rules.walkTime(120, nil, 2)).toBe(2)
+		end)
+	end)
+
+	describe("a hire off the board", function()
+		it("is remembered by its numbers, however the client wrote them", function()
+			local Rules = harness.load("WorkerRules")
+			expect(Rules.hireKey(tonumber("0012") :: number, "Farmhand", 1)).toBe(Rules.hireKey(12, "Farmhand", 1))
+		end)
+	end)
 	local WorkerRules = harness.load("WorkerRules")
 	local Workers = harness.load("Config/Workers")
 

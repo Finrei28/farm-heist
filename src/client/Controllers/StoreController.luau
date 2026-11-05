@@ -17,6 +17,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Crops = require(Shared.Config.Crops)
 local DemandModel = require(Shared.DemandModel)
 local MarketPrice = require(Shared.MarketPrice)
+local PackRules = require(Shared.PackRules)
 local Rarities = require(Shared.Config.Rarities)
 local Remotes = require(Shared.Remotes)
 local Shop = require(Shared.Config.Shop)
@@ -213,7 +214,7 @@ local function pricesTab(state)
 	end
 	table.sort(list)
 	if #list == 0 then
-		labelRow(1, 60, "🏪", "Nothing to sell yet", "At the Packing Shed bench, pick 🏪 Store for a crate: it comes to your stockroom. Then press E at a display and pick it.", C.kraft, true)
+		labelRow(1, 60, "🏪", "Nothing to sell yet", "Pack a crate at the Packing Shed bench, then press E at a display and pick it.", C.kraft, true)
 	end
 	-- (shoppers a minute, and how many slots are stocked: each shopper picks
 	-- crops by their slots, so a crop's share is its slots of all of them)
@@ -346,8 +347,8 @@ local function stockTab(state)
 		local crop = Crops.ById[cropId]
 		table.insert(lines, `{crop.icon or ""} {crop.name} ×{units[cropId]}`)
 	end
-	labelRow(order, 70, "📦", `Stockroom: {#store.stockroom} / {ShopRules.stockroomSize(store)} crates`,
-		if #lines > 0 then table.concat(lines, "   ") else "Empty: send crates here from the Packing Shed bench (🏪 Store).", C.soil, true)
+	labelRow(order, 70, "📦", `Packed crates: {#store.stockroom} / {PackRules.size(state)}`,
+		if #lines > 0 then table.concat(lines, "   ") else "None ready for the shelves: pack some at the Packing Shed bench.", C.soil, true)
 	order += 1
 	-- each display
 	for _, id in StoreLayout.ofKind(store.layout, "Display") do
