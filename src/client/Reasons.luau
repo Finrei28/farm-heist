@@ -10,6 +10,7 @@ local REASONS = {
 	Planted = "Something's already growing there.",
 	NoSeeds = "No seeds of that left. Barley sells more in town!",
 	NotRipe = "Not ripe yet.",
+	Ripe = "It's ripe: harvest it first.",
 	NotNeeded = "Already watered this stage.",
 	BarnFull = nil, -- (the server sends its own note)
 	TooPoor = "Not enough coins.",

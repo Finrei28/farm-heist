@@ -19,6 +19,26 @@ Follow-ups: <what to test next time>
 
 ## Sessions
 
+### 2026-11-06 · digging up crops, switching seeds · build: uncommitted, on 2a1902b
+Testers: Claude, driving Studio · Setup: Server & Clients × 1 (Player1: test save, Level 20, a seed of every crop), and the iPhone 17 Pro emulator · Lag: 0 · Shots: [playtest/2026-11-06-dig-up-seeds/](playtest/2026-11-06-dig-up-seeds/)
+
+| Case | Result | Pass? | Notes |
+|---|---|---|---|
+| **The reported bug:** a seed from past the end of a full bar | Tomato (8th seed, 7 fit) takes the last seed place, stands up, and can be put away | ✓ | [shot](playtest/2026-11-06-dig-up-seeds/seed-keeps-a-place.jpg) |
+| Full bar | Bat, 7 seeds and ALL in slot 9; ALL opens the picker, "Tap a seed to take it in hand." | ✓ | [bar](playtest/2026-11-06-dig-up-seeds/all-packet.jpg), [picker](playtest/2026-11-06-dig-up-seeds/picker-from-all.jpg) |
+| CHANGE SEED with a seed in hand (F) | Picker says "Tap a seed to plant it here.", the seed in hand ringed in gold; picking Corn planted it on the spot | ✓ | [shot](playtest/2026-11-06-dig-up-seeds/change-seed-picker.jpg) |
+| No seed in hand | Stamp says Pick seed, no CHANGE SEED | ✓ | |
+| HOLD TO DIG UP, let go early | Crop stays | ✓ | [stamp](playtest/2026-11-06-dig-up-seeds/dig-up-stamp.jpg) |
+| HOLD TO DIG UP, held (F, then the mouse) | Tile empty, seed count unchanged, stamp back to PLANT | ✓ | |
+| During the hold | Bar fills 0 to 1.00, chalkboard reads "Keep holding: the crop and its seed are lost" | ✓ | Sampled from the client: it's over before a screenshot |
+| A ripe crop | The small stamp hides, and a Dig sent straight to the server is refused with `Ripe` | ✓ | |
+| Chalkboard | First: pushed up behind the Farm Guide. Fixed: beside the small stamp | ✗ → ✓ | [shot](playtest/2026-11-06-dig-up-seeds/chalkboard-beside.jpg) |
+| Phone | First: the Farm Guide hid the small stamp. Fixed: beside the big one, on the hotbar's top edge. A held tap digs up | ✗ → ✓ | [shot](playtest/2026-11-06-dig-up-seeds/phone.jpg) |
+
+Not run: CHANGE SEED hidden with one kind of seed (a line of logic, and the save has them all); a friend on your farm (the server's Dig only reaches your own field); a real phone or a gamepad.
+
+Flags: on a phone the big stamp sits over the hotbar's last packets, ALL among them, while you're on the field: CHANGE SEED and Pick seed still reach the picker there (later). On a phone the chalkboard is partly behind the Farm Guide, as it was before (later). The Farm Guide's "Plant your 5 free Carrot seeds" counts any seed: planting Corn moved it on (leave). The picker shows two rows at a time on a short screen, and scrolls (leave).
+
 ### 2026-11-06 · workers carry crates, the Barn's price · build: uncommitted, on 0207db8
 Testers: Claude, driving Studio · Setup: Server & Clients × 1 (Player1: test save; Warehouse Level 1 then 5, Store Level 3 then 5, 10, 15) · Lag: 0 · Shots: [playtest/2026-11-06-workers-carry-crates/](playtest/2026-11-06-workers-carry-crates/)
 
@@ -30,6 +50,7 @@ Testers: Claude, driving Studio · Setup: Server & Clients × 1 (Player1: test s
 | Packer, crate for the Cold Room | Table to belt to branch to door in 3.3 s, level on the belt the whole way; the Cold Room's sign goes up by one | ✓ | [shot](playtest/2026-11-06-workers-carry-crates/on-the-belt.jpg), [log](playtest/2026-11-06-workers-carry-crates/belt-log.jpg) |
 | Packer, crate for the store | Out by the warehouse's side door to the stockroom and back in about 16 s | ✓ | [shot](playtest/2026-11-06-workers-carry-crates/packer-leaving.jpg) |
 | Stockroom walk at every store size | Corner Store, Farm Shop, Market Hall, Supermarket: walks in by the open side, every time | ✓ | [Farm Shop](playtest/2026-11-06-workers-carry-crates/farm-shop-stockroom.jpg), [Market Hall](playtest/2026-11-06-workers-carry-crates/market-hall-stockroom.jpg) |
+| **Reported:** mutated crops not packed, Golden on Pack and Carrot on Store | First: left in the barn. After the fix: `Carrot Golden ×12` packed, on the rack, not on the truck; 6 more walked over later | ✗ → ✓ | The crew never loads a crop ticked for the store, so it waits at the dock. [log](playtest/2026-11-06-workers-carry-crates/golden-packed-log.jpg) |
 | Walking through anything | A raycast along every step of every walk at all sizes: no hits | ✓ | |
 
 Not run: a server closing with a crate in someone's hands (covered by tests/pack.test.luau); Warehouse stages 3 and 4 (their belt and doors are built by the same code); a Shed Hand with crops going both ways, to see how much the store walks slow the truck.

@@ -111,13 +111,18 @@ return function(spec, harness)
 			expect(PackRules.nextForTruck(data)).toBe(nil)
 			expect(PackRules.nextForStore(data)).toBe(nil)
 		end)
-		it("doesn't pack a mutated stack for a crop ticked for the store, even on Pack", function()
+		it("packs a mutated stack you picked for a crop ticked for the store, and leaves it at the dock", function()
 			local data = save()
 			data.warehouse.packs = { Golden = true }
+			data.warehouse.routes.Carrot = 0 -- (the user: "don't seem to be packing mutated crops now")
 			expect(PackRules.crewTakes(data.warehouse, "Carrot|Golden|")).toBe(true)
-			data.warehouse.routes.Carrot = 0
-			expect(PackRules.crewTakes(data.warehouse, "Carrot|Golden|")).toBe(false)
+			expect(PackRules.crewTakes(data.warehouse, "Carrot|Frosted|")).toBe(false)
 			expect(PackRules.crewTakes(data.warehouse, "Carrot||")).toBe(true)
+			local golden = crate("Carrot", "B", "Carrot|Golden|")
+			data.store.stockroom = { golden }
+			expect(PackRules.crewUse(data.warehouse, golden)).toBe(nil)
+			expect(PackRules.nextForTruck(data)).toBe(nil)
+			expect(PackRules.nextForStore(data)).toBe(nil)
 		end)
 		it("finds the first crate for each, past the others", function()
 			local data = save()
@@ -161,12 +166,14 @@ return function(spec, harness)
 			data.warehouse.routes.Corn = "Keep"
 			expect(ready(data, 500)).toBe(false)
 		end)
-		it("packs a few of a mutated crop you've picked, for the truck", function()
+		it("packs a few of a mutated crop you've picked", function()
 			local data = save()
 			expect(ready(data, 3, "Corn|Golden|")).toBe(false)
 			data.warehouse.packs = { Golden = true }
 			expect(ready(data, 3, "Corn|Golden|")).toBe(true)
 			data.warehouse.routes.Corn = 0
+			expect(ready(data, 3, "Corn|Golden|")).toBe(true)
+			data.warehouse.routes.Corn = "Keep"
 			expect(ready(data, 3, "Corn|Golden|")).toBe(false)
 		end)
 	end)

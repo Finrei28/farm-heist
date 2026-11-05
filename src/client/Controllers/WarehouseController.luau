@@ -333,8 +333,8 @@ local function routesTab(state)
 
 	-- mutated and Giant crops: left for you unless you say so
 	local order = #list + 1
-	labelRow(order, 66, "✨", "Mutated crops",
-		"Your crew leaves these in the barn unless you pick 📦 Pack. They pack them while you're here, for the truck, so never a crop on 🏪 Store or ✋ Keep.", C.sky)
+	labelRow(order, 84, "✨", "Mutated crops",
+		"Your crew leaves these in the barn unless you pick 📦 Pack. They pack them while you're here and load the truck. For a crop on 🏪 Store, they wait at the dock for you to load. On ✋ Keep they stay in the barn.", C.sky)
 	local kinds = table.clone(Weather.MUTATION_ORDER)
 	table.insert(kinds, "Giant")
 	for i, kind in kinds do

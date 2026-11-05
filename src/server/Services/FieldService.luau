@@ -207,6 +207,31 @@ function actions.Plant(player, data, arg)
 	return nil
 end
 
+-- Digs up a growing crop, to plant something else there (the user, 2026-11-06:
+-- "Allow players to remove existing planted crops"). The seed's gone with it,
+-- so it can't re-roll a yield. A ripe crop you harvest instead.
+function actions.Dig(player, data, arg)
+	local tile = parseTile(arg)
+	local index, failure = reach(player, tile)
+	if not index then
+		return failure
+	end
+	local key = tostring(tile)
+	if not data.field[key] then
+		return "Empty"
+	end
+	settle(player, data, true)
+	local planted = data.field[key]
+	if not planted then
+		return "Empty"
+	elseif GrowthRules.isRipe(planted) then
+		return "Ripe"
+	end
+	data.field[key] = nil
+	FarmArt.showTile(tilePart(index, tile), nil, now())
+	return nil
+end
+
 function actions.Water(player, data, arg)
 	local tile = parseTile(arg)
 	local owner, ownerData = workFarm(player, data)

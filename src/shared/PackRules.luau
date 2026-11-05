@@ -39,12 +39,13 @@ end
 -- Whether the crew may pack a barn stack: its crop isn't kept, and if it's
 -- mutated or Giant you've picked 📦 Pack for that kind in the Routes tab
 -- (warehouse.packs; the user, 2026-11-05: "Allow selecting which mutated
--- produce to pack or not pack"). A Giant mutated crop needs both picked. They
--- only go by truck, so not for a crop ticked for the store.
+-- produce to pack or not pack"). A Giant mutated crop needs both picked. For a
+-- crop ticked for the store they're packed too, and wait at the dock for you to
+-- load (crewUse; the user, 2026-11-06: "The packers don't seem to be packing
+-- mutated crops now").
 function PackRules.crewTakes(warehouse, key: string): boolean
 	local cropId, mutation, giant = BarnRules.parse(key)
-	local share = WarehouseRules.route(warehouse, cropId)
-	if share == nil or ((mutation or giant) and share <= 0) then
+	if WarehouseRules.route(warehouse, cropId) == nil then
 		return false
 	end
 	local packs = warehouse.packs or {}

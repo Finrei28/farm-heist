@@ -1,0 +1,42 @@
+-- The hotbar (shared/HotbarRules): which seeds it shows when you have more than
+-- it holds.
+return function(spec, harness)
+	local describe, it, expect = spec.describe, spec.it, spec.expect
+	local HotbarRules = harness.load("HotbarRules")
+
+	local seeds = { "Carrot", "Wheat", "Potato", "Lettuce", "Corn", "Onion" }
+
+	describe("the seeds on the bar", function()
+		it("shows them all when they fit, with no ALL packet", function()
+			local shown, all = HotbarRules.shown(seeds, nil, 6)
+			expect(#shown).toBe(6)
+			expect(all).toBe(false)
+		end)
+		it("keeps the last place for the ALL packet when they don't", function()
+			local shown, all = HotbarRules.shown(seeds, nil, 4)
+			expect(#shown).toBe(3)
+			expect(all).toBe(true)
+			expect(shown[3]).toBe("Potato")
+		end)
+		it("always shows the seed in your hand, so you can put it away", function()
+			local shown = HotbarRules.shown(seeds, "Onion", 4)
+			expect(#shown).toBe(3)
+			expect(shown[3]).toBe("Onion")
+			expect(shown[1]).toBe("Carrot")
+		end)
+		it("leaves the bar alone when the seed in your hand is on it", function()
+			local shown = HotbarRules.shown(seeds, "Wheat", 4)
+			expect(shown[2]).toBe("Wheat")
+			expect(shown[3]).toBe("Potato")
+		end)
+		it("ignores a seed you've run out of", function()
+			local shown = HotbarRules.shown(seeds, "Pumpkin", 4)
+			expect(shown[3]).toBe("Potato")
+		end)
+		it("doesn't change the list it's given", function()
+			HotbarRules.shown(seeds, "Onion", 4)
+			expect(seeds[3]).toBe("Potato")
+			expect(#seeds).toBe(6)
+		end)
+	end)
+end

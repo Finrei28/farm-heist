@@ -9,13 +9,17 @@
 --
 -- Pressing Plant with no seed in hand opens the seed picker
 -- (HotbarController.openPicker): every seed you have as a big packet, the
--- ones you can't plant yet greyed with their level.
+-- ones you can't plant yet greyed with their level. So does the context
+-- stamp's CHANGE SEED, and, with more seeds than the bar holds, the ALL packet
+-- at its end. The seed in your hand always keeps a place on the bar
+-- (shared/HotbarRules), so you can always put it away.
 local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Crops = require(Shared.Config.Crops)
+local HotbarRules = require(Shared.HotbarRules)
 local Rarities = require(Shared.Config.Rarities)
 
 local PlayerState = require(script.Parent.Parent.PlayerState)
@@ -129,12 +133,17 @@ end
 
 local pickerDone: ((string) -> ())? = nil -- what the open seed picker plants once you pick
 local picker -- (the seed picker's window: below)
+local rebuild: (any) -> () -- (below)
 
 local function select(cropId: string?)
 	if selected == cropId then
 		return
 	end
 	selected = cropId
+	if cropId and not bar:FindFirstChild(cropId) and PlayerState.current then
+		rebuild(PlayerState.current) -- (it takes a place on the bar, and comes back here)
+		return
+	end
 	highlight()
 	changedEvent:Fire(cropId)
 	if cropId and pickerDone then -- (picked from the picker, or with a key while it was open)
@@ -148,6 +157,14 @@ end
 -- A tap or a key: the bat goes in or out of your hand; a seed puts the bat
 -- away; the seed you're holding goes away (nothing stands up then).
 local function pick(id: string)
+	if id == "More" then
+		if HotbarController.pickerOpen() then
+			picker.close()
+		else
+			HotbarController.openPicker(function() end)
+		end
+		return
+	end
 	if id == "Bat" then
 		if HotbarController.batEquipped() then
 			unequipBat()
@@ -220,7 +237,7 @@ local function packet(id: string, layoutOrder: number, band: Color3, icon: strin
 	return slot
 end
 
-local function rebuild(state)
+function rebuild(state)
 	local seeds = state.inventory.seeds
 	seedCounts = seeds
 	local ids = {}
@@ -241,12 +258,13 @@ local function rebuild(state)
 		packet("Bat", 0, C.red, "🏏", "BAT", C.red, C.cream)
 	end
 	empty.Visible = #ids == 0 and not hasBat
-	for i, cropId in ids do
-		if #keyOrder >= MAX_SLOTS then
-			break
-		end
+	local shown, more = HotbarRules.shown(ids, selected, MAX_SLOTS - #keyOrder)
+	for i, cropId in shown do
 		local crop = Crops.ById[cropId]
 		packet(cropId, i, Rarities.ById[crop.rarity].color, crop.icon or "🌱", `×{seeds[cropId]}`, C.kraft, C.ink)
+	end
+	if more then -- (every seed you have, in the picker)
+		packet("More", #shown + 1, C.green, "🎒", "ALL", C.green, C.cream)
 	end
 	-- Keep the seed in your hand while you still have some; none when it runs
 	-- out (it never jumps to another seed: you pick the next one).
@@ -263,7 +281,6 @@ end
 -- The seed picker: Plant with no seed in hand opens it.
 
 picker = UI.panel("Pick a seed", { width = 560, height = 320, toolbar = true })
-picker.toolbar.Text = "Tap a seed packet to plant it. Tap it on the bar again to put it away."
 make("UIGridLayout", { CellSize = UDim2.fromOffset(96, 122), CellPadding = UDim2.fromOffset(10, 12), SortOrder = Enum.SortOrder.LayoutOrder, Parent = picker.list })
 picker.onClose = function()
 	pickerDone = nil
@@ -274,6 +291,17 @@ function HotbarController.hasSeeds(): boolean
 	local state = PlayerState.current
 	for cropId, count in state and state.inventory.seeds or {} do
 		if count > 0 and Crops.ById[cropId] then
+			return true
+		end
+	end
+	return false
+end
+
+-- Whether you have a seed other than the one in your hand, to change to.
+function HotbarController.hasOtherSeeds(): boolean
+	local state = PlayerState.current
+	for cropId, count in state and state.inventory.seeds or {} do
+		if count > 0 and Crops.ById[cropId] and cropId ~= selected then
 			return true
 		end
 	end
@@ -307,7 +335,7 @@ function HotbarController.fillPicker()
 		local card = make("Frame", {
 			Name = cropId, LayoutOrder = i, BackgroundColor3 = if locked then Color3.fromRGB(214, 206, 190) else C.cream,
 			ZIndex = 23, Parent = picker.list,
-		}, { UI.corner(4), UI.stroke(UI.SEAM, 2) })
+		}, { UI.corner(4), UI.stroke(if cropId == selected then C.gold else UI.SEAM, if cropId == selected then 4 else 2) })
 		UI.crimp(card, card.BackgroundColor3, 7, 7)
 		make("Frame", { -- the rarity band
 			Size = UDim2.new(1, 0, 0, 8), Position = UDim2.fromOffset(0, 6), BackgroundColor3 = rarity.color, BorderSizePixel = 0,
@@ -348,8 +376,9 @@ function HotbarController.fillPicker()
 end
 
 -- Opens the picker; once you pick a seed it's in your hand and onPick(cropId)
--- runs (the stamp plants it). Closing it without picking does nothing.
-function HotbarController.openPicker(onPick: ((string) -> ())?)
+-- runs (planting: the stamp plants it). Closing it without picking does nothing.
+function HotbarController.openPicker(onPick: ((string) -> ())?, planting: boolean?)
+	picker.toolbar.Text = if planting then "Tap a seed to plant it here." else "Tap a seed to take it in hand."
 	HotbarController.fillPicker()
 	picker.open()
 	pickerDone = onPick
