@@ -247,7 +247,7 @@ local function pricesTab(state)
 		local perMinute = DemandModel.salesPerMinute(chance, shoppers, share, crop.perPatch)
 		local out = if onDisplay[cropId] then onDisplay[cropId].units else 0
 		local frame = labelRow(i, 74, crop.icon or "🌱", crop.name,
-			`Shoppers expect ~{math.floor(ref + 0.5)} each · truck pays {market} now\n{out} out on display · {inStock[cropId] or 0} in the stockroom`,
+			`Shoppers expect ~{math.floor(ref + 0.5)} each · truck pays {market} now\n{out} out on display · {inStock[cropId] or 0} packed`,
 			Rarities.ById[crop.rarity].color)
 		local low, high = DemandModel.priceRange(ref)
 		local step = math.max(1, math.floor(ref * 0.05 + 0.5))
@@ -326,7 +326,7 @@ local function stockTab(state)
 	local order = 1
 	-- Fill all
 	local fillRow = labelRow(order, 56, "🧺", "Fill your displays",
-		if inMyStore() then "Tops up every display from the stockroom." else "Walk into your store to use Fill all.", C.green)
+		if inMyStore() then "Tops up every display from your packed crates." else "Walk into your store to use Fill all.", C.green)
 	local _, fillButton = UI.button({ text = "Fill all", kind = if inMyStore() then "green" else "cream", size = UDim2.fromOffset(120, 40),
 		anchor = Vector2.new(1, 0.5), position = UDim2.new(1, -10, 0.5, 2), textSize = 18, zIndex = 23, parent = fillRow })
 	fillButton.Activated:Connect(function()

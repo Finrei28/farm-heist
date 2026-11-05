@@ -110,7 +110,9 @@ function StoreLayout.news(number: number): { string }
 	if after.goldStar then
 		table.insert(parts, "a gold star on your sign")
 	end
-	table.insert(parts, `stockroom {after.stockroom} crates`)
+	if after.stockroom > before.stockroom then
+		table.insert(parts, `room for {after.stockroom - before.stockroom} more packed crates`)
+	end
 	return parts
 end
 

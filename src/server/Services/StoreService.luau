@@ -162,7 +162,7 @@ local function drawDisplays(player: Player)
 					canFill += n
 				end
 			end
-			prompt.ObjectText = `{def.name} {units}/{room} · stockroom {canFill}`
+			prompt.ObjectText = `{def.name} {units}/{room} · packed {canFill}`
 		end
 	end
 end
@@ -491,7 +491,7 @@ local function atDisplay(st, shopper, t: number)
 			if not ShopRules.isOpen(data.store) and not st.soldOutTold then
 				st.soldOutTold = true
 				Notice.send(player, if #data.store.stockroom > 0
-					then "Your store sold out! Fill the displays from the stockroom."
+					then "Your store sold out! Fill the displays from your packed crates."
 					else "Your store sold out! Pack more crates at the Packing Shed.")
 			end
 		else
