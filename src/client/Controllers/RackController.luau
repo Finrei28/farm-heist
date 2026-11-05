@@ -14,7 +14,6 @@ local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
-local BarnRules = require(Shared.BarnRules)
 local CrateRules = require(Shared.CrateRules)
 local Crops = require(Shared.Config.Crops)
 local PackRules = require(Shared.PackRules)
@@ -23,6 +22,7 @@ local Remotes = require(Shared.Remotes)
 local Warehouse = require(Shared.Config.Warehouse)
 local WarehouseRules = require(Shared.WarehouseRules)
 
+local CropNames = require(script.Parent.Parent.CropNames)
 local PlayerState = require(script.Parent.Parent.PlayerState)
 local Reasons = require(script.Parent.Parent.Reasons)
 local Sfx = require(script.Parent.Parent.Sfx)
@@ -79,7 +79,7 @@ local function makeRow(stack, canSend: boolean)
 	make("Frame", { Size = UDim2.new(0, 8, 1, 0), BackgroundColor3 = Rarities.ById[crop.rarity].color, BorderSizePixel = 0, ZIndex = 23, Parent = frame })
 	UI.label({ Position = UDim2.fromOffset(14, 8), Size = UDim2.fromOffset(40, 40), Font = UI.HEAD, Text = crop.icon or "🌱", TextSize = 28,
 		TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 23, Parent = frame })
-	local name = UI.fit(UI.label({ Position = UDim2.fromOffset(58, 5), Size = UDim2.new(1, -190, 0, 22), Font = UI.HEAD, TextSize = 17, ZIndex = 23, Parent = frame }), 11)
+	local name = UI.fit(UI.label({ Position = UDim2.fromOffset(58, 5), Size = UDim2.new(1, -190, 0, 22), Font = UI.HEAD, TextSize = 17, TextColor3 = CropNames.color(stack.key), ZIndex = 23, Parent = frame }), 11)
 	local line = UI.fit(UI.label({ Position = UDim2.fromOffset(58, 28), Size = UDim2.new(1, -190, 0, 20), Font = UI.HAND, TextSize = 18, ZIndex = 23, Parent = frame }), 11)
 	local row = { frame = frame, name = name, line = line }
 	if canSend then
@@ -100,8 +100,7 @@ local function showRow(order: number, side: string, stack, moves: number?, open:
 	rows[id] = row
 	row.shown = true
 	row.frame.LayoutOrder = order
-	local _, mutation, giant = BarnRules.parse(stack.key)
-	row.name.Text = string.upper(`{if giant then "Giant " else ""}{if mutation then mutation .. " " else ""}{Crops.ById[stack.crop].name} ×{UI.formatNumber(stack.units)}{if stack.grade == "A" then " · grade A" else ""}`)
+	row.name.Text = string.upper(`{CropNames.of(stack.key)} ×{UI.formatNumber(stack.units)}{if stack.grade == "A" then " · grade A" else ""}`)
 	row.line.Text = `{stack.crates} crate{if stack.crates == 1 then "" else "s"}{if CrateRules.storeable(stack.key) then "" else " · truck only"}`
 	if row.button then
 		row.button.Text = if moves and moves > 1 then `Send {moves}` else "Send"

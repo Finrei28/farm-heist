@@ -30,6 +30,7 @@ local TruckRules = require(Shared.TruckRules)
 local Warehouse = require(Shared.Config.Warehouse)
 local WarehouseRules = require(Shared.WarehouseRules)
 
+local CropNames = require(script.Parent.Parent.CropNames)
 local PlayerState = require(script.Parent.Parent.PlayerState)
 local Reasons = require(script.Parent.Parent.Reasons)
 local UI = require(script.Parent.Parent.UI)
@@ -158,9 +159,9 @@ local function showWash(key: string)
 	local state = PlayerState.current
 	local units = math.min(state and state.inventory.crops[key] or 0, CrateRules.size(cropId))
 	chosen = { key = key }
-	local _, mutation, giant = BarnRules.parse(key)
 	crateIcon.Text = crop.icon or "📦"
-	crateCount.Text = `{if giant then "Giant " else ""}{if mutation then mutation .. " " else ""}{crop.name} ×{units}`
+	crateCount.Text = `{CropNames.of(key)} ×{units}`
+	crateCount.TextColor3 = CropNames.color(key) or C.ink
 	destination.Text = if CrateRules.storeable(key) then "📦 for your truck or store" else "🚚 for your truck only"
 	water.Size = UDim2.fromScale(1, 0)
 	resultHolder.Visible = false
@@ -238,7 +239,7 @@ back.Activated:Connect(showList)
 -- The list: one crate label per barn stack
 
 local function row(order: number, key: string, units: number, state)
-	local cropId, mutation, giant = BarnRules.parse(key)
+	local cropId = BarnRules.parse(key)
 	local crop = Crops.ById[cropId]
 	local t = now()
 	local bonus = CrateRules.mutationValue({ key = key }) -- (a mutated crop: the truck pays this many times more)
@@ -261,8 +262,8 @@ local function row(order: number, key: string, units: number, state)
 	}, { UI.corner(3), UI.stroke(UI.SEAM, 2) })
 	make("Frame", { Size = UDim2.new(0, 8, 1, 0), BackgroundColor3 = Rarities.ById[crop.rarity].color, BorderSizePixel = 0, ZIndex = 23, Parent = frame })
 	UI.label({ Position = UDim2.fromOffset(14, 18), Size = UDim2.fromOffset(40, 40), Font = UI.HEAD, Text = crop.icon or "🌱", TextSize = 28, TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 23, Parent = frame })
-	local name = `{if giant then "Giant " else ""}{if mutation then mutation .. " " else ""}{crop.name}`
-	UI.fit(UI.label({ Position = UDim2.fromOffset(58, 5), Size = UDim2.new(1, -200, 0, 22), Font = UI.HEAD, TextSize = 17, Text = string.upper(name), ZIndex = 23, Parent = frame }), 11)
+	UI.fit(UI.label({ Position = UDim2.fromOffset(58, 5), Size = UDim2.new(1, -200, 0, 22), Font = UI.HEAD, TextSize = 17, TextColor3 = CropNames.color(key),
+		Text = string.upper(CropNames.of(key)), ZIndex = 23, Parent = frame }), 11)
 	UI.fit(UI.label({ Position = UDim2.fromOffset(58, 27), Size = UDim2.new(1, -200, 0, 20), Font = UI.HAND, TextSize = 18,
 		Text = `×{units} in the barn · {CrateRules.size(cropId)} a crate`, ZIndex = 23, Parent = frame }), 11)
 	local truckText = UI.formatNumber(truckPrice)

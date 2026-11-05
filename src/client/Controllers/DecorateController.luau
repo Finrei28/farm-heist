@@ -82,6 +82,14 @@ local hint, hintLabel = UI.tag({ name = "Hint", text = "", color = C.cream, auto
 local doneHolder, doneStamp = UI.stamp({ text = "DONE", kind = "green", diameter = 78, anchor = Vector2.new(1, 1), position = UDim2.new(1, -16, 1, -190), textSize = 18, zIndex = 31, parent = overlay })
 local costLabel = UI.label({ AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -8, 1, -270), Size = UDim2.fromOffset(150, 24), Font = UI.HEAD, TextSize = 17,
 	TextColor3 = C.cream, TextStrokeColor3 = UI.SEAM, TextStrokeTransparency = 0, TextXAlignment = Enum.TextXAlignment.Center, Text = "", ZIndex = 31, Parent = overlay })
+-- Your coins, over what the draft costs: the HUD's off in here (the user,
+-- 2026-11-06: "Show players coins in shop decoration mode").
+local coinPlate = make("Frame", { Name = "Coins", AnchorPoint = Vector2.new(1, 1), Size = UDim2.fromOffset(150, 34), ZIndex = 31, Parent = overlay },
+	{ UI.corner(5), UI.stroke(UI.SEAM, 3) })
+UI.wood(coinPlate, 2, false)
+UI.coin({ diameter = 22, anchor = Vector2.new(0, 0.5), position = UDim2.new(0, 8, 0.5, 0), zIndex = 32, parent = coinPlate })
+local coinsLabel = UI.fit(UI.label({ Position = UDim2.fromOffset(36, 0), Size = UDim2.new(1, -44, 1, 0), Font = UI.HEAD, TextSize = 20, TextColor3 = C.cream,
+	TextStrokeColor3 = UI.SEAM, TextStrokeTransparency = 0, ZIndex = 32, Parent = coinPlate }), 12)
 local cancelHolder, cancelStamp = UI.stamp({ text = "X", kind = "red", diameter = 48, anchor = Vector2.new(1, 1), position = UDim2.new(1, -102, 1, -196), textSize = 20, zIndex = 31, parent = overlay })
 
 -- The drawer: tabs and a row of cards.
@@ -141,6 +149,7 @@ UI.onLayout(function()
 	doneHolder.Position = UDim2.new(1, -16, 1, -(above + 4))
 	cancelHolder.Position = UDim2.new(1, -(done + 26), 1, -(above + 10))
 	costLabel.Position = UDim2.new(1, -8, 1, -(above + done + 8))
+	coinPlate.Position = UDim2.new(1, -8, 1, -(above + done + 36))
 end)
 
 ------------------------------------------------------------------------
@@ -1125,6 +1134,7 @@ function DecorateController.enter()
 		hideConnection = hideStore(model)
 	end
 	setHud(false)
+	coinsLabel.Text = UI.formatNumber(PlayerState.current.coins)
 	overlay.Visible = true
 	controls(false)
 	zoom, pan = 1, Vector3.zero
@@ -1256,6 +1266,7 @@ function DecorateController.Start()
 	end)
 	-- the server can end it (you wandered off, or 5 idle minutes)
 	PlayerState.changed:Connect(function(state)
+		coinsLabel.Text = UI.formatNumber(state.coins)
 		if active and state.store.level ~= level then
 			UI.toast("Your store changed level: decorate again to use the new floor.", "Announce", 4)
 			exit(false)

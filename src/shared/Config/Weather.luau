@@ -27,16 +27,18 @@ return {
 		{ mutation = "Golden", chance = 0.005 },
 		{ mutation = "Rainbow", chance = 0.0005 },
 	},
-	-- × value, and the aura's colour.
+	-- × value, the aura's colour, and its name's colour on a cream card (the
+	-- aura's are too pale to read there: client/CropNames).
 	MUTATIONS = {
-		Wet = { value = 1.3, color = Color3.fromRGB(90, 170, 240) },
-		Frosted = { value = 2.5, color = Color3.fromRGB(190, 235, 255) },
-		Golden = { value = 2, color = Color3.fromRGB(255, 200, 40) },
-		Shocked = { value = 3, color = Color3.fromRGB(250, 240, 90) },
-		Moonlit = { value = 5, color = Color3.fromRGB(190, 120, 255) },
-		Rainbow = { value = 8, color = Color3.fromRGB(255, 120, 200) },
+		Wet = { value = 1.3, color = Color3.fromRGB(90, 170, 240), text = Color3.fromHex("1667C4") },
+		Frosted = { value = 2.5, color = Color3.fromRGB(190, 235, 255), text = Color3.fromHex("0A8FA6") },
+		Golden = { value = 2, color = Color3.fromRGB(255, 200, 40), text = Color3.fromHex("B87A00") },
+		Shocked = { value = 3, color = Color3.fromRGB(250, 240, 90), text = Color3.fromHex("D9480F") },
+		Moonlit = { value = 5, color = Color3.fromRGB(190, 120, 255), text = Color3.fromHex("7B3FE4") },
+		Rainbow = { value = 8, color = Color3.fromRGB(255, 120, 200), text = Color3.fromHex("D6249F") },
 	},
 	MUTATION_ORDER = { "Wet", "Golden", "Frosted", "Shocked", "Moonlit", "Rainbow" },
+	GIANT_TEXT = Color3.fromHex("2E8B3D"), -- (a Giant crop's name, as `text` above)
 
 	-- The Harvest Moon: at these hours (UTC) every day, the sky turns to night
 	-- for it whatever the time of day. Heist Night: steal holds are quicker

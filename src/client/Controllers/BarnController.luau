@@ -18,6 +18,7 @@ local MarketPrice = require(Shared.MarketPrice)
 local Rarities = require(Shared.Config.Rarities)
 local Remotes = require(Shared.Remotes)
 
+local CropNames = require(script.Parent.Parent.CropNames)
 local PlayerState = require(script.Parent.Parent.PlayerState)
 local Reasons = require(script.Parent.Parent.Reasons)
 local UI = require(script.Parent.Parent.UI)
@@ -35,7 +36,7 @@ local listLayout = make("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = 
 
 -- A crate label: a stencilled name, a handwritten note, the count stamped
 -- on the right, a band in the item's colour down the left.
-local function row(order: number, icon: string, title: string, detail: string, right: string, color: Color3?)
+local function row(order: number, icon: string, title: string, detail: string, right: string, color: Color3?, titleColor: Color3?)
 	local frame = make("Frame", {
 		Size = UDim2.new(1, 0, 0, 50),
 		BackgroundColor3 = C.cream,
@@ -48,7 +49,7 @@ local function row(order: number, icon: string, title: string, detail: string, r
 		Position = UDim2.fromOffset(14, 5), Size = UDim2.fromOffset(40, 40), BackgroundTransparency = 1,
 		Font = UI.HEAD, Text = icon, TextSize = 28, ZIndex = 23, Parent = frame,
 	})
-	UI.label({ Position = UDim2.fromOffset(60, 4), Size = UDim2.new(1, -170, 0, 22), Font = UI.HEAD, TextSize = 17, Text = string.upper(title), ZIndex = 23, Parent = frame })
+	UI.label({ Position = UDim2.fromOffset(60, 4), Size = UDim2.new(1, -170, 0, 22), Font = UI.HEAD, TextSize = 17, TextColor3 = titleColor, Text = string.upper(title), ZIndex = 23, Parent = frame })
 	UI.fit(UI.label({ Position = UDim2.fromOffset(60, 26), Size = UDim2.new(1, -170, 0, 20), Font = UI.HAND, TextSize = 18, Text = detail, ZIndex = 23, Parent = frame }), 12)
 	local count = make("Frame", {
 		AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.fromOffset(76, 32),
@@ -76,12 +77,11 @@ local function cropsTab(state)
 		return
 	end
 	for i, key in keys do
-		local cropId, mutation, giant = BarnRules.parse(key)
+		local cropId = BarnRules.parse(key)
 		local crop = Crops.ById[cropId]
 		if crop then
-			local name = `{if giant then "Giant " else ""}{if mutation then mutation .. " " else ""}{crop.name}`
-			row(i, crop.icon or "🌱", name, `{crop.rarity} · the truck pays {UI.formatNumber(MarketPrice.price(cropId, workspace:GetServerTimeNow()))} each now · pack it at the Packing Shed`,
-				`×{inventory.crops[key]}`, Rarities.ById[crop.rarity].color)
+			row(i, crop.icon or "🌱", CropNames.of(key), `{crop.rarity} · the truck pays {UI.formatNumber(MarketPrice.price(cropId, workspace:GetServerTimeNow()))} each now · pack it at the Packing Shed`,
+				`×{inventory.crops[key]}`, Rarities.ById[crop.rarity].color, CropNames.color(key))
 		end
 	end
 end

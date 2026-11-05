@@ -28,6 +28,7 @@ local ShopRules = require(Shared.ShopRules)
 local StoreLayout = require(Shared.StoreLayout)
 local Workers = require(Shared.Config.Workers)
 
+local CropNames = require(script.Parent.Parent.CropNames)
 local PlayerState = require(script.Parent.Parent.PlayerState)
 local Reasons = require(script.Parent.Parent.Reasons)
 local UI = require(script.Parent.Parent.UI)
@@ -110,14 +111,14 @@ end
 
 -- A crate-label row, like the Barn's: colour band, icon, stencilled name,
 -- a handwritten line (the left half when the row has buttons).
-local function labelRow(order: number, height: number, icon: string, title: string, detail: string, color: Color3?, wide: boolean?)
+local function labelRow(order: number, height: number, icon: string, title: string, detail: string, color: Color3?, wide: boolean?, titleColor: Color3?)
 	local frame = make("Frame", {
 		Size = UDim2.new(1, 0, 0, height), BackgroundColor3 = C.cream, LayoutOrder = order, ZIndex = 22, Parent = panel.list,
 	}, { UI.corner(3), UI.stroke(UI.SEAM, 2) })
 	make("Frame", { Size = UDim2.new(0, 8, 1, 0), BackgroundColor3 = color or C.soil, BorderSizePixel = 0, ZIndex = 23, Parent = frame })
 	UI.label({ Position = UDim2.fromOffset(14, 0), Size = UDim2.new(0, 40, 0, math.min(height, 56)), Font = UI.HEAD, Text = icon, TextSize = 28, TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 23, Parent = frame })
 	local width = if wide then UDim2.new(1, -70, 0, 0) else UDim2.new(0.5, -60, 0, 0)
-	UI.fit(UI.label({ Position = UDim2.fromOffset(58, 5), Size = width + UDim2.fromOffset(0, 22), Font = UI.HEAD, TextSize = 17, Text = string.upper(title), ZIndex = 23, Parent = frame }), 11)
+	UI.fit(UI.label({ Position = UDim2.fromOffset(58, 5), Size = width + UDim2.fromOffset(0, 22), Font = UI.HEAD, TextSize = 17, TextColor3 = titleColor, Text = string.upper(title), ZIndex = 23, Parent = frame }), 11)
 	UI.label({ Position = UDim2.fromOffset(58, 27), Size = width + UDim2.fromOffset(0, height - 30), Font = UI.HAND, TextSize = 17, TextWrapped = true,
 		TextYAlignment = Enum.TextYAlignment.Top, Text = detail, ZIndex = 23, Parent = frame })
 	return frame
@@ -349,9 +350,8 @@ local function stockTab(state)
 	for _, stack in stacks do
 		local crop = Crops.ById[stack.crop]
 		local _, mutation, giant = BarnRules.parse(stack.key)
-		local name = `{if giant then "Giant " else ""}{if mutation then mutation .. " " else ""}{crop.name}`
-		labelRow(order, 52, crop.icon or "🌱", `{name} ×{UI.formatNumber(stack.units)}{if stack.grade == "A" then " · grade A" else ""}`,
-			`{stack.crates} crate{if stack.crates == 1 then "" else "s"}{if mutation or giant then " · truck only" else ""}`, Rarities.ById[crop.rarity].color, true)
+		labelRow(order, 52, crop.icon or "🌱", `{CropNames.of(stack.key)} ×{UI.formatNumber(stack.units)}{if stack.grade == "A" then " · grade A" else ""}`,
+			`{stack.crates} crate{if stack.crates == 1 then "" else "s"}{if mutation or giant then " · truck only" else ""}`, Rarities.ById[crop.rarity].color, true, CropNames.color(stack.key))
 		order += 1
 	end
 	-- each display

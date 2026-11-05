@@ -353,15 +353,12 @@ local function leanOf(st, data, cropId: string): (string, () -> ())
 	end
 end
 
--- A barn stack the crew may take (PackRules.crewTakes) with a full crate's
--- worth in it, or any at all of a mutated one (they come a few at a time, so
--- their crates go part-full), or nil.
+-- A barn stack the crew should pack now (PackRules.readyToPack), or nil.
 local function nextStack(data): (string?, string?)
 	local keys = {}
 	for key, units in data.inventory.crops do
 		local cropId = BarnRules.parse(key)
-		if Crops.ById[cropId] and PackRules.crewTakes(data.warehouse, key)
-			and (units >= CrateRules.size(cropId) or (units > 0 and not CrateRules.storeable(key))) then
+		if Crops.ById[cropId] and PackRules.readyToPack(data, key, units) then
 			table.insert(keys, key)
 		end
 	end
@@ -490,7 +487,7 @@ function JOBS.Farmhand(player, data, st, entry, speed, index)
 end
 
 -- The Shed Hand: loads the pickup when it's home with the crates routed to
--- it, and packs full crates from the barn while there's room in the stock. A
+-- it, and packs what's ready in the barn while there's room in the stock. A
 -- crate for the truck goes straight on if it can. With the stock full they
 -- stop packing, whatever the crop's route, until a crate leaves it (the user,
 -- 2026-11-05: "stop packing and wait for space ... and not just pack for the
@@ -532,7 +529,7 @@ function JOBS.ShedHand(player, data, st, entry, speed, index)
 				TruckRules.load(warehouse, crate, t)
 				carried = crate.crop
 			else
-				table.insert(data.store.stockroom, crate)
+				PackRules.stow(data, crate)
 			end
 			changed = true
 		end
@@ -554,13 +551,12 @@ function JOBS.Sorter(_player, data, st, entry, speed, _index)
 		rest(st, entry.uid)
 		return false
 	end
-	local size = CrateRules.size(cropId)
-	local work = CrateRules.patches(cropId, size) -- (a Sorter's speed is in patches' worth)
+	local units = math.min(CrateRules.size(cropId), data.inventory.crops[key] or 0)
+	local work = CrateRules.patches(cropId, units) -- (a Sorter's speed is in patches' worth)
 	local budget = charge(st, entry.uid, speed, work)
 	if budget >= work - 1e-9 then
 		local info = WarehouseRules.level(data.warehouse.level)
 		local grade = if rng:NextNumber() < WorkerRules.gradeAChance(entry.worker, info.washLine) then "A" else "B"
-		local units = math.min(size, data.inventory.crops[key] or 0)
 		if units > 0 and BarnRules.takeCrops(data.inventory, key, units) then
 			table.insert(data.warehouse.sorted, { crop = cropId, key = key, units = units, grade = grade })
 			budget -= work
@@ -590,7 +586,7 @@ function JOBS.Packer(player, data, st, entry, speed, _index)
 		commit()
 		local crate = table.remove(data.warehouse.sorted, 1)
 		crate.lean = lean
-		table.insert(data.store.stockroom, crate)
+		PackRules.stow(data, crate)
 		st.holdChanged = true
 	end
 	st.budgets[entry.uid] = budget
@@ -954,6 +950,7 @@ local function settleAway(player: Player, data, away: number)
 			break
 		end
 	end
+	PackRules.combine(data)
 	-- coins: the store's sales in, the wages out (runs that reached the City
 	-- are paid by TruckService next)
 	if storeCoins > 0 then

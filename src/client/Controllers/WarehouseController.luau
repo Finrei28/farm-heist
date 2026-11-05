@@ -74,14 +74,14 @@ end
 
 -- A crate-label row: colour band, icon, stencilled name, a handwritten line
 -- (the left part when the row has things on the right).
-local function labelRow(order: number, height: number, icon: string, title: string, detail: string, color: Color3?, rightWidth: number?)
+local function labelRow(order: number, height: number, icon: string, title: string, detail: string, color: Color3?, rightWidth: number?, titleColor: Color3?)
 	local frame = make("Frame", {
 		Size = UDim2.new(1, 0, 0, height), BackgroundColor3 = C.cream, LayoutOrder = order, ZIndex = 22, Parent = panel.list,
 	}, { UI.corner(3), UI.stroke(UI.SEAM, 2) })
 	make("Frame", { Name = "Band", Size = UDim2.new(0, 8, 1, 0), BackgroundColor3 = color or C.soil, BorderSizePixel = 0, ZIndex = 23, Parent = frame })
 	UI.label({ Position = UDim2.fromOffset(14, 0), Size = UDim2.new(0, 40, 0, math.min(height, 56)), Font = UI.HEAD, Text = icon, TextSize = 28, TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 23, Parent = frame })
 	local width = UDim2.new(1, -(70 + (rightWidth or 0)), 0, 0)
-	UI.fit(UI.label({ Position = UDim2.fromOffset(58, 5), Size = width + UDim2.fromOffset(0, 22), Font = UI.HEAD, TextSize = 17, Text = string.upper(title), ZIndex = 23, Parent = frame }), 11)
+	UI.fit(UI.label({ Position = UDim2.fromOffset(58, 5), Size = width + UDim2.fromOffset(0, 22), Font = UI.HEAD, TextSize = 17, TextColor3 = titleColor, Text = string.upper(title), ZIndex = 23, Parent = frame }), 11)
 	local line = UI.label({ Position = UDim2.fromOffset(58, 27), Size = width + UDim2.fromOffset(0, height - 30), Font = UI.HAND, TextSize = 17, TextWrapped = true,
 		TextYAlignment = Enum.TextYAlignment.Top, Text = detail, ZIndex = 23, Parent = frame })
 	UI.fit(line, 11)
@@ -150,7 +150,7 @@ local function pipelineTab(state)
 		-- (mutated stacks you haven't picked wait for you at the wash table)
 		if Crops.ById[cropId] and PackRules.crewTakes(warehouse, key) then
 			waiting += units
-			crates += units / CrateRules.size(cropId)
+			crates += math.max(units / CrateRules.size(cropId), if PackRules.readyToPack(state, key, units) then 1 else 0)
 			sizes += CrateRules.size(cropId)
 			count += 1
 		end
@@ -341,7 +341,8 @@ local function routesTab(state)
 		local packs = (warehouse.packs or {})[kind] == true
 		local mutation = Weather.MUTATIONS[kind]
 		local detail = if packs then "📦 crew packs them for the truck" else "✋ left in the barn"
-		local frame = labelRow(order + i, 56, "✨", kind, if mutation then `×{mutation.value} · {detail}` else detail, if mutation then mutation.color else C.gold, 200)
+		local frame = labelRow(order + i, 56, "✨", kind, if mutation then `×{mutation.value} · {detail}` else detail, if mutation then mutation.color else C.gold, 200,
+			if mutation then mutation.text else Weather.GIANT_TEXT)
 		for j, choice in { { "📦 Pack", "Pack", packs }, { "✋ Keep", "Keep", not packs } } do
 			local _, button = UI.button({ text = choice[1], kind = if choice[3] then "green" else "cream", size = UDim2.fromOffset(84, 38), anchor = Vector2.new(1, 0.5),
 				position = UDim2.new(1, -10 - (2 - j) * 90, 0.5, 0), textSize = 15, zIndex = 23, parent = frame })

@@ -14,7 +14,8 @@
 -- by truck (CrateRules.storeable). The crew leaves mutated and Giant crops in
 -- the barn unless you've chosen them (crewTakes). A crate you send to the
 -- stockroom (crate.to, client RackController) is the store's, whatever its
--- route. tests/pack.test.luau.
+-- route. Part-full crates that are alike combine in the stock (stow).
+-- tests/pack.test.luau.
 local BarnRules = require(script.Parent.BarnRules)
 local CrateRules = require(script.Parent.CrateRules)
 local Crops = require(script.Parent.Config.Crops)
@@ -48,6 +49,21 @@ function PackRules.crewTakes(warehouse, key: string): boolean
 	end
 	local packs = warehouse.packs or {}
 	return (mutation == nil or packs[mutation] == true) and (not giant or packs.Giant == true)
+end
+
+-- Whether the crew packs a barn stack now. A crop for the truck waits for a full
+-- crate, as a trip is paid by what's on it; mutated crops come a few at a time,
+-- so their crates go part-full. A crop ticked for the store doesn't wait either,
+-- or it sits in the barn while the shelves run out (the user, 2026-11-06:
+-- "Workers seems to be not packing for the store"): what's packed combines in
+-- the stock (stow), so small crates don't fill it.
+function PackRules.readyToPack(data, key: string, units: number): boolean
+	local cropId = BarnRules.parse(key)
+	if units <= 0 or not PackRules.crewTakes(data.warehouse, key) then
+		return false
+	end
+	return units >= CrateRules.size(cropId) or not CrateRules.storeable(key)
+		or (WarehouseRules.route(data.warehouse, cropId) or 1) <= 0
 end
 
 -- What the crew does with a crate: "Truck", "Store", or nil (it's kept for
@@ -112,6 +128,38 @@ end
 
 local function keyOf(crate): string
 	return crate.key or `{crate.crop}||`
+end
+
+-- Puts a crate in the stock, tipping what it can into part-full crates like it
+-- first, up to a crate's worth (the user, 2026-11-06: "just combine them into
+-- one in the stock room"): the same crop, mutation and grade, that the crew's
+-- doing the same thing with. Goods always fit. crate.units is what's left of it.
+function PackRules.stow(data, crate)
+	local size = CrateRules.size(crate.crop)
+	local use = PackRules.crewUse(data.warehouse, crate)
+	for _, other in data.store.stockroom do
+		if crate.units <= 0 then
+			return
+		end
+		if other.units < size and keyOf(other) == keyOf(crate) and other.grade == crate.grade
+			and PackRules.crewUse(data.warehouse, other) == use then
+			local add = math.min(crate.units, size - other.units)
+			other.units += add
+			crate.units -= add
+		end
+	end
+	if crate.units > 0 then
+		table.insert(data.store.stockroom, crate)
+	end
+end
+
+-- Combines the whole stock (your time away, and saves from before crates did).
+function PackRules.combine(data)
+	local crates = data.store.stockroom
+	data.store.stockroom = {}
+	for _, crate in crates do
+		PackRules.stow(data, crate)
+	end
 end
 
 -- How many crates the stockroom shows, and how many more you can send there.

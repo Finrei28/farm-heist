@@ -224,12 +224,13 @@ function actions.Pack(player, data)
 	if not crate then
 		return "NoCrops"
 	end
-	table.insert(data.store.stockroom, crate)
+	local units = crate.units
+	PackRules.stow(data, crate)
 	WarehouseService.showHold(player)
 	Analytics.step(player, data, "FirstCrate")
 	GuideService.Record(player, "Pack")
 	DataService.NotifyState(player)
-	return nil, { grade = grade, units = crate.units, crop = crate.crop }
+	return nil, { grade = grade, units = units, crop = crate.crop }
 end
 
 function actions.Upgrade(player, data)

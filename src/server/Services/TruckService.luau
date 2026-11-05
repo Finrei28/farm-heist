@@ -230,7 +230,7 @@ function actions.Unload(player, data, arg)
 		return "NoCrate"
 	end
 	for _, crate in crates do
-		table.insert(data.store.stockroom, crate)
+		PackRules.stow(data, crate)
 	end
 	moved(player)
 	return nil

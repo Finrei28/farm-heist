@@ -16,7 +16,6 @@ local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
-local BarnRules = require(Shared.BarnRules)
 local CrateRules = require(Shared.CrateRules)
 local Crops = require(Shared.Config.Crops)
 local MarketPrice = require(Shared.MarketPrice)
@@ -28,6 +27,7 @@ local TruckRules = require(Shared.TruckRules)
 local Warehouse = require(Shared.Config.Warehouse)
 local WarehouseRules = require(Shared.WarehouseRules)
 
+local CropNames = require(script.Parent.Parent.CropNames)
 local PlayerState = require(script.Parent.Parent.PlayerState)
 local Reasons = require(script.Parent.Parent.Reasons)
 local Sfx = require(script.Parent.Parent.Sfx)
@@ -123,7 +123,7 @@ local function makeRow(stack, action: string)
 	local frame = make("Frame", { Size = UDim2.new(1, 0, 0, 56), BackgroundColor3 = C.cream, ZIndex = 22, Parent = panel.list }, { UI.corner(3), UI.stroke(UI.SEAM, 2) })
 	make("Frame", { Size = UDim2.new(0, 8, 1, 0), BackgroundColor3 = Rarities.ById[crop.rarity].color, BorderSizePixel = 0, ZIndex = 23, Parent = frame })
 	UI.label({ Position = UDim2.fromOffset(14, 8), Size = UDim2.fromOffset(40, 40), Font = UI.HEAD, Text = crop.icon or "🌱", TextSize = 28, TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 23, Parent = frame })
-	local name = UI.fit(UI.label({ Position = UDim2.fromOffset(58, 5), Size = UDim2.new(1, -190, 0, 22), Font = UI.HEAD, TextSize = 17, ZIndex = 23, Parent = frame }), 11)
+	local name = UI.fit(UI.label({ Position = UDim2.fromOffset(58, 5), Size = UDim2.new(1, -190, 0, 22), Font = UI.HEAD, TextSize = 17, TextColor3 = CropNames.color(stack.key), ZIndex = 23, Parent = frame }), 11)
 	local line = UI.fit(UI.label({ Position = UDim2.fromOffset(58, 28), Size = UDim2.new(1, -190, 0, 20), Font = UI.HAND, TextSize = 18, ZIndex = 23, Parent = frame }), 11)
 	local holder, button = UI.button({ text = "", kind = "cream", size = UDim2.fromOffset(112, 40), anchor = Vector2.new(1, 0.5), position = UDim2.new(1, -10, 0.5, 0),
 		textSize = 16, zIndex = 23, parent = frame })
@@ -140,8 +140,7 @@ local function showRow(order: number, stack, action: string, word: string, moves
 	rows[id] = row
 	row.shown = true
 	row.frame.LayoutOrder = order
-	local _, mutation, giant = BarnRules.parse(stack.key)
-	row.name.Text = string.upper(`{if giant then "Giant " else ""}{if mutation then mutation .. " " else ""}{Crops.ById[stack.crop].name} ×{stack.units}{if stack.grade == "A" then " · grade A" else ""}`)
+	row.name.Text = string.upper(`{CropNames.of(stack.key)} ×{stack.units}{if stack.grade == "A" then " · grade A" else ""}`)
 	row.line.Text = `{stack.crates} crate{if stack.crates == 1 then "" else "s"} · {detail}`
 	row.button.Text = if moves > 1 then `{word} {moves}` else word
 	if row.kind ~= kind then

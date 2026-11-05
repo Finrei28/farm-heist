@@ -128,6 +128,123 @@ return function(spec, harness)
 		end)
 	end)
 
+	describe("what the crew packs now", function()
+		local function ready(data, units, key)
+			return PackRules.readyToPack(data, key or "Corn||", units)
+		end
+		it("waits for a full crate of a crop for the truck", function()
+			local data = save()
+			expect(ready(data, 59)).toBe(false)
+			expect(ready(data, 60)).toBe(true)
+		end)
+		it("doesn't wait with a crop ticked for the store", function()
+			local data = save()
+			data.warehouse.routes.Corn = 0
+			expect(ready(data, 48)).toBe(true)
+			expect(ready(data, 1)).toBe(true)
+			expect(ready(data, 0)).toBe(false)
+		end)
+		it("isn't held up by a crate that's waiting", function()
+			local data = save()
+			data.warehouse.routes.Corn = 0
+			data.store.stockroom = { crate("Corn") }
+			expect(ready(data, 48)).toBe(true)
+		end)
+		it("waits with a split: half of it's for the truck", function()
+			local data = save(5)
+			data.warehouse.routes.Corn = 0.5
+			expect(ready(data, 48)).toBe(false)
+			expect(ready(data, 60)).toBe(true)
+		end)
+		it("leaves a crop on Keep", function()
+			local data = save()
+			data.warehouse.routes.Corn = "Keep"
+			expect(ready(data, 500)).toBe(false)
+		end)
+		it("packs a few of a mutated crop you've picked, for the truck", function()
+			local data = save()
+			expect(ready(data, 3, "Corn|Golden|")).toBe(false)
+			data.warehouse.packs = { Golden = true }
+			expect(ready(data, 3, "Corn|Golden|")).toBe(true)
+			data.warehouse.routes.Corn = 0
+			expect(ready(data, 3, "Corn|Golden|")).toBe(false)
+		end)
+	end)
+
+	describe("combining crates in the stock", function()
+		local function of(units, cropId, grade, key)
+			local one = crate(cropId or "Corn", grade, key)
+			one.units = units
+			return one
+		end
+		local function total(data)
+			local sum = 0
+			for _, one in data.store.stockroom do
+				sum += one.units
+			end
+			return sum
+		end
+		it("makes two part-full crates one", function()
+			local data = save()
+			data.store.stockroom = { of(10) }
+			PackRules.stow(data, of(10))
+			expect(#data.store.stockroom).toBe(1)
+			expect(data.store.stockroom[1].units).toBe(20)
+		end)
+		it("starts a new crate with what doesn't fit", function()
+			local data = save()
+			data.store.stockroom = { of(50) }
+			PackRules.stow(data, of(30))
+			expect(#data.store.stockroom).toBe(2)
+			expect(data.store.stockroom[1].units).toBe(60)
+			expect(data.store.stockroom[2].units).toBe(20)
+		end)
+		it("leaves a full crate as it is", function()
+			local data = save()
+			data.store.stockroom = { of(60) }
+			PackRules.stow(data, of(10))
+			expect(#data.store.stockroom).toBe(2)
+			expect(data.store.stockroom[1].units).toBe(60)
+		end)
+		it("keeps crops, grades and mutations apart", function()
+			local data = save()
+			data.store.stockroom = { of(10) }
+			PackRules.stow(data, of(10, "Tomato"))
+			PackRules.stow(data, of(10, "Corn", "A"))
+			PackRules.stow(data, of(10, "Corn", "B", "Corn|Golden|"))
+			expect(#data.store.stockroom).toBe(4)
+		end)
+		it("combines mutated crates too", function()
+			local data = save()
+			data.store.stockroom = { of(3, "Corn", "B", "Corn|Golden|") }
+			PackRules.stow(data, of(4, "Corn", "B", "Corn|Golden|"))
+			expect(#data.store.stockroom).toBe(1)
+			expect(data.store.stockroom[1].units).toBe(7)
+		end)
+		it("keeps crates apart that the crew's doing different things with", function()
+			local data = save(5)
+			data.warehouse.routes.Corn = 0.5
+			local truck, store = of(10), of(10)
+			truck.lean, store.lean = "Truck", "Store"
+			data.store.stockroom = { truck }
+			PackRules.stow(data, store)
+			expect(#data.store.stockroom).toBe(2)
+			local data2 = save()
+			local sent = of(10)
+			sent.to = "Store"
+			data2.store.stockroom = { sent }
+			PackRules.stow(data2, of(10))
+			expect(#data2.store.stockroom).toBe(2)
+		end)
+		it("combines a whole stock without losing a crop", function()
+			local data = save()
+			data.store.stockroom = { of(10), of(25, "Tomato"), of(30), of(40), of(5, "Tomato") }
+			PackRules.combine(data)
+			expect(#data.store.stockroom).toBe(3)
+			expect(total(data)).toBe(110)
+		end)
+	end)
+
 	describe("sending crates to the stockroom", function()
 		local function stocked(...)
 			local data = save()

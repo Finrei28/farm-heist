@@ -19,6 +19,29 @@ Follow-ups: <what to test next time>
 
 ## Sessions
 
+### 2026-11-06 · packing for the store, combining crates, mutated names, coins in Decorate · build: uncommitted, on ee37da9
+Testers: Claude, driving Studio · Setup: Server & Clients × 1 (Player1: test save, Level 2, Store Level 3, a Stocker, Shed Hand, Farmhand, Cashier) · Lag: 0 · Shots: [playtest/2026-11-06-store-packing-names/](playtest/2026-11-06-store-packing-names/)
+
+| Case | Result | Pass? | Notes |
+|---|---|---|---|
+| **The reported bug:** 48 corn on Store, shelves with room | First: still in the barn after 2 minutes, along with Tomato 40/60 and Carrot 66/72. After the fix: packed and on the shelves within seconds | ✗ → ✓ | The crew only packed a crate's worth |
+| Onion ×10 on Store, a Stocker working | Barn to crate to shelf in about 6 s | ✓ | |
+| Three lots of 10 onions, Stockers held off by Decorate | One crate: `Onion ×20`, then `Onion ×30` | ✓ | [log](playtest/2026-11-06-store-packing-names/combining-log.jpg) |
+| Leaving Decorate | That crate on a shelf within 3 s | ✓ | |
+| Potato ×30 on Truck | Stays in the barn: a truck crop still waits for a full crate | ✓ | |
+| Mutated names, Barn | Each kind in its own colour, easy to tell apart, readable | ✓ | [shot](playtest/2026-11-06-store-packing-names/barn-names.jpg) |
+| Routes tab | Wet to Rainbow, and Giant in green | ✓ | [shot](playtest/2026-11-06-store-packing-names/routes-names.jpg) |
+| Packing Shed list and wash label | Coloured, and the label's name fits | ✓ | [list](playtest/2026-11-06-store-packing-names/shed-names.jpg), [label](playtest/2026-11-06-store-packing-names/wash-label.jpg) |
+| Stock tab, dock, packed crates | `SHOCKED TOMATO ×6 · GRADE A` in orange in all three | ✓ | [Stock](playtest/2026-11-06-store-packing-names/stock-tab-name.jpg), [dock](playtest/2026-11-06-store-packing-names/dock-name.jpg), [crates](playtest/2026-11-06-store-packing-names/packed-crates-name.jpg) |
+| Coins in Decorate | Plate over the cost by DONE with the exact number; the draft's `−1,500` sits right under it, nothing overlaps | ✓ | [plate](playtest/2026-11-06-store-packing-names/decorate-coins.jpg), [with a cost](playtest/2026-11-06-store-packing-names/decorate-coins-cost.jpg) |
+| Coins changing in Decorate | Wages took it from 5,135,385 to 5,135,000 on screen | ✓ | |
+| Cancel | Draft dropped, HUD back, nothing spent | ✓ | |
+| Output | No errors | ✓ | Only the existing asset type warning |
+
+Not run: the trade window's colours (needs two players; same helper); a Giant crop's name in a list (`/crops` can't make one; its Routes row is green); combining on the way back from time away (covered by tests/pack.test.luau); a split route (Warehouse Level 5).
+
+Flags: the Barn's "the truck pays 30 each" leaves out the mutation's bonus, so a Frosted Carrot reads 30 when the truck pays 75 (now, one line). The truck receipt's names are still plain (later). With every slot full of other crops, a crate for the store waits in the stock until a slot empties: that's right, but nothing tells you (leave). The dock's Send the Pickup prompt covers Load crates and Send to stockroom from where `/tp dock` lands, with an empty truck too (later).
+
 ### 2026-11-06 · Routes tab, shelf Take off · build: uncommitted, on cf6c2cd
 Testers: Claude, driving Studio · Setup: Server & Clients × 1 (Player1: test save, Level 2, Store Level 3) · Lag: 0 · Shots: [playtest/2026-11-06-take-off-routes/](playtest/2026-11-06-take-off-routes/)
 

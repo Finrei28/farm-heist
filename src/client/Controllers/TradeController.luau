@@ -18,6 +18,7 @@ local Crops = require(Shared.Config.Crops)
 local Remotes = require(Shared.Remotes)
 local TradeRules = require(Shared.TradeRules)
 
+local CropNames = require(script.Parent.Parent.CropNames)
 local PlayerState = require(script.Parent.Parent.PlayerState)
 local Reasons = require(script.Parent.Parent.Reasons)
 local UI = require(script.Parent.Parent.UI)
@@ -76,6 +77,11 @@ local function lineName(kind: string, key: string): string
 	local cropId, mutation = BarnRules.parse(key)
 	local crop = Crops.ById[cropId]
 	return `{crop.icon or ""} {if mutation then mutation .. " " else ""}{crop.name}`
+end
+
+-- Its colour: a mutated crop's stands out.
+local function lineColor(kind: string, key: string): Color3
+	return if kind == "seed" then C.ink else CropNames.color(key) or C.ink
 end
 
 ------------------------------------------------------------------------
@@ -218,7 +224,7 @@ local function drawPicker()
 		local left = entry.count - lineCount(entry.kind, entry.key)
 		local row = make("Frame", { Size = UDim2.new(1, 0, 0, 34), BackgroundColor3 = C.cream, LayoutOrder = order, ZIndex = 32, Parent = pickerList },
 			{ UI.corner(4), UI.stroke(C.stitch, 1) })
-		UI.fit(UI.label({ Position = UDim2.fromOffset(8, 0), Size = UDim2.new(1, -170, 1, 0), Font = UI.BODY_BOLD, TextSize = 15, TextColor3 = C.ink,
+		UI.fit(UI.label({ Position = UDim2.fromOffset(8, 0), Size = UDim2.new(1, -170, 1, 0), Font = UI.BODY_BOLD, TextSize = 15, TextColor3 = lineColor(entry.kind, entry.key),
 			Text = `{lineName(entry.kind, entry.key)} ×{UI.formatNumber(left)}`, ZIndex = 33, Parent = row }), 10)
 		for i, step in { 1, 10, "All" } do
 			local amount = if step == "All" then left else math.min(step :: number, left)
@@ -237,7 +243,7 @@ local function lineRow(list: Instance, line, order: number, editable: boolean)
 	local row = make("Frame", { Size = UDim2.new(1, 0, 0, 36), BackgroundColor3 = Color3.fromRGB(255, 250, 238), LayoutOrder = order, ZIndex = 24, Parent = list },
 		{ UI.corner(4), UI.stroke(C.stitch, 1) })
 	UI.fit(UI.label({ Position = UDim2.fromOffset(8, 1), Size = UDim2.new(1, if editable then -140 else -16, 0, 19), Font = UI.BODY_BOLD, TextSize = 15,
-		TextColor3 = C.ink, Text = `{lineName(line.kind, line.key)} ×{UI.formatNumber(line.count)}`, ZIndex = 25, Parent = row }), 10)
+		TextColor3 = lineColor(line.kind, line.key), Text = `{lineName(line.kind, line.key)} ×{UI.formatNumber(line.count)}`, ZIndex = 25, Parent = row }), 10)
 	UI.label({ Position = UDim2.fromOffset(8, 18), Size = UDim2.new(1, -150, 0, 16), Font = UI.BODY, TextSize = 13, TextColor3 = C.soil,
 		Text = `worth {UI.formatNumber(line.value)} coins`, ZIndex = 25, Parent = row })
 	if editable then
