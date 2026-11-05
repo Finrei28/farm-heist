@@ -398,8 +398,8 @@ end
 -- 🚫 on the signs while you can't travel.
 local function updateBlocked()
 	local now = workspace:GetServerTimeNow()
-	-- (no travel while you're a Suspect, knocked out or carrying stolen crops: CrimeService)
-	local blocked = (player:GetAttribute("SuspectOf") or 0) > 0 or player:GetAttribute("StolenCrop") ~= nil
+	-- (no travel while you're a Suspect and not home yet, knocked out or carrying stolen crops: CrimeService)
+	local blocked = player:GetAttribute("NoTravel") == true or player:GetAttribute("StolenCrop") ~= nil
 		or (player:GetAttribute("KnockedOut") or 0) > now
 	for _, sign in signs do
 		sign.label.Text = if blocked then `🚫 {sign.text}` else sign.text

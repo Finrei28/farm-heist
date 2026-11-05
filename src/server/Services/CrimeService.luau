@@ -88,6 +88,7 @@ local function stateOf(player: Player)
 			visits = {}, -- [plot] = shared/CrimeRules visit
 			loot = LootRules.new(), -- the stolen crop in their hands
 			farm = 0, -- the farm they were in at the last tick
+			homeAt = nil, -- the last time they were in their own farm
 			hold = nil, -- { plot, tile, key, crop, ownerId, startedAt, seconds }
 			climb = nil, -- { plot, direction, token }
 			arrest = nil, -- { target, startedAt } (an owner arresting)
@@ -385,6 +386,11 @@ local function suspectOf(player: Player, state, t: number): number
 		end
 	end
 	return best
+end
+
+-- Whether a Suspect mark on `plot` (0: none) stops them travelling.
+local function heldBack(state, plot: number): boolean
+	return plot > 0 and CrimeRules.holdsTravel(state.visits[plot], state.farm == plot, state.homeAt)
 end
 
 -- Tells an owner someone is stealing from them (at most every ALARM_GAP s
@@ -796,9 +802,16 @@ local function tick()
 		if carrying(state) and home and farm == home then
 			deposit(player, state)
 		end
+		if home and farm == home then
+			state.homeAt = t
+		end
 		local suspect = suspectOf(player, state, t)
 		if (player:GetAttribute("SuspectOf") or 0) ~= suspect then
 			player:SetAttribute("SuspectOf", suspect)
+		end
+		local held = heldBack(state, suspect)
+		if (player:GetAttribute("NoTravel") == true) ~= held then
+			player:SetAttribute("NoTravel", if held then true else nil) -- (the Home and Town signs)
 		end
 	end
 end
@@ -1344,7 +1357,7 @@ function CrimeService.Status(player: Player)
 	end
 	local t = now()
 	return {
-		suspect = suspectOf(player, state, t) > 0,
+		suspect = heldBack(state, suspectOf(player, state, t)),
 		knockedOut = isKnockedOut(state, t) or state.climb ~= nil,
 		carrying = carrying(state),
 	}

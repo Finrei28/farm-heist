@@ -152,6 +152,23 @@ return function(spec, harness)
 		end)
 	end)
 
+	describe("a Suspect travelling", function()
+		local function visit(at)
+			return { lastSuspectAt = at }
+		end
+		it("is held back until they've been home since the act", function()
+			expect(CrimeRules.holdsTravel(visit(100), false, nil)).toBe(true)
+			expect(CrimeRules.holdsTravel(visit(100), false, 90)).toBe(true)
+			expect(CrimeRules.holdsTravel(visit(100), false, 105)).toBe(false)
+		end)
+		it("is held back in the farm it's for, home or not", function()
+			expect(CrimeRules.holdsTravel(visit(100), true, 105)).toBe(true)
+		end)
+		it("is held back again after a new act", function()
+			expect(CrimeRules.holdsTravel(visit(200), false, 105)).toBe(true)
+		end)
+	end)
+
 	describe("the bat", function()
 		it("hits within 7 studs (+1 for lag), in front, with a clear line", function()
 			expect(reason(CrimeRules.validHit(hit()))).toBe("ok")

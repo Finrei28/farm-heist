@@ -13,8 +13,9 @@
 --
 -- WarehouseAction remote: "Wash" stackKey, then "Pack" · "Upgrade" · "Route"
 -- "cropId|Truck" (Store, Keep, or a share for the truck 0–1) · "PackKind"
--- "Golden|Pack" (or Keep; any mutation, or Giant) · "DriverRule" share of the
--- base value (0 = whenever full).
+-- "Golden|Pack" (or Keep; any mutation, or Giant) · "SendCrate" "stackKey|grade"
+-- (to the stockroom, at the crates) · "DriverRule" share of the base value (0 =
+-- whenever full).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
@@ -45,6 +46,7 @@ local GuideService = require(script.Parent.GuideService)
 local WarehouseService = {}
 
 WarehouseService.BENCH_REACH = 12 -- studs from the bench you can pack from
+local CRATES_REACH = 16 -- studs from the rack or the Cold Room's sign you can send crates from
 local DRIVER_RULES = { 0, 0.9, 1, 1.1, 1.2, 1.3 } -- the Drivers' choices (share of the base value)
 WarehouseService.DRIVER_RULES = DRIVER_RULES
 
@@ -62,6 +64,13 @@ end
 local function bench(index: number): BasePart?
 	local warehouse = warehouseModel(index)
 	return warehouse and warehouse.Building:FindFirstChild("Bench") :: BasePart?
+end
+
+-- What the packed crates' prompt hangs on: the rack, or the Cold Room's sign.
+local function cratesSpot(index: number): BasePart?
+	local warehouse = warehouseModel(index)
+	local found = warehouse and (warehouse:FindFirstChild("CratesSpot", true) or warehouse:FindFirstChild("ColdRoomCount", true))
+	return if found and found:IsA("BasePart") then found else nil
 end
 
 -- Redraws the packed crates where you see them (the rack, the Cold Room, the
@@ -96,12 +105,32 @@ local function benchPrompt(player: Player, index: number)
 	prompt.Parent = top
 end
 
+-- The packed crates' prompt (the window opens on the client: RackController).
+local function cratesPrompt(player: Player, index: number)
+	local at = cratesSpot(index)
+	if not at then
+		return
+	end
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = "CratesPrompt"
+	prompt.ActionText = "Send to stockroom"
+	prompt.ObjectText = "Packed crates"
+	prompt.KeyboardKeyCode = Enum.KeyCode.E
+	prompt.HoldDuration = 0
+	prompt.MaxActivationDistance = 10
+	prompt.RequiresLineOfSight = false
+	prompt:SetAttribute("Opens", "Rack")
+	prompt:SetAttribute("OwnerId", player.UserId)
+	prompt.Parent = at
+end
+
 -- Builds the warehouse side for the owner's level and puts everything back.
 local function rebuild(player: Player, index: number, data)
 	local model = PlotService.model(index)
 	YardArt.setLevel(model, data.warehouse.level)
 	model:SetAttribute("WarehouseLevel", data.warehouse.level)
 	benchPrompt(player, index)
+	cratesPrompt(player, index)
 	WarehouseService.showHold(player)
 	if data.warehouse.build then
 		YardArt.showConstruction(model, data.warehouse.build.to, math.ceil(data.warehouse.build.left))
@@ -249,6 +278,31 @@ function actions.Route(player, data, arg)
 		share = math.clamp(math.round(share * 10) / 10, 0, 1)
 		routes[cropId] = if share >= 1 then nil else share
 	end
+	DataService.NotifyState(player)
+	return nil
+end
+
+-- "stackKey|grade": crates of that stack to the stockroom (with the hand cart,
+-- up to four at a time).
+function actions.SendCrate(player, data, arg)
+	local key, grade = string.match(arg or "", "^([%w|]+)|(%a)$")
+	local index = PlotService.plotOf(player)
+	local at = index and cratesSpot(index)
+	local position = MovementService.positionOf(player)
+	if not key or not grade then
+		return "BadRequest"
+	elseif not at or not position or (position - at.Position).Magnitude > CRATES_REACH then
+		return "TooFar"
+	elseif not CrateRules.storeable(key) then
+		return "TruckOnly"
+	elseif PackRules.stockroomRoom(data) <= 0 then
+		return "StockroomFull"
+	end
+	local info = WarehouseRules.level(data.warehouse.level)
+	if PackRules.send(data, key, grade, if info.handCart then Warehouse.HAND_CART else 1) == 0 then
+		return "NoCrate"
+	end
+	WarehouseService.showHold(player)
 	DataService.NotifyState(player)
 	return nil
 end

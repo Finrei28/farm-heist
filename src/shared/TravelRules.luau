@@ -5,7 +5,8 @@
 -- without it a farmer in town was always back in time, and a raid could
 -- never get away (the user chose this, 2026-11-05: "wait if being raided").
 -- What keeps travel from being an escape is that none work while you're a
--- Suspect, knocked out or carrying stolen crops. tests/travel.test.luau.
+-- Suspect, knocked out or carrying stolen crops. Home, a Suspect has got away:
+-- travel works again (CrimeRules.holdsTravel). tests/travel.test.luau.
 local TravelRules = {
 	RAID_WAIT = 3, -- seconds
 	KINDS = { Home = true, Town = true, Visit = true },

@@ -9,7 +9,7 @@
 --   SeedAction     C→S  ("Buy" "cropId|count") -> { ok, reason? }   Barley's Seeds (shared/SeedStock)
 --   LandAction     C→S  ("Clear" block) -> { ok, reason? }   Land Permits (shared/LandRules; obstacles are server prompts)
 --   TravelAction   C→S  ("Home" | "Town" | "Visit" userId | "Cancel") -> { ok, reason? }   (shared/TravelRules)
---   WarehouseAction C→S ("Wash" stackKey | "Pack" | "Upgrade" | "Route" "cropId|Truck/Store/Keep/0.7" | "PackKind" "Golden|Pack/Keep"
+--   WarehouseAction C→S ("Wash" stackKey | "Pack" | "Upgrade" | "Route" "cropId|Truck/Store/Keep/0.7" | "PackKind" "Golden|Pack/Keep" | "SendCrate" "stackKey|grade"
 --                        | "DriverRule" share) -> { ok, reason?, result? }   the warehouse (server/Services/WarehouseService):
 --                        at the bench Wash starts the hold, Pack is letting go (result = { grade, units, crop })
 --   TruckAction    C→S  ("Dispatch" [truck] | "Load" "truck|stackKey|grade" | "Unload" "truck|stackKey|grade")

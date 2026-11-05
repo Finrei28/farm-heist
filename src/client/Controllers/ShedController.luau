@@ -91,11 +91,11 @@ local crateIcon = UI.label({
 	Size = UDim2.new(1, 0, 0, 64), Position = UDim2.fromOffset(0, 6), Font = UI.HEAD, TextSize = 52,
 	TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 28, Parent = crateBox,
 })
-local crateCount = UI.label({
-	AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -8), Size = UDim2.new(1, -16, 0, 24),
+local crateCount = UI.fit(UI.label({ -- (a long name shrinks to stay on its label: "Shocked Tomato ×6" ran off it)
+	AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -8), Size = UDim2.new(1, -12, 0, 26),
 	BackgroundTransparency = 0, BackgroundColor3 = C.cream, Font = UI.HEAD, TextSize = 17,
 	TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 28, Parent = crateBox,
-})
+}), 9)
 make("UICorner", { CornerRadius = UDim.new(0, 3), Parent = crateCount })
 local destination = UI.label({
 	AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.2, 0, 0.45, 62), Size = UDim2.fromOffset(170, 24),
@@ -158,10 +158,10 @@ local function showWash(key: string)
 	local state = PlayerState.current
 	local units = math.min(state and state.inventory.crops[key] or 0, CrateRules.size(cropId))
 	chosen = { key = key }
-	local _, mutation = BarnRules.parse(key)
+	local _, mutation, giant = BarnRules.parse(key)
 	crateIcon.Text = crop.icon or "📦"
-	crateCount.Text = `{if mutation then mutation .. " " else ""}{crop.name} ×{units}`
-	destination.Text = "📦 for your truck or store"
+	crateCount.Text = `{if giant then "Giant " else ""}{if mutation then mutation .. " " else ""}{crop.name} ×{units}`
+	destination.Text = if CrateRules.storeable(key) then "📦 for your truck or store" else "🚚 for your truck only"
 	water.Size = UDim2.fromScale(1, 0)
 	resultHolder.Visible = false
 	holdStamp.Visible = true

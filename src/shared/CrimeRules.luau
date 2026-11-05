@@ -59,6 +59,14 @@ function CrimeRules.isSuspect(visit, now: number, carrying: boolean?): boolean
 	return visit.visitSuspect or now - visit.lastSuspectAt <= Crime.SUSPECT_LINGER
 end
 
+-- Whether a Suspect mark stops you travelling: in the farm it's for, or until
+-- you've been home since the act. Home you've got away, so it would only keep
+-- you waiting (the user, 2026-11-05: "I still can't access the teleports after
+-- reaching home"). The mark itself stays: back in that farm you're a Suspect.
+function CrimeRules.holdsTravel(visit, insideIt: boolean, homeAt: number?): boolean
+	return insideIt or (homeAt or -math.huge) < visit.lastSuspectAt
+end
+
 ------------------------------------------------------------------------
 -- Protection: the Sprout Shield (your first SHIELD_SECONDS of play, unless
 -- you drop it) and arrival grace (ARRIVAL_GRACE after joining a server).

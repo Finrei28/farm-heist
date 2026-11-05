@@ -12,7 +12,9 @@
 -- to the store, and by hand you can use any crate either way. A crate from a
 -- split remembers which way it leans (crate.lean). A mutated crate only goes
 -- by truck (CrateRules.storeable). The crew leaves mutated and Giant crops in
--- the barn unless you've chosen them (crewTakes). tests/pack.test.luau.
+-- the barn unless you've chosen them (crewTakes). A crate you send to the
+-- stockroom (crate.to, client RackController) is the store's, whatever its
+-- route. tests/pack.test.luau.
 local BarnRules = require(script.Parent.BarnRules)
 local CrateRules = require(script.Parent.CrateRules)
 local Crops = require(script.Parent.Config.Crops)
@@ -36,10 +38,12 @@ end
 -- Whether the crew may pack a barn stack: its crop isn't kept, and if it's
 -- mutated or Giant you've picked 📦 Pack for that kind in the Routes tab
 -- (warehouse.packs; the user, 2026-11-05: "Allow selecting which mutated
--- produce to pack or not pack"). A Giant mutated crop needs both picked.
+-- produce to pack or not pack"). A Giant mutated crop needs both picked. They
+-- only go by truck, so not for a crop ticked for the store.
 function PackRules.crewTakes(warehouse, key: string): boolean
 	local cropId, mutation, giant = BarnRules.parse(key)
-	if WarehouseRules.route(warehouse, cropId) == nil then
+	local share = WarehouseRules.route(warehouse, cropId)
+	if share == nil or ((mutation or giant) and share <= 0) then
 		return false
 	end
 	local packs = warehouse.packs or {}
@@ -49,11 +53,18 @@ end
 -- What the crew does with a crate: "Truck", "Store", or nil (it's kept for
 -- you: the crop's route is Keep).
 function PackRules.crewUse(warehouse, crate): string?
+	if crate.to == "Store" and CrateRules.storeable(crate.key or "") then
+		return "Store" -- (you sent it to the stockroom)
+	end
 	local share = WarehouseRules.route(warehouse, crate.crop)
 	if share == nil then
 		return nil
 	elseif not CrateRules.storeable(crate.key or "") then
-		return "Truck"
+		-- (it can't go in the store. Ticked for the store, the crew leaves it for
+		-- you at the dock: a crop on Store is never loaded for you. The user,
+		-- 2026-11-05: "still packing crates onto the truck even though it's
+		-- ticked for the store")
+		return if share > 0 then "Truck" else nil
 	elseif share >= 1 then
 		return "Truck"
 	elseif share <= 0 then
@@ -101,6 +112,33 @@ end
 
 local function keyOf(crate): string
 	return crate.key or `{crate.crop}||`
+end
+
+-- How many crates the stockroom shows, and how many more you can send there.
+function PackRules.stockroomSize(data): number
+	return StoreLayout.level(data.store.level).stockroom
+end
+
+function PackRules.stockroomRoom(data): number
+	local _, shelf = PackRules.sides(data)
+	return math.max(0, PackRules.stockroomSize(data) - #shelf)
+end
+
+-- Sends up to `count` crates of a stack to the stockroom: they're the store's
+-- now, whatever the crop's route, and a Stocker puts them out. How many went.
+function PackRules.send(data, key: string, grade: string, count: number): number
+	local most = math.min(count, PackRules.stockroomRoom(data))
+	local sent = 0
+	for _, crate in data.store.stockroom do
+		if sent >= most then
+			break
+		end
+		if keyOf(crate) == key and crate.grade == grade and CrateRules.storeable(key) and PackRules.crewUse(data.warehouse, crate) ~= "Store" then
+			crate.to = "Store"
+			sent += 1
+		end
+	end
+	return sent
 end
 
 -- Crates that are alike, for choosing from: { { key, crop, grade, crates,

@@ -44,14 +44,62 @@ local CULL = 300 -- studs from the camera: farther shoppers aren't drawn (a busy
 local DOOR_REACH = 3 -- studs from the middle of the door's cell: they're coming through it
 local DOOR_GAP = 4 -- seconds: a busy store's door doesn't ring on and on
 
+local SAY_SIZE = UDim2.fromScale(4.6, 1.2) -- a bubble, in studs
+local PAID_SIZE = UDim2.fromScale(3.2, 1.2) -- what they paid is short, with a coin
+
 local folder = Instance.new("Folder")
 folder.Name = "Shoppers"
 local shoppers = {} -- [id] = shopper
 
+-- A gold coin over `bubble`, sized by it so it shrinks with it (UI.coin's in
+-- pixels, for windows), and not in the label, whose padding would push it onto
+-- the number. Hidden until someone pays.
+local function coinIn(bubble: BillboardGui): Frame
+	local function round(frame: Frame)
+		local corner = Instance.new("UICorner")
+		corner.CornerRadius = UDim.new(0.5, 0)
+		corner.Parent = frame
+	end
+	local coin = Instance.new("Frame")
+	coin.Name = "Coin"
+	coin.AnchorPoint = Vector2.new(0, 0.5)
+	coin.Position = UDim2.fromScale(0.07, 0.5)
+	coin.Size = UDim2.fromScale(0.68, 0.68)
+	coin.SizeConstraint = Enum.SizeConstraint.RelativeYY
+	coin.BackgroundColor3 = Color3.fromRGB(255, 221, 110)
+	coin.ZIndex = 2
+	coin.Visible = false
+	round(coin)
+	local rim = Instance.new("UIStroke")
+	rim.Color = Color3.fromRGB(122, 78, 18)
+	rim.Thickness = 2
+	rim.Parent = coin
+	local face = Instance.new("Frame")
+	face.AnchorPoint = Vector2.new(0.5, 0.5)
+	face.Position = UDim2.fromScale(0.5, 0.5)
+	face.Size = UDim2.fromScale(0.62, 0.62)
+	face.BackgroundColor3 = Color3.fromRGB(240, 178, 52)
+	face.BorderSizePixel = 0
+	face.ZIndex = 3
+	round(face)
+	face.Parent = coin
+	local shine = Instance.new("Frame")
+	shine.Position = UDim2.fromScale(0.2, 0.16)
+	shine.Size = UDim2.fromScale(0.24, 0.24)
+	shine.BackgroundColor3 = Color3.new(1, 1, 1)
+	shine.BackgroundTransparency = 0.25
+	shine.BorderSizePixel = 0
+	shine.ZIndex = 4
+	round(shine)
+	shine.Parent = coin
+	coin.Parent = bubble
+	return coin
+end
+
 local function build(look: number)
 	local model, parts, torso, basket, k = People.shopper(look)
 	local bubble = Instance.new("BillboardGui")
-	bubble.Size = UDim2.fromScale(6, 1.6)
+	bubble.Size = SAY_SIZE
 	bubble.StudsOffsetWorldSpace = Vector3.new(0, 4.1 * k, 0) -- (under a Corner Store's 10-stud ceiling)
 	bubble.MaxDistance = 90
 	bubble.Enabled = false
@@ -65,7 +113,13 @@ local function build(look: number)
 	local corner = Instance.new("UICorner")
 	corner.CornerRadius = UDim.new(0.3, 0)
 	corner.Parent = label
+	local room = Instance.new("UIPadding") -- (the text's clear of the rounded ends, and of the coin)
+	room.Name = "Room"
+	room.PaddingLeft = UDim.new(0.05, 0)
+	room.PaddingRight = UDim.new(0.05, 0)
+	room.Parent = label
 	label.Parent = bubble
+	coinIn(bubble)
 	bubble.Parent = model
 	model.Parent = folder
 	return model, parts, bubble, label, basket
@@ -79,9 +133,12 @@ end
 local MOOD = { good = Color3.fromRGB(214, 240, 196), bad = Color3.fromRGB(255, 206, 196) }
 local TURN = math.rad(540) -- how fast they turn round (degrees a second): never a snap
 
-local function say(shopper, text: string, color: Color3?)
+local function say(shopper, text: string, color: Color3?, coin: boolean?)
 	shopper.label.Text = text
 	shopper.label.BackgroundColor3 = color or Color3.fromRGB(255, 244, 220)
+	shopper.bubble.Coin.Visible = coin == true
+	shopper.label.Room.PaddingLeft = UDim.new(if coin then 0.34 else 0.05, 0)
+	shopper.bubble.Size = if coin then PAID_SIZE else SAY_SIZE
 	Bubbles.set(shopper.bubble, true)
 	shopper.sayToken += 1
 	local token = shopper.sayToken
@@ -135,7 +192,7 @@ end
 local function paid(event)
 	local shopper = shoppers[event.id]
 	if shopper and event.coins > 0 then
-		say(shopper, `+{Format.number(event.coins)}`, Color3.fromRGB(242, 179, 61))
+		say(shopper, `+{Format.number(event.coins)}`, Color3.fromRGB(242, 179, 61), true)
 		if event.plot == Players.LocalPlayer:GetAttribute("Plot") then -- (your own store's sales)
 			Sfx.play("Coins", shopper.model.PrimaryPart or shopper.model:FindFirstChildWhichIsA("BasePart"))
 		end

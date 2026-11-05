@@ -19,6 +19,29 @@ Follow-ups: <what to test next time>
 
 ## Sessions
 
+### 2026-11-06 · crates to the stockroom, solid crates, store-ticked crops, travel from home, bubbles · build: uncommitted, on d295390
+Testers: Claude, driving Studio · Setup: Server & Clients × 1 and × 2 (Player1, Player2: test saves) · Lag: 0 · Shots: [playtest/2026-11-06-crates-to-stockroom/](playtest/2026-11-06-crates-to-stockroom/)
+
+| Case | Result | Pass? | Notes |
+|---|---|---|---|
+| **The reported bug:** Tomato ticked for the store, a Shocked Tomato packed | First run: on the truck within 24 s. After the fix: 28 s on, still in the stock | ✗ → ✓ | A mutated crate went by truck, tick or no tick |
+| Plain crops ticked for the store, truck home and empty | Into the stock, nothing on the truck | ✓ | They were never the problem |
+| Golden on Pack, Carrot ticked for the store | Stays in the barn | ✓ | |
+| Walking at a stack of crates on the rack | Stopped at its edge, X 25.1 | ✓ | |
+| The Send to stockroom prompt | First: hidden by Load crates from the truck side. Fixed: shows there and from the ground | ✗ → ✓ | It hangs on the crates' truck side now. [shot](playtest/2026-11-06-crates-to-stockroom/prompt-by-the-truck.jpg) |
+| The panel | `Packed crates 16/16 · Stockroom 0/10`, a row a kind, Send | ✓ | [panel](playtest/2026-11-06-crates-to-stockroom/packed-crates-panel.jpg) |
+| Send × 3 | 13 on the rack, 3 in the stockroom, both lists live; a Stocker started on them with carrots on the Truck route | ✓ | |
+| Wash screen | "Shocked Tomato ×6" on its label, "for your truck only" | ✓ | [shot](playtest/2026-11-06-crates-to-stockroom/wash-label.jpg) |
+| Speech bubbles | Smaller, text fits | ✓ | |
+| Paid bubble | First: the coin covered the number (`+805` read `05`). Fixed: `+30`, `+805`, `+12,345` all clear | ✗ → ✓ | Held on screen for shots. [short](playtest/2026-11-06-crates-to-stockroom/paid-bubble.jpg), [long](playtest/2026-11-06-crates-to-stockroom/paid-bubble-long.jpg) |
+| Suspect in the victim's farm | TRESPASSING, 🚫 on the signs, Town `Blocked` | ✓ | Player2 on Player1's farm |
+| Home within the 60 s | 🚫 gone, `SuspectOf` still 1, Town works | ✓ | |
+| In town after that | Signs stay clear | ✓ | |
+
+Not run: the panel at the Cold Room (Warehouse Level 5+); walking back into the farm within the 60 s; two simultaneous Sends.
+
+Flags: 🪙 shows as nothing, so the Defend window's prices (and the shelf panel's and the quest reward's, by the same text) have no coin, just a small gap (later). With the rack stacked, the crates take up most of the dock platform there, so you walk round on the ground (leave). PowerShell's window tiling was refused this time ("Access is denied"), so two players ran in overlapping windows.
+
 ### 2026-11-05 · a full stock stops all packing · build: uncommitted, on cc1b9a6
 Testers: Claude, driving Studio · Setup: Server & Clients × 1 (Player1: test save, every worker Level 10) · Lag: 0
 

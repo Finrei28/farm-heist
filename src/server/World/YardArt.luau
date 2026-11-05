@@ -126,8 +126,9 @@ end
 
 -- Shows `crates` in `folder`, each on the frame where(i) gives (nil: no more
 -- fit). One that looks the same in the same place stays put, so a stack
--- doesn't blink each time a single crate moves.
-function YardArt.stack(folder: Instance, crates, where: (number) -> CFrame?)
+-- doesn't blink each time a single crate moves. solid: you can't walk through
+-- them (where you can reach them: the rack and the Cold Room).
+function YardArt.stack(folder: Instance, crates, where: (number) -> CFrame?, solid: boolean?)
 	local old = {}
 	for _, child in folder:GetChildren() do
 		old[child:GetAttribute("Look") or child] = child
@@ -141,7 +142,11 @@ function YardArt.stack(folder: Instance, crates, where: (number) -> CFrame?)
 		if old[look] then
 			old[look] = nil
 		else
-			YardArt.crate(crate, at, folder):SetAttribute("Look", look)
+			local model = YardArt.crate(crate, at, folder)
+			model:SetAttribute("Look", look)
+			if solid then
+				model.PrimaryPart.CanCollide = true
+			end
 		end
 	end
 	for _, child in old do
@@ -175,7 +180,7 @@ function YardArt.showHold(model: Model, crates, count: string)
 			local layer = (i - 1) // 4
 			local offset = Vector3.new((spot % 2) * 3.4 - 1.7, P.dock.height + 0.2 + layer * CRATE.Y, (spot // 2) * -3.4 + 1.2) -- (on the rack's boards)
 			return if i <= 12 then frame * CFrame.new(at + offset) else nil
-		end)
+		end, true)
 		return
 	end
 	local room = PlotLayout.WAREHOUSES[stage].coldRoom
@@ -186,7 +191,7 @@ function YardArt.showHold(model: Model, crates, count: string)
 		local x = room.min.X + 2.6 + (stack % columns) * 3.6
 		local z = room.max.Z - 2.6 - (stack // columns) * 3.6
 		return if i <= SHOW_HOLD then frame * CFrame.new(x, FLOOR + layer * CRATE.Y, z) else nil
-	end)
+	end, true)
 	local sign = warehouse:FindFirstChild("ColdRoomCount", true)
 	local words = sign and sign:FindFirstChild("Words", true) -- (the label in the sign's SurfaceGui)
 	if words then
@@ -445,6 +450,9 @@ local function buildShed(warehouse: Model, frame: CFrame)
 	end
 	-- The rack on the dock for crates waiting while the pickup is out.
 	local rackAt = PlotLayout.rackLocal()
+	-- (the packed crates' prompt hangs here, on their truck side: from the
+	-- rack's middle the truck's own prompt was nearer, and hid it)
+	prop({ Name = "CratesSpot", Size = Vector3.new(0.4, 0.4, 0.4), CFrame = frame * CFrame.new(rackAt + Vector3.new(3.4, P.dock.height + 1.6, -0.5)), Transparency = 1, CastShadow = false }, shed)
 	plotBox("RackBase", frame, rackAt + Vector3.new(-3.6, P.dock.height, -2.4), rackAt + Vector3.new(3.6, P.dock.height + 0.2, 4.8), { Color = COLORS.post }, shed)
 end
 

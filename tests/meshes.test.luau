@@ -350,6 +350,18 @@ return function(spec, harness)
 			expect(count()).toBe(0)
 		end)
 
+		it("makes a stack solid when it's where you can walk", function()
+			local folder = roblox.Instance.new("Folder")
+			local function where()
+				return roblox.CFrame.new()
+			end
+			YardArt.stack(folder, { { crop = "Carrot", units = 72, grade = "A" } }, where, true)
+			expect(folder:GetChildren()[1].PrimaryPart.CanCollide).toBe(true)
+			local other = roblox.Instance.new("Folder")
+			YardArt.stack(other, { { crop = "Carrot", units = 72, grade = "A" } }, where)
+			expect(other:GetChildren()[1].PrimaryPart.CanCollide).toBe(false)
+		end)
+
 		it("heaps a crate's produce on top, as full as the crate is", function()
 			local folder = roblox.Instance.new("Folder")
 			local fullCrate = YardArt.crate({ crop = "Tomato", units = 60, grade = "A" }, roblox.CFrame.new(), folder)
