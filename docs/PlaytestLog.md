@@ -19,6 +19,16 @@ Follow-ups: <what to test next time>
 
 ## Sessions
 
+### 2026-11-05 · a full stock stops all packing · build: uncommitted, on cc1b9a6
+Testers: Claude, driving Studio · Setup: Server & Clients × 1 (Player1: test save, every worker Level 10) · Lag: 0
+
+| Case | Result | Pass? | Notes |
+|---|---|---|---|
+| Stock 16/16 (carrots on Keep), truck 3/4, 400 tomatoes on the default Truck route | 25 s on: tomatoes still 400, truck still 3, stock still 16/16 | ✓ | The case that used to go straight on the truck |
+| The note | "Your packed crates are full, so your crew has stopped packing ...", once | ✓ | |
+| Packing by hand with the stock full | Refused (`PackedFull`) | ✓ | |
+| Carrots moved to the Truck route | One already-packed crate loaded (truck 4/4), that freed a space, one more packed (barn 354 → 282), then stopped at 16/16 | ✓ | Crates already routed to the truck still load, and packing starts again by itself |
+
 ### 2026-11-05 · E in Decorate, a Cashier over two tills, mutated crops, the shield, Invite, centred icons · build: uncommitted, on 53be864
 Testers: Claude, driving Studio · Setup: Server & Clients × 1 (Player1: test save) · Lag: 0 · Shots: [playtest/2026-11-05-store-crew/](playtest/2026-11-05-store-crew/)
 

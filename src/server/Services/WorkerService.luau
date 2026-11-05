@@ -355,14 +355,13 @@ end
 
 -- A barn stack the crew may take (PackRules.crewTakes) with a full crate's
 -- worth in it, or any at all of a mutated one (they come a few at a time, so
--- their crates go part-full), or nil. takes: only crops it says yes to.
-local function nextStack(data, takes: ((string) -> boolean)?): (string?, string?)
+-- their crates go part-full), or nil.
+local function nextStack(data): (string?, string?)
 	local keys = {}
 	for key, units in data.inventory.crops do
 		local cropId = BarnRules.parse(key)
 		if Crops.ById[cropId] and PackRules.crewTakes(data.warehouse, key)
-			and (units >= CrateRules.size(cropId) or (units > 0 and not CrateRules.storeable(key)))
-			and (not takes or takes(cropId)) then
+			and (units >= CrateRules.size(cropId) or (units > 0 and not CrateRules.storeable(key))) then
 			table.insert(keys, key)
 		end
 	end
@@ -491,22 +490,23 @@ function JOBS.Farmhand(player, data, st, entry, speed, index)
 end
 
 -- The Shed Hand: loads the pickup when it's home with the crates routed to
--- it, and packs full crates from the barn into the stock. A crate for the
--- truck goes straight on when there's room on it, stock full or not; anything
--- else waits for space.
+-- it, and packs full crates from the barn while there's room in the stock. A
+-- crate for the truck goes straight on if it can. With the stock full they
+-- stop packing, whatever the crop's route, until a crate leaves it (the user,
+-- 2026-11-05: "stop packing and wait for space ... and not just pack for the
+-- truck").
 function JOBS.ShedHand(player, data, st, entry, speed, index)
 	local warehouse = data.warehouse
 	local t = now()
-	local truckHome = TruckRules.cannotLoad(warehouse, t) == nil
-	local ready = if truckHome then PackRules.nextForTruck(data) else nil
-	local room = PackRules.room(data) > 0
-	local key, cropId = nextStack(data, function(id: string): boolean
-		return room or (truckHome and WarehouseRules.route(warehouse, id) == 1)
-	end)
-	if room then
+	local ready = if TruckRules.cannotLoad(warehouse, t) == nil then PackRules.nextForTruck(data) else nil
+	local key, cropId = nextStack(data)
+	if PackRules.room(data) > 0 then
 		st.told.packedFull = nil
-	elseif not key and nextStack(data) then
-		tellFull(player, st)
+	else
+		if key then
+			tellFull(player, st)
+		end
+		key, cropId = nil, nil
 	end
 	if not ready and not key then
 		rest(st, entry.uid)
@@ -522,22 +522,19 @@ function JOBS.ShedHand(player, data, st, entry, speed, index)
 	end
 	if budget >= 1 and key and cropId then
 		local lean, commit = leanOf(st, data, cropId)
-		local straight = lean == "Truck" and TruckRules.cannotLoad(warehouse, t) == nil
-		if straight or PackRules.room(data) > 0 then
-			commit()
-			budget -= 1
-			local grade = if rng:NextNumber() < WorkerRules.gradeAChance(entry.worker) then "A" else "B"
-			local crate = CrateRules.pack(data.inventory, key, grade)
-			if crate then
-				crate.lean = lean
-				if straight then
-					TruckRules.load(warehouse, crate, t)
-					carried = crate.crop
-				else
-					table.insert(data.store.stockroom, crate)
-				end
-				changed = true
+		commit()
+		budget -= 1
+		local grade = if rng:NextNumber() < WorkerRules.gradeAChance(entry.worker) then "A" else "B"
+		local crate = CrateRules.pack(data.inventory, key, grade)
+		if crate then
+			crate.lean = lean
+			if lean == "Truck" and TruckRules.cannotLoad(warehouse, t) == nil then
+				TruckRules.load(warehouse, crate, t)
+				carried = crate.crop
+			else
+				table.insert(data.store.stockroom, crate)
 			end
+			changed = true
 		end
 	end
 	st.budgets[entry.uid] = budget
