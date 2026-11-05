@@ -23,6 +23,15 @@ return function(spec, harness)
 		}
 	end
 
+	describe("who's on the boards", function()
+		it("real players, never Studio's test players", function()
+			expect(LeaderRules.counts(123456)).toBe(true)
+			expect(LeaderRules.counts(-1)).toBe(false)
+			expect(LeaderRules.counts(-8)).toBe(false)
+			expect(LeaderRules.counts(0)).toBe(false)
+		end)
+	end)
+
 	describe("weeks", function()
 		it("turn over on Monday at midnight UTC", function()
 			expect(os.date("!%A %H:%M", MONDAY)).toBe("Monday 00:00")

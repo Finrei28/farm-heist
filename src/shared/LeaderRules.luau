@@ -24,6 +24,7 @@ LeaderRules.WEEK = 7 * 86400
 LeaderRules.MONDAY = 4 * 86400 -- (1 January 1970 was a Thursday)
 LeaderRules.TOP_STORE_SHOPPERS = 200
 LeaderRules.SIZE = 10 -- rows on a board
+LeaderRules.SPARE = 10 -- rows read past that, in case test players are stored there
 
 LeaderRules.BOARDS = {
 	{ id = "NetWorth", title = "RICHEST FARMS", what = "net worth", weekly = false },
@@ -31,6 +32,14 @@ LeaderRules.BOARDS = {
 	{ id = "Sheriff", title = "SHERIFF OF THE WEEK", what = "arrests this week", weekly = true },
 	{ id = "Wanted", title = "MOST WANTED", what = "coins of crops stolen this week", weekly = true },
 }
+
+-- Whether a player belongs on the boards. Studio's test players (Player1,
+-- Player2 ...) have negative ids, and Studio writes to the same boards as the
+-- live game: a test save can hold anything (one showed 89 million on RICHEST
+-- FARMS, 2026-11-05).
+function LeaderRules.counts(userId: number): boolean
+	return userId > 0
+end
 
 function LeaderRules.week(t: number): number
 	return (t - LeaderRules.MONDAY) // LeaderRules.WEEK

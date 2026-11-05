@@ -80,6 +80,9 @@ end
 -- Writes a player's numbers (only those that changed). `scores`: worked out
 -- already (as their save closes), else from their save now.
 local function write(player: Player, scores)
+	if not LeaderRules.counts(player.UserId) then
+		return
+	end
 	local t = os.time()
 	if not scores then
 		local data = DataService.Get(player)
@@ -115,19 +118,20 @@ local function nameOf(userId: number): string
 end
 
 -- The top `count` of a store: { { userId, value } }, or nil if unreadable.
+-- (Test players stored before they were kept off are passed over.)
 local function top(name: string, count: number)
 	local store = ordered(name)
 	if not store then
 		return nil
 	end
-	local ok, pages = pcall(store.GetSortedAsync, store, false, count)
+	local ok, pages = pcall(store.GetSortedAsync, store, false, count + LeaderRules.SPARE)
 	if not ok then
 		return nil
 	end
 	local list = {}
 	for _, entry in pages:GetCurrentPage() do
 		local userId = tonumber(entry.key)
-		if userId then
+		if userId and LeaderRules.counts(userId) and #list < count then
 			table.insert(list, { userId = userId, value = entry.value })
 		end
 	end

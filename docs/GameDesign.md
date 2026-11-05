@@ -1480,6 +1480,7 @@ Decided while building:
 | Can defences won at the auction be traded? | No (§4.13): seeds won there can |
 | What happens when you close the Trade window? | The trade is cancelled (it says so); nothing has moved |
 | Which sales count toward supply? | Truck runs, at dispatch (when the price locks); offline settlement's simulated runs don't |
+| "How come theres a farm with 89 mill" | It was a Studio test player: Studio writes to the same boards as the live game, and that test save had been given 90 million coins. Test players (negative ids) aren't written any more, and any already stored are passed over when the boards are read (`LeaderRules.counts`) |
 | Weekly and all-time on the boards | Each board shows this week's top 10 (RICHEST FARMS: now); Sheriff and Most Wanted show the all-time #1 under them |
 | The boards in Studio without API access | They rank the players in this server and say so |
 | The woods' clearance | 12 studs from every hedge (the doc's 10, with room for a trunk) and from the highway; a test checks every tree |
