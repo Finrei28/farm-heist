@@ -96,7 +96,7 @@ Bigger Barn's description:
 >
 > Yours forever.
 
-**Developer products** (`productId`: the weathers and the boost in `Config/Monetization.luau`, the looks in `Config/Cosmetics.luau`). No pictures needed: leave each one **Not Listed** (Monetization > Shop; new products start that way) and it's only sold from the game's own Robux shop, which draws its own icons. A Listed product shows in Roblox's Shop and outside the game too, with Roblox's default icon if it has no picture, so one would need a picture first; and the weathers are made to be bought in a server, where they start at once.
+**Developer products** (`productId`: the weathers and the boost in `Config/Monetization.luau`, the looks in `Config/Cosmetics.luau`). No pictures needed: leave each one **Not Listed** (Monetization > Shop; new products start that way) and it's only sold from the game's own Robux shop, which draws its own icons. A Listed product shows in Roblox's Shop and outside the game too, with Roblox's default icon if it has no picture, so one would need a picture and a description first. Listing one is safe for the game (a purchase made outside it is granted when the player next joins, and a weather waits in their barn until it can start), but only our Weather tab warns what's in a weather's way before you buy. All eleven stay Not Listed for now (the user's choice, 2026-11-05).
 
 | Id in the code | Name | Robux |
 |---|---|---|
