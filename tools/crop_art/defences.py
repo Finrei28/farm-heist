@@ -14,7 +14,9 @@ from props import chamfer_box, prop, rng_of
 
 # The dog's hips (x, z) in its own frame, and how high they are: the game
 # hangs a DogLeg from each (server/World/Meshes.dogLegs, PropMeshData.dog).
-DOG_LEGS = [(-0.3, -0.62), (0.3, -0.62), (-0.3, 0.7), (0.3, 0.7)]
+# Under the body's middle: it curves up toward its sides, so legs set any
+# wider stop short of it.
+DOG_LEGS = [(-0.22, -0.62), (0.22, -0.62), (-0.22, 0.66), (0.22, 0.66)]
 LEG_TOP = 1.1
 
 

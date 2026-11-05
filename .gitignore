@@ -8,3 +8,4 @@ __pycache__/
 art/crops/previews/
 art/props/previews/
 art/page/renders/*.json
+art/sounds/stock/

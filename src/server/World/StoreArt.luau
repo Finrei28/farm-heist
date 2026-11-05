@@ -415,6 +415,8 @@ local function cornerStore(sf, building, look, color, roof, parent)
 	box("Cornice", sf, -w - S.wall - 0.4, h + 4, -S.wall - 0.4, S.wall + 0.4, h + 4.5, -S.wall + 0.8, look.trim, roof)
 	nameSign(sf * CFrame.new(-w / 2, h + 2, -S.wall - 0.2), Vector3.new(w - 6, 2.6, 0.2), Color3.fromRGB(236, 214, 170), COLORS.barnRed, color, roof)
 	-- the awning: stripes in the farm colour and cream, sloping toward the road
+	-- (with the roof: it fades as you walk in, or a camera behind you outside
+	-- the window sits inside it and the whole screen goes one colour)
 	local stripes = math.floor(w / 2)
 	for i = 0, stripes - 1 do
 		local x = -w + (i + 0.5) * (w + S.wall) / stripes - S.wall / 2
@@ -422,9 +424,9 @@ local function cornerStore(sf, building, look, color, roof, parent)
 			Name = "Awning", Size = Vector3.new((w + S.wall) / stripes, 0.25, 4.4),
 			CFrame = sf * CFrame.new(x, 8.6, -S.wall - 2.1) * CFrame.Angles(math.rad(-20), 0, 0),
 			Color = if i % 2 == 0 then color else COLORS.cream,
-		}, parent)
+		}, roof)
 		Parts.prop({ Name = "Valance", Size = Vector3.new((w + S.wall) / stripes, 0.7, 0.15), CFrame = sf * CFrame.new(x, 7.55, -S.wall - 4.2),
-			Color = if i % 2 == 0 then color else COLORS.cream }, parent)
+			Color = if i % 2 == 0 then color else COLORS.cream }, roof)
 	end
 	-- the roof (flat, a little overhang)
 	box("Roof", sf, -w - S.wall - 0.6, h, -S.wall + 0.6, S.wall + 0.6, h + 0.6, d + S.wall + 0.6, SLATE_ROOF, roof)
@@ -503,7 +505,7 @@ local function farmShop(sf, building, look, color, roof, parent)
 	for i = 0, 2 do
 		Parts.prop({ Name = "Awning", Size = Vector3.new((dw + 2) / 3, 0.25, 2.6),
 			CFrame = sf * CFrame.new(d1 + 1 - (i + 0.5) * (dw + 2) / 3, DOOR_TOP + 0.9, -S.wall - 1.2) * CFrame.Angles(math.rad(-18), 0, 0),
-			Color = if i % 2 == 0 then color else COLORS.cream }, parent)
+			Color = if i % 2 == 0 then color else COLORS.cream }, roof)
 	end
 end
 

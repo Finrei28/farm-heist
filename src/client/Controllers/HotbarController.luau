@@ -1,8 +1,9 @@
 -- The hotbar (docs/GameDesign.md §5.2): your seeds along the bottom, as
 -- seed packets (crimped top, a band in the rarity colour, the count on a
 -- tag). The one you pick stands up out of the row: it's what the context
--- stamp plants. Tap a packet, or press 1–9; tap the one you're holding (or
--- its key) again to put it away. Inside your own farm the bat (a Tool the
+-- stamp plants, and a chalkboard over the Home and Town boards says what it
+-- is. Tap a packet, or press 1–9; tap the one you're holding (or its key)
+-- again to put it away. Inside your own farm the bat (a Tool the
 -- server gives you there: CrimeService) is the first packet: tap it to hold
 -- it, tap a seed to put it away. Watering is the context stamp's job.
 --
@@ -49,6 +50,10 @@ local bar = make("Frame", {
 }, { make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder, VerticalAlignment = Enum.VerticalAlignment.Bottom }) })
 
 local empty = UI.chalkboard({ name = "Empty", size = UDim2.fromOffset(300, 34), text = "No seeds! Barley sells them in town", visible = false, parent = bar })
+
+-- The seed in your hand, in words: a packet's picture alone doesn't say.
+local heldBoard, heldLabel = UI.chalkboard({ name = "HeldSeed", size = UDim2.fromOffset(0, 30), anchor = Vector2.new(0.5, 1), autoWidth = true, visible = false, parent = UI.screen })
+local seedCounts = {} -- [crop id] = how many, from the save
 
 -- The crop the context stamp plants (nil if you have no seeds).
 function HotbarController.selectedSeed(): string?
@@ -97,6 +102,16 @@ local function unequipBat()
 end
 
 -- Which packet stands up: the bat while it's in your hand, else your seed.
+-- (none with the bat out, or a stolen crop in your hands)
+local function showHeld()
+	local crop = if selected and not HotbarController.batEquipped() then Crops.ById[selected] else nil
+	heldBoard.Visible = crop ~= nil and bar.Visible and player:GetAttribute("StolenCrop") == nil
+	if crop then
+		local count = seedCounts[selected] or 0
+		heldLabel.Text = `{crop.icon or "🌱"} {Crops.seeds(selected, count)} ×{count}`
+	end
+end
+
 local function highlight()
 	local bat = HotbarController.batEquipped()
 	for _, slot in bar:GetChildren() do
@@ -109,6 +124,7 @@ local function highlight()
 			packet.UIStroke.Thickness = if mine then 4 else 2
 		end
 	end
+	showHeld()
 end
 
 local pickerDone: ((string) -> ())? = nil -- what the open seed picker plants once you pick
@@ -206,6 +222,7 @@ end
 
 local function rebuild(state)
 	local seeds = state.inventory.seeds
+	seedCounts = seeds
 	local ids = {}
 	for cropId, count in seeds do
 		if count > 0 and Crops.ById[cropId] then
@@ -371,6 +388,11 @@ function HotbarController.Start()
 		bar.Position = UDim2.new(0.5, 0, 1, -10)
 	end)
 	HudController.HOTBAR_HEIGHT = PACKET + LIFT
+	UI.onLayout(function()
+		heldBoard.Position = UDim2.new(0.5, 0, 1, -(HudController.HOTBAR_HEIGHT + 68))
+	end)
+	bar:GetPropertyChangedSignal("Visible"):Connect(showHeld)
+	player:GetAttributeChangedSignal("StolenCrop"):Connect(showHeld)
 
 	-- The bat comes and goes (your own farm only) and goes in and out of your hand.
 	local function redraw()

@@ -1081,7 +1081,7 @@ local alarmTitle = UI.label({ Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum
 	TextColor3 = C.alarm, TextXAlignment = Enum.TextXAlignment.Center, Text = "", LayoutOrder = 1, ZIndex = 36, Parent = alarmCard })
 local alarmLine = UI.label({ Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, TextWrapped = true, Font = UI.HAND, TextSize = 21,
 	TextXAlignment = Enum.TextXAlignment.Center, Text = "", LayoutOrder = 2, ZIndex = 36, Parent = alarmCard })
-local homeHolder, homeButton = UI.button({ text = "🏠 Go home (3 s)", kind = "blue", size = UDim2.fromOffset(200, 42), order = 3, zIndex = 36, parent = alarmCard })
+local homeHolder, homeButton = UI.button({ text = "🏠 Go home", kind = "blue", size = UDim2.fromOffset(200, 42), order = 3, zIndex = 36, parent = alarmCard })
 UI.onLayout(function()
 	alarmCard.Position = UDim2.new(0.5, 0, 0, if UI.compact then 108 else 124)
 	alarmCard.Size = UDim2.fromOffset(math.min(400, UI.screen.AbsoluteSize.X - 300), 0)
@@ -1252,7 +1252,6 @@ homeButton.Activated:Connect(function()
 		say(result.reason)
 	else
 		homeHolder.Visible = false
-		alarmLine.Text = "Heading home... stand still!"
 	end
 end)
 

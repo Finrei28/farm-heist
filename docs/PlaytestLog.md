@@ -19,6 +19,81 @@ Follow-ups: <what to test next time>
 
 ## Sessions
 
+### 2026-11-05 · the picket line · build: uncommitted
+Testers: Claude, driving Studio · Setup: Server & Clients × 1 as Player1 (UserId -1), a real strike from `/coins -N` and its end from `/coins N` · Lag: 0 · Shot: [playtest/2026-11-05-checkout-prompt/picket.jpg](playtest/2026-11-05-checkout-prompt/picket.jpg)
+
+| Case | Result | Pass? | Notes |
+|---|---|---|---|
+| Picket line | 8 workers stand on the lawn ahead of the spawn, facing it, banners readable from both sides | ✓ | Name tags hidden there: they ran together |
+| Walk back to work | All at their posts, no jumps; a ray along every step of every worker hit one solid part | ✓ | That part: the gatehouse wall where the Watchman's painted door is |
+| Walk out on strike | The same both ways | ✓ | The banner goes up on arrival: it's taller than the doors |
+
+Not run: a crew of more than 8 (the spots are tested for 30), a Shed Hand's walk out at the Packing Shed, a Stocker's route round a layout that's been redecorated. With nothing else open, a Stocker in a tight layout may go straight to the staff door.
+Flagged: a negative purse shows as "-,950,163" (leave: only dev commands can do it).
+
+### 2026-11-05 · every worker, working and by eye · build: uncommitted, with the fixes below
+Testers: Claude, driving Studio · Setup: solo Play on the user's save for the first Farmhand check (two test Farmhands, let go after; 3 carrot seeds used and given back; about 190 carrots harvested into their barn), then Server & Clients × 1 as Player1 (UserId -1) for everything else, as the warehouse and store upgrades can't be undone · Lag: 0
+
+| Worker | Result | Pass? | Notes |
+|---|---|---|---|
+| Farmhand | Every harvest logged with them on the crop (0.0 studs away); nearest crop next; no jumps; home after 4 s; a moved post is a walk | ✓ after fixes | They harvested at the start of the walk, and each new job snapped them back |
+| Shed Hand | Packs, carries the crate to the pickup round the shed's middle post, crate appears as they arrive | ✓ after a fix | They never moved |
+| Sorter, Packer | Busy at their stations, batches flow through | ✓ after a fix | Bodies overlapped at 2.6 studs apart |
+| Loader | Through the dock door and back, on the dock, crate appears on arrival | ✓ after fixes | Cut through the wall by the door, floated 1.5 studs at the truck, feet in the pallets |
+| Driver | Disappears with the truck while it's out | ✓ | The automatic send wasn't watched (a truck takes about 10 minutes to fill): tests/pipeline covers the rule. New: waits for a crate still being carried |
+| Stocker | Walks the aisles to the displays, stock goes on as they arrive, 30 trips with no jumps | ✓ after fixes | They never moved; two stood on the same spot |
+| Cashier | 6 shoppers paid with nobody at the till | ✓ | |
+| Greeter, Watchman | At the door and in the gatehouse | ✓ | The Greeter's extra shoppers weren't measured; the Watchman's raid work wasn't run |
+
+Bugs: all in the table. My own: Play didn't start after a Stop, so typed commands went into Studio and posted a comment "//hire Farmhand 5" on the Baseplate (marked resolved; check Play has started before typing).
+Changes made because of this session: `WorkerService` goTo, walkTime, carryToTruck, reachCrop, reachDisplay, aisle; `WorkerRules.nearest`; `ShopRules.nextDisplay`; `WorkerController` walks along points from where they are.
+Follow-ups: the user's eyes on it; a full truck sent by a Driver in a long session.
+
+### 2026-11-05 · the batch of play-test changes in Studio, and the sounds · build: uncommitted, with the fixes below
+Testers: Claude, driving Studio on the published place (dev commands on the user's save: 77 carrots given, 3 test crates sold; Decorate cancelled, nothing moved) · Setup: solo Play, then iPhone 17 Pro emulation · Lag: 0 · Shots: [playtest/2026-11-05-checkout-prompt/](playtest/2026-11-05-checkout-prompt/)
+
+| Case | Result | Pass? | Notes |
+|---|---|---|---|
+| Green wheel | Gone from the shed's back corner, by eye and in the tree | ✓ | |
+| Instant travel | TOWN and HOME move you at once, no bar | ✓ | Raid decision still with the user |
+| Checkout prompt | Comes up on the counter when a shopper reaches it; E held 0.8 s pays them; hold on the sign works on the phone view | ✓ after a fix | Over the customer's head, Roblox hid it whenever that spot was off screen. Moved onto the till (the user asked for the same mid-check) |
+| Speech bubbles | Goldie's shows whole in the hall, over the curtain; hidden from three spots outside | ✓ | Shoppers and bidders use the same code; not looked at from outside on their own |
+| Hire rate | "Hire · 67.7/min" and the no-fee banner, desktop | ✓ | On the phone view the banner and cards showed; the buttons are below the fold there and weren't scrolled to |
+| Decorate keys | E (picked item, item under the mouse, place), R, F, Q, double click; caps on the buttons | ✓ | G not run: the plant can't be sold |
+| Location sign | Long store name clear of the clock and ribbons, desktop and phone | ✓ | |
+| Centred notes | Readable under the ticker, desktop and phone | ✓ after a fix | They sat on a window's first row and the Welcome Back letter, and under prompts: they go to the top of the screen with a window or the letter up, and draw over prompts |
+| Sounds | 12 uploaded as the community; every id checked against Roblox by name; all load at the right length. Seen firing: ShopBell, CheckoutBell, TillOpen, Coins, AuctionBell, AuctionTick (higher for the last 3), Outbid (rival faked on the client) | ✓ | Nobody has heard them in game yet: I can't. Gavel, Bonk, Siren, DogAlert, Plant, Harvest, LevelUp not triggered this session |
+
+Bugs: `local till` in the prompt's new code shadowed the argument (showPrompt errored; found in the first Play). The camera sat inside the store's awning (above).
+Changes made because of this session: the shed's buttons say "coins each"; the prompt on the counter; notes on their own layer; awnings fade with the roof.
+Warnings looked at: `Exchange:WaitForChild("PriceBoard")` is the board streaming in: its own task, it goes on when the part arrives. Leave. `rbxassetid://203785492 ... Asset type does not match` isn't in this repository: not ours. Leave.
+Flagged, not changed: a note like "The auction's on" still offers TOWN when you're in the hall (later). On a phone a note covers HOME and TOWN while it shows (leave: they still take taps). On a phone the jump button sits over a window's bottom right corner (later).
+Follow-ups: the user's ears on the new sounds; `BidWon` as a cheer; the raid decision; 12 older sounds still without ids.
+
+### 2026-11-05 · the guard dog's alert and its legs · build: uncommitted, with the fixes below
+Testers: Claude, driving Studio (the published "Farm Heist" place) · Setup: solo Play; a dog put on the farm from the Server command bar (the world only, not the save), the alert fired and `Chase` set by hand, as the user's Farm Level is far under the dog's. The sound isn't uploaded yet, so this checks what you see
+
+| Case | Result | Pass? | Notes |
+|---|---|---|---|
+| Found: the ! sat over the dog's back, not its head | pinned to the middle of its body | ✓ | fixed: a spot over its head ([01](playtest/2026-11-05-guard-dog/01-gold-mark-over-its-head.jpg)) |
+| At a thief's heels | the ! pops again and goes with the dog ([02](playtest/2026-11-05-guard-dog/02-at-the-heels.jpg)) | ✓ | |
+| The user, mid-check: "the dogs limbs are not connected." | the legs stopped short of the body at the hips, touching only on the inside: the body curves up toward its sides ([03](playtest/2026-11-05-guard-dog/03-legs-before.jpg)) | ✓ | fixed: the hips moved in under the body and the legs stretched 1.3× so their tops go up inside it ([04](playtest/2026-11-05-guard-dog/04-legs-after.jpg)); the mesh is the same, so nothing to import again |
+| Running | the legs swing from inside the body, no gap ([05](playtest/2026-11-05-guard-dog/05-legs-running.jpg)) | ✓ | |
+| Its paws | on the ground: paws at 0.20, the yard at 0.20 | ✓ | it looked as if it hovered from low down: its shadow falls away from it |
+
+### 2026-11-05 · the seed in your hand says what it is · build: uncommitted
+Testers: Claude, driving Studio (the published "Farm Heist" place) · Setup: solo Play, nothing planted or bought, so the save wasn't touched. The user, playing the live game: "it should tell them what it is otherwise they won't know."
+
+| Case | Result | Pass? | Notes |
+|---|---|---|---|
+| Picking a packet | a chalkboard over HOME and TOWN: "🥕 Carrot seeds ×3" ([01](playtest/2026-11-05-held-seed/01-carrot-seeds.jpg)), one seed reads "Bell Pepper seed ×1" ([02](playtest/2026-11-05-held-seed/02-one-bell-pepper-seed.jpg)) | ✓ | |
+| The bat out, or the seed put away | it goes ([03](playtest/2026-11-05-held-seed/03-gone-with-the-bat-out.jpg)) | ✓ | |
+| Travelling | the travel bar takes its spot ([04](playtest/2026-11-05-held-seed/04-travel-bar-in-its-place.jpg)); it's back on arrival | ✓ | |
+| A stolen crop in your hands | it goes, and the red sign shows ([05](playtest/2026-11-05-held-seed/05-gone-carrying-a-crop.jpg)); back after | ✓ | the crop faked on the client only |
+| On a phone | fits, readable, over the character's feet ([06](playtest/2026-11-05-held-seed/06-phone.jpg)) | ✓ | |
+
+Not watched: the count dropping as you plant (it would spend a seed from the real save); it comes from the same update that draws the packet's own ×3.
+
 ### 2026-11-05 · the bat skins remade · build: uncommitted, with the fixes below
 Testers: Claude, driving Studio (the published "Farm Heist" place) · Setup: solo Play; each skin built by `CrimeArt.bat` from the Server command bar and put in the character's hand, so the save wasn't touched; `Pose_slow` and a longer trail to catch the swing; Bonk events fired from the server to see the burst
 

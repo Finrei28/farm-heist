@@ -83,6 +83,11 @@ local function wageText(wage: number): string
 	return string.format("%.1f coins/min", wage)
 end
 
+-- What they cost going on, for a Hire button: "105/min", "87.5/min".
+local function rateText(wage: number): string
+	return `{(string.gsub(string.format("%.1f", wage), "%.0$", ""))}/min`
+end
+
 -- A pinned card on the corkboard (a cream card with the job's colour band).
 local function card(parent: Instance, order: number, size: UDim2, color: Color3)
 	local frame = make("Frame", { Size = size, BackgroundColor3 = C.cream, LayoutOrder = order, Rotation = ((order * 37) % 5 - 2) * 0.3, ZIndex = 22, Parent = parent },
@@ -134,7 +139,7 @@ local function crewTab(state)
 		local empty = card(panel.list, 1, UDim2.new(1, 0, 0, 80), C.sky)
 		UI.label({ Position = UDim2.fromOffset(14, 12), Size = UDim2.new(1, -28, 1, -20), Font = UI.HAND, TextSize = 19, TextWrapped = true, ZIndex = 23, Parent = empty,
 			Text = if state.freeHireUsed then "No crew yet. Workers harvest, pack, load and sell for you, even while you're away. Hire them on the Hire tab or at the Hiring Hall in town."
-				else "No crew yet. Your first hire is free! Try a Shed Hand: they wash, pack and load crates at the Packing Shed for you (Hire tab)." })
+				else "No crew yet. There's no fee on your first hire, just their wage. Try a Shed Hand: they wash, pack and load crates at the Packing Shed for you (Hire tab)." })
 		return
 	end
 	for i, entry in list do
@@ -202,7 +207,7 @@ local function hireTab(state)
 	local canHire = free or state.level >= 2
 	if free then
 		local note = card(panel.list, 0, UDim2.new(1, 0, 0, 44), C.gold)
-		UI.label({ Position = UDim2.fromOffset(14, 8), Size = UDim2.new(1, -28, 1, -12), Font = UI.HEAD, TextSize = 18, Text = "🎉 Your first hire is free!", ZIndex = 23, Parent = note })
+		UI.label({ Position = UDim2.fromOffset(14, 8), Size = UDim2.new(1, -28, 1, -12), Font = UI.HEAD, TextSize = 18, Text = "🎉 No fee on your first hire: you just pay their wage.", ZIndex = 23, Parent = note })
 	elseif state.level < 2 then
 		local note = card(panel.list, 0, UDim2.new(1, 0, 0, 44), C.red)
 		UI.label({ Position = UDim2.fromOffset(14, 8), Size = UDim2.new(1, -28, 1, -12), Font = UI.HAND, TextSize = 18, Text = "Hiring more workers comes with Farm Level 2.", ZIndex = 23, Parent = note })
@@ -246,7 +251,7 @@ local function hireTab(state)
 				Text = `Level {candidate.level} · {pct(candidate.level)}` }), 10)
 			UI.fit(UI.label({ Position = UDim2.fromOffset(8, 50), Size = UDim2.new(1, -16, 0, 18), Font = UI.HAND, TextSize = 15, ZIndex = 23, Parent = cardFrame,
 				Text = `{trait.name}: {trait.text} · paid {wageText(WorkerRules.wage(candidate))}` }), 10)
-			local _, hire = UI.button({ text = if taken then "Hired ✓" elseif free then "Hire · free" else `Hire · {UI.formatNumber(candidate.fee)}`,
+			local _, hire = UI.button({ text = if taken then "Hired ✓" elseif free then `Hire · {rateText(WorkerRules.wage(candidate))}` else `Hire · {UI.formatNumber(candidate.fee)}`,
 				kind = if taken or not canHire then "cream" elseif free or state.coins >= candidate.fee then "green" else "cream",
 				size = UDim2.new(1, -16, 0, 34), anchor = Vector2.new(0.5, 1), position = UDim2.new(0.5, 0, 1, -6), textSize = 15, zIndex = 23, parent = cardFrame })
 			hire.Activated:Connect(function()
@@ -374,8 +379,10 @@ local function showWelcome(notice)
 		position = UDim2.fromScale(0.5, 0.55), textSize = 18, zIndex = 37, parent = holder })
 	close.Activated:Connect(function()
 		letter.Visible = false
+		UI.raiseNotes(false)
 	end)
 	letter.Visible = true
+	UI.raiseNotes(true)
 	letter.Rotation = -6
 	TweenService:Create(letter, TweenInfo.new(0.4, Enum.EasingStyle.Back), { Rotation = -1 }):Play()
 end

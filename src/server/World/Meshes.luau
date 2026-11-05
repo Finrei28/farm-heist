@@ -219,11 +219,13 @@ function Meshes.grass(base: CFrame, model: Instance): boolean
 end
 
 -- The guard dog's legs, one under each hip (PropMeshData.dog), standing on
--- `at` like its body (World/DefenceArt; the clients swing them).
+-- `at` like its body (World/DefenceArt; the clients swing them). Stretched
+-- so their tops go up inside the body: a swing shouldn't open a gap.
+local DOG_LEG_SCALE = Vector3.new(0.9, 1.3, 0.9)
 function Meshes.dogLegs(at: CFrame, parent: Instance): { MeshPart }
 	local legs = {}
 	for _, hip in (PROPS.dog and PROPS.dog.legs) or {} do
-		local leg = Meshes.make("DogLeg", at * CFrame.new(hip[1], 0, hip[2]), 1, parent)
+		local leg = Meshes.make("DogLeg", at * CFrame.new(hip[1], 0, hip[2]), DOG_LEG_SCALE, parent)
 		if leg then
 			leg.Name = "DogLeg"
 			table.insert(legs, leg)

@@ -4,7 +4,8 @@
 -- the last one: along the sidewalk, through the door, down the aisles to a
 -- display, into a checkout queue, out again. They say what happened in a
 -- bubble ("🥕×3", "Too dear!"), their basket fills with what they picked,
--- and a coin pop shows when they pay. Roblox-shaped people in all sorts of
+-- and a coin pop shows when they pay; the bell over the door rings as they
+-- come in. Roblox-shaped people in all sorts of
 -- outfits (client/People), made of local parts: nothing here matters to the game.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -15,6 +16,8 @@ local Format = require(Shared.Format)
 local PlotLayout = require(Shared.PlotLayout)
 local Remotes = require(Shared.Remotes)
 local Shop = require(Shared.Config.Shop)
+local Store = require(Shared.Config.Store)
+local Bubbles = require(script.Parent.Parent.Bubbles)
 local People = require(script.Parent.Parent.People)
 local Sfx = require(script.Parent.Parent.Sfx)
 
@@ -38,6 +41,8 @@ local PRODUCE = {
 local BIG = { Pumpkin = true, Watermelon = true, Moonmelon = true, DragonsEyePumpkin = true }
 local FADE = 1
 local CULL = 300 -- studs from the camera: farther shoppers aren't drawn (a busy Supermarket has 24, and there are 8 stores)
+local DOOR_REACH = 3 -- studs from the middle of the door's cell: they're coming through it
+local DOOR_GAP = 4 -- seconds: a busy store's door doesn't ring on and on
 
 local folder = Instance.new("Folder")
 folder.Name = "Shoppers"
@@ -77,12 +82,12 @@ local TURN = math.rad(540) -- how fast they turn round (degrees a second): never
 local function say(shopper, text: string, color: Color3?)
 	shopper.label.Text = text
 	shopper.label.BackgroundColor3 = color or Color3.fromRGB(255, 244, 220)
-	shopper.bubble.Enabled = true
+	Bubbles.set(shopper.bubble, true)
 	shopper.sayToken += 1
 	local token = shopper.sayToken
 	task.delay(2.6, function()
 		if shopper.sayToken == token then
-			shopper.bubble.Enabled = false
+			Bubbles.set(shopper.bubble, false)
 		end
 	end)
 end
@@ -146,6 +151,20 @@ local function clear(event)
 	end
 end
 
+-- The bell over a store's door, once for each shopper coming in.
+local doorRangAt = {} -- [plot] = when its door last rang
+local function ringDoor(shopper, position: Vector3, t: number)
+	local door = PlotLayout.storeWorld(shopper.plot, Store.DOOR_X, 1, position.Y)
+	if (position - door).Magnitude > DOOR_REACH then
+		return
+	end
+	shopper.rang = true
+	if t - (doorRangAt[shopper.plot] or -math.huge) >= DOOR_GAP then
+		doorRangAt[shopper.plot] = t
+		Sfx.at("ShopBell", door)
+	end
+end
+
 local function step(dt: number)
 	local t = now()
 	local eye = workspace.CurrentCamera and workspace.CurrentCamera.CFrame.Position or Vector3.zero
@@ -162,6 +181,9 @@ local function step(dt: number)
 		shopper.model.Parent = if near then folder else nil
 		if not near then
 			continue
+		end
+		if not shopper.rang and not shopper.leave then
+			ringDoor(shopper, position, t)
 		end
 		-- Which way they face: along the walk while walking; once there, toward
 		-- what they came for (`face`); and before their next walk starts (still

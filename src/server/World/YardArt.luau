@@ -459,11 +459,10 @@ local function buildShed(warehouse: Model, frame: CFrame)
 	prop({ Name = "Water", Size = Vector3.new(2.6, 0.1, 2.6), CFrame = top.CFrame * CFrame.new(-3.2, 1.4, 0), Color = COLORS.water, Transparency = 0.2 }, shed)
 	YardArt.crate({ crop = "Carrot", units = 0, grade = "B" }, top.CFrame * CFrame.new(0.4, 0.3, 0), shed).Name = "EmptyCrate"
 	cylinder("Tape", top.CFrame * CFrame.new(3.6, 0.55, 0), 1, 0.5, { Color = Color3.fromRGB(210, 160, 90) }, shed)
-	-- Empty crates stacked by the back wall, a hose reel.
+	-- Empty crates stacked by the back wall.
 	for i = 0, 2 do
 		YardArt.crate({ crop = "Carrot", units = 0, grade = "B" }, frame * CFrame.new(s.min.X + 3, 0.5 + i * CRATE.Y, s.max.Z - 3.5) * CFrame.Angles(0, math.rad(i * 9), 0), shed)
 	end
-	cylinder("HoseReel", frame * CFrame.new(s.max.X - 3, 2, s.max.Z - 2) * CFrame.Angles(0, 0, math.rad(90)), 3, 1, { Color = COLORS.leaf }, shed)
 	-- The rack on the dock for crates waiting while the pickup is out.
 	local rackAt = PlotLayout.rackLocal()
 	plotBox("RackBase", frame, rackAt + Vector3.new(-3.6, P.dock.height, -2.4), rackAt + Vector3.new(3.6, P.dock.height + 0.2, 4.8), { Color = COLORS.post }, shed)

@@ -523,7 +523,7 @@ local function hiringHall(town: Instance)
 		Parts.ball("Pin", f * CFrame.new(x, y + 0.7, 0.66), 0.25, { Color = COLORS.barnRed }, model)
 	end
 	local header = deco("BoardHeader", f, -15, F + 8.1, 0, -4.4, F + 9.5, 0.3, WHITE, model)
-	words(header, "HELP WANTED · first hire free!", TEAL)
+	words(header, "HELP WANTED · no fee on your first hire", TEAL)
 	patty(f * CFrame.new(-16.2, F, 3.2) * CFrame.Angles(0, math.rad(200), 0), model)
 
 	-- the waiting bench for candidates, a crate, a potted plant

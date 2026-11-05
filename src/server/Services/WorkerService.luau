@@ -59,11 +59,18 @@ local HIRE_LEVEL = 2 -- Farm Level to hire (§4.9)
 local WELCOME_AWAY = 120 -- seconds away before the Welcome back card
 local SORTED_MAX = 12 -- batches Sorters wash ahead of the Packers
 local WALK = 10 -- studs a second, a worker's walk
+local PAUSE = 0.6 -- seconds at the far end of a walk out and back (client/WorkerController's)
+local PULL = 0.3 -- seconds a Farmhand bends over a crop before it comes up
+local STOCK_ROUND = 8 -- patches' worth a Stocker can take out in one go
+local HOME_AFTER = 4 -- seconds with nothing to do before a Farmhand walks back to their post
 
 local WorkerEvent = Remotes.event("WorkerEvent")
 local rng = Random.new()
 
-local crews = {} -- [Player] = { budgets = { [uid] = n }, routeAcc = {}, wageAt, told = {} }
+-- [Player] = { budgets = { [uid] = n }, routeAcc = {}, wageAt, told = {}, spots = { [uid] = their post },
+--   at = { [uid] = where they went last }, trips = { [uid] = the tile they're on their way to },
+--   worked = { [uid] = { at, crop }: their last harvest }, loading = { [truck] = crates being carried to it } }
+local crews = {}
 
 local function now(): number
 	return workspace:GetServerTimeNow()
@@ -125,7 +132,7 @@ local function spotOf(index: number, data, entry, nth: number): (Vector3, Vector
 	local info = WarehouseRules.level(data.warehouse.level)
 	local layout = PlotLayout.WAREHOUSES[info.stage]
 	local floor = if info.stage == 1 then 0.5 else PlotLayout.PLOT.dock.height
-	local offsets = { 0, -2.6, 2.6, -5.2, 5.2 }
+	local offsets = { 0, -3.4, 3.4, -6.8, 6.8 } -- (closer, their arms go through each other)
 	local t = worker.type
 	if t == "Farmhand" then
 		return at(Vector3.new(-14 + nth * 6, 0.2, PlotLayout.PLOT.field.depth - 3), Vector3.new(0, 0, 1))
@@ -133,7 +140,8 @@ local function spotOf(index: number, data, entry, nth: number): (Vector3, Vector
 		return at(layout.bench + Vector3.new(-2.5 + (nth - 1) * 5, floor, -3), Vector3.new(0, 0, 1))
 	elseif (t == "Sorter" or t == "Packer" or t == "Loader") and layout.stations then
 		local station = layout.stations[if t == "Sorter" then "Sort" elseif t == "Packer" then "Pack" else "Load"]
-		return at(station + Vector3.new(0, floor, offsets[(nth - 1) % #offsets + 1]), Vector3.new(1, 0, 0))
+		local spread = if t == "Loader" then { 0, -3.4, -6.8 } else offsets -- (Loaders: not onto the pallets behind them)
+		return at(station + Vector3.new(0, floor, spread[(nth - 1) % #spread + 1]), Vector3.new(1, 0, 0))
 	elseif t == "Driver" then
 		local across = layout.docks[math.min(nth, #layout.docks)]
 		local length = YardArt.TRUCK_LENGTH[info.truck]
@@ -160,8 +168,67 @@ local function spotOf(index: number, data, entry, nth: number): (Vector3, Vector
 	return at(PlotLayout.PLOT.door, Vector3.new(0, 0, 1))
 end
 
+-- The way along the store's aisles between two points, for a Stocker: the
+-- corners to go by, or nil to go straight.
+local function aisle(index: number, data, from: Vector3, to: Vector3): { Vector3 }?
+	local store = data.store
+	local ax, ay = PlotLayout.storeCellAt(index, from)
+	local bx, by = PlotLayout.storeCellAt(index, to)
+	local cells = StoreLayout.path(store.layout, store.level, { math.round(ax), math.round(ay) }, { math.round(bx), math.round(by) })
+	if not cells then
+		return nil
+	end
+	local points = StoreLayout.smooth(store.layout, store.level, cells)
+	local via = {}
+	for i = 2, #points - 1 do
+		table.insert(via, PlotLayout.storeWorld(index, points[i][1], points[i][2], PlotLayout.PLOT.store.floor))
+	end
+	return via
+end
+
+-- The corners a worker goes by to get out of their building, for the walk
+-- to the picket line: through a door, never a wall.
+local function wayOut(index: number, data, entry, from: Vector3): { Vector3 }
+	local t = entry.worker.type
+	local frame = PlotLayout.frame(index)
+	local here = frame:PointToObjectSpace(from)
+	local function at(x: number, y: number, z: number): Vector3
+		return frame:PointToWorldSpace(Vector3.new(x, y, z))
+	end
+	local P = PlotLayout.PLOT
+	if t == "Sorter" or t == "Packer" or t == "Loader" then -- (by the staff door, on the gate side)
+		local layout = PlotLayout.WAREHOUSES[WarehouseRules.level(data.warehouse.level).stage]
+		local doorZ = layout.min.Z + 10
+		return { at(layout.min.X + 3, here.Y, doorZ), at(layout.min.X - 4, 0.2, doorZ) }
+	elseif t == "ShedHand" then -- (the shed's open at the side)
+		return { at(10, 0.2, 62) }
+	elseif t == "Driver" then -- (along the dock, behind the trucks)
+		return { at(here.X, P.dock.height, P.dock.z + 3.5), at(10, 0.2, P.dock.z + 3.5) }
+	elseif t == "Watchman" then -- (his door, on the yard side)
+		local g = P.gatehouse
+		return { at(g.min.X + 5.4, here.Y, g.max.Z - 2), at(g.min.X + 5.4, 0.2, g.max.Z + 2) }
+	elseif t == "Stocker" or t == "Cashier" or t == "Greeter" then -- (by the staff door)
+		local cx, cy = StoreLayout.staffCell()
+		local door = PlotLayout.storeWorld(index, cx, cy, P.store.floor)
+		local outside = at(P.store.right + 5, 0.2, PlotLayout.storeLocal(cx, cy).Z)
+		if t == "Cashier" then
+			return { door, outside } -- (they work in the doorway)
+		end
+		local _, y = PlotLayout.storeCellAt(index, from)
+		local beside = PlotLayout.storeWorld(index, cx, if y < cy then cy - 1 else cy + 1, P.store.floor)
+		local via = aisle(index, data, from, beside) or {}
+		table.insert(via, beside)
+		table.insert(via, door)
+		table.insert(via, outside)
+		return via
+	end
+	return {}
+end
+
 -- Tells the clients (every one, or just `to`) where this farm's crew
--- stands (after a hire, a level, a strike, a new building ...).
+-- stands (after a hire, a level, a strike, a new building ...). On strike
+-- that's the picket line by your door; the moment one starts or ends they
+-- get the way there too.
 local function showCrew(player: Player, to: Player?)
 	local index = PlotService.plotOf(player)
 	local data = DataService.Get(player)
@@ -169,17 +236,41 @@ local function showCrew(player: Player, to: Player?)
 		return
 	end
 	local st = crews[player]
+	local striking = data.crew.strike == true
+	local turned = st ~= nil and st.striking ~= nil and st.striking ~= striking
+	local wasAt = st and st.at or {}
+	if st then
+		st.striking = striking
+		if turned then
+			st.at, st.worked = {}, {} -- (they walk from wherever they were)
+		end
+	end
 	local list, counts = {}, {}
 	for _, entry in roster(data) do
 		local t = entry.worker.type
 		counts[t] = (counts[t] or 0) + 1
 		local position, face = spotOf(index, data, entry, counts[t])
+		local via = nil
+		if turned then
+			via = wayOut(index, data, entry, if striking then wasAt[entry.uid] or position else position)
+			if not striking then -- (back the way they came)
+				local out = via
+				via = {}
+				for i = #out, 1, -1 do
+					table.insert(via, out[i])
+				end
+			end
+		end
+		if striking then
+			position = PlotLayout.toWorld(index, PlotLayout.picketLocal(#list + 1))
+			face = PlotLayout.frame(index):VectorToWorldSpace(Vector3.new(0, 0, -1))
+		end
 		if st then
 			st.spots[entry.uid] = position
 		end
 		table.insert(list, {
 			id = entry.uid, type = t, name = entry.worker.name, level = entry.worker.level, look = entry.worker.look or 1,
-			at = position, face = face, strike = data.crew.strike, nth = counts[t],
+			at = position, face = face, strike = striking, nth = counts[t], via = via,
 		})
 	end
 	if to then
@@ -190,12 +281,35 @@ local function showCrew(player: Player, to: Player?)
 end
 WorkerService.ShowCrew = showCrew
 
--- A worker walks to a world point and back (a harvest, a load, a refill),
--- carrying `carry` there (a crate to the truck) or, with `back`, on the way
--- back (a harvested crop).
-local function walk(index: number, uid: string, from: Vector3, to: Vector3, carry: string?, back: boolean?)
-	local seconds = (to - from).Magnitude / WALK
-	WorkerEvent:FireAllClients("Do", { plot = index, id = uid, at = now(), to = to, seconds = math.clamp(seconds, 0.4, 6), carry = carry, back = back })
+-- How long a walk takes, by way of the points in `via`, and no longer than
+-- `most` seconds (a good worker hurries to keep up with their speed).
+local function walkTime(from: Vector3, via: { Vector3 }?, to: Vector3, most: number?): number
+	local length, last = 0, from
+	for _, point in via or {} do
+		length += (point - last).Magnitude
+		last = point
+	end
+	length += (to - last).Magnitude
+	return math.clamp(math.min(length / WALK, most or math.huge), 0.4, 6)
+end
+
+-- A worker walks to a world point and back (a crate to a truck), by way of
+-- `via`, carrying `carry` there or, with `back`, on the way back. Returns how
+-- long the way there takes.
+local function walk(index: number, uid: string, from: Vector3, to: Vector3, carry: string?, back: boolean?, most: number?, via: { Vector3 }?): number
+	local seconds = walkTime(from, via, to, most)
+	WorkerEvent:FireAllClients("Do", { plot = index, id = uid, at = now(), to = to, via = via, seconds = seconds, carry = carry, back = back })
+	return seconds
+end
+
+-- A worker walks one way and stays there (a Farmhand from crop to crop, a
+-- Stocker from display to display), and home with `home`. Returns how long
+-- it takes.
+local function goTo(index: number, st, uid: string, to: Vector3, carry: string?, home: boolean?, most: number?, via: { Vector3 }?): number
+	local seconds = walkTime(st.at[uid] or st.spots[uid] or to, via, to, most)
+	st.at[uid] = to
+	WorkerEvent:FireAllClients("Do", { plot = index, id = uid, at = now(), to = to, via = via, seconds = seconds, carry = carry, stay = true, home = home })
+	return seconds
 end
 
 ------------------------------------------------------------------------
@@ -255,16 +369,85 @@ end
 
 local JOBS = {}
 
+-- A Farmhand has reached their crop: it comes up now, not when they set off.
+local function reachCrop(player: Player, st, uid: string, key: string)
+	st.trips[uid] = nil
+	local data = DataService.Get(player)
+	if crews[player] ~= st or not data or data.crew.strike or not data.workers[uid] then
+		return
+	end
+	local cropId = data.field[key] and data.field[key].crop
+	local failure, note = FieldService.WorkerHarvest(player, data, key, data.crew.replant)
+	if failure ~= nil then
+		st.budgets[uid] = (st.budgets[uid] or 0) + 1 -- (someone got there first: that wasn't a job done)
+		return
+	end
+	st.worked[uid] = { at = now(), crop = cropId }
+	if note == "NoSeeds" and cropId and not st.told[`seeds{cropId}`] then
+		st.told[`seeds{cropId}`] = true
+		Notice.send(player, `🌱 Out of {Crops.ById[cropId].name} seeds: your Farmhands harvest but can't replant. Barley sells more in town.`, "Error")
+	end
+end
+
+-- Nothing to do for a while: back to their post, with the last crop;
+-- route(from, to) gives the way if they can't walk straight there.
+local function headHome(index: number, st, uid: string, route: ((Vector3, Vector3) -> { Vector3 }?)?)
+	local spot, last = st.spots[uid], st.worked[uid]
+	if spot and last and now() - last.at >= HOME_AFTER then
+		st.worked[uid] = nil
+		goTo(index, st, uid, spot, last.crop, true, nil, route and route(st.at[uid] or spot, spot))
+	end
+end
+
+-- Carries a crate to a truck and back, out through the dock door, quick
+-- enough to be back for the next one. The crate shows on the truck as they
+-- reach it.
+local function carryToTruck(player: Player, data, st, uid: string, speed: number, index: number, truck: number, crop: string)
+	local folder = PlotService.model(index):FindFirstChild("Warehouse")
+	local spot = folder and folder.Docks:FindFirstChild(`LoadSpot{truck}`)
+	local from = st.spots[uid]
+	if not spot or not from then
+		st.trucksChanged = true
+		return
+	end
+	local layout = PlotLayout.WAREHOUSES[WarehouseRules.level(data.warehouse.level).stage]
+	-- (the warehouses: to the middle of the dock's door; the Packing Shed is open
+	-- at the front, with a post in the middle of it to go round)
+	local door = PlotLayout.toWorld(index, Vector3.new(layout.docks[truck] - (if layout.stations then 0 else 4), 0, layout.min.Z + 2))
+	local to = spot.Position - Vector3.new(0, spot.Size.Y / 2, 0) -- (on the dock)
+	local seconds = walk(index, uid, from, to, crop, false, (60 / speed - PAUSE) / 2, { Vector3.new(door.X, from.Y, door.Z) })
+	st.loading[truck] = (st.loading[truck] or 0) + 1
+	task.delay(seconds, function()
+		st.loading[truck] -= 1
+		if crews[player] == st then
+			TruckService.Refresh(player)
+		end
+	end)
+end
+
 function JOBS.Farmhand(player, data, st, entry, speed, index)
+	local uid = entry.uid
+	if st.trips[uid] then
+		charge(st, uid, speed, 1)
+		return true
+	end
 	if not st.ripe then
 		st.ripe = FieldService.RipeTiles(player, data)
+		for _, key in st.trips do -- (not the ones a Farmhand's already on the way to)
+			local at = table.find(st.ripe, key)
+			if at then
+				table.remove(st.ripe, at)
+			end
+		end
 	end
 	if #st.ripe == 0 then
-		rest(st, entry.uid)
+		rest(st, uid)
+		headHome(index, st, uid)
 		return false
 	end
 	if not BarnRules.hasRoom(data, 1) then
-		rest(st, entry.uid)
+		rest(st, uid)
+		headHome(index, st, uid)
 		if not st.told.barnFull then
 			st.told.barnFull = true
 			Notice.send(player, "Barn full: your Farmhands are waiting. Sell or pack some crops.", "Error")
@@ -272,27 +455,26 @@ function JOBS.Farmhand(player, data, st, entry, speed, index)
 		return false
 	end
 	st.told.barnFull = nil
-	local budget = charge(st, entry.uid, speed, 1)
-	while budget >= 1 and #st.ripe > 0 do
-		local key = table.remove(st.ripe, 1)
-		local cropId = data.field[key] and data.field[key].crop
-		local failure, note = FieldService.WorkerHarvest(player, data, key, data.crew.replant)
-		if failure == nil then
-			budget -= 1
-			if note == "NoSeeds" and cropId and not st.told[`seeds{cropId}`] then
-				st.told[`seeds{cropId}`] = true
-				Notice.send(player, `🌱 Out of {Crops.ById[cropId].name} seeds: your Farmhands harvest but can't replant. Barley sells more in town.`, "Error")
-			end
-			walk(index, entry.uid, st.spots[entry.uid] or PlotLayout.tileWorld(index, tonumber(key) :: number), PlotLayout.tileWorld(index, tonumber(key) :: number), BarnRules.parse(key), true)
-		end
+	local budget = charge(st, uid, speed, 1)
+	if budget < 1 then
+		return true -- (still busy over the last crop)
 	end
-	st.budgets[entry.uid] = budget
+	local function tile(key: string): Vector3
+		return PlotLayout.tileWorld(index, tonumber(key) :: number)
+	end
+	local from = st.at[uid] or st.spots[uid] or tile(st.ripe[1])
+	local key = table.remove(st.ripe, WorkerRules.nearest(st.ripe, function(k)
+		return (tile(k) - from).Magnitude
+	end))
+	st.budgets[uid] = budget - 1
+	st.trips[uid] = key
+	task.delay(goTo(index, st, uid, tile(key), nil, nil, 60 / speed - PULL) + PULL, reachCrop, player, st, uid, key)
 	return true
 end
 
 -- The Shed Hand: loads the pickup from the rack when it's home, and packs
 -- full crates from the barn (to the pickup, the rack, or the store).
-function JOBS.ShedHand(player, data, st, entry, speed, _index)
+function JOBS.ShedHand(player, data, st, entry, speed, index)
 	local warehouse = data.warehouse
 	local t = now()
 	local loadable = #warehouse.dock > 0 and TruckRules.cannotLoad(warehouse, t) == nil
@@ -303,11 +485,12 @@ function JOBS.ShedHand(player, data, st, entry, speed, _index)
 		return false
 	end
 	local budget = charge(st, entry.uid, speed, 1)
-	local changed = false
+	local changed, carried = false, nil
 	if budget >= 1 and loadable then
 		budget -= 1
-		TruckRules.load(warehouse, table.remove(warehouse.dock, 1), t)
-		changed = true
+		local crate = table.remove(warehouse.dock, 1)
+		TruckRules.load(warehouse, crate, t)
+		changed, carried = true, crate.crop
 	end
 	if budget >= 1 and canPack and key and cropId then
 		local to, commit = destination(st, data, cropId)
@@ -322,16 +505,22 @@ function JOBS.ShedHand(player, data, st, entry, speed, _index)
 			if crate and to == "Store" then
 				table.insert(data.store.stockroom, crate)
 				StoreService.StockroomChanged(player)
-			elseif crate and TruckRules.load(warehouse, crate, t) ~= nil then
-				table.insert(warehouse.dock, crate)
+			elseif crate then
+				if TruckRules.load(warehouse, crate, t) ~= nil then
+					table.insert(warehouse.dock, crate)
+				else
+					carried = crate.crop
+				end
 			end
 			changed = true
 		end
 	end
 	st.budgets[entry.uid] = budget
 	if changed then
-		st.trucksChanged = true
 		st.holdChanged = true
+	end
+	if carried then
+		carryToTruck(player, data, st, entry.uid, speed, index, 1, carried)
 	end
 	return true
 end
@@ -394,7 +583,7 @@ function JOBS.Packer(player, data, st, entry, speed, _index)
 end
 
 -- Loaders take crates from the Cold Room to the trucks that are home.
-function JOBS.Loader(_player, data, st, entry, speed, index)
+function JOBS.Loader(player, data, st, entry, speed, index)
 	local warehouse = data.warehouse
 	local t = now()
 	local truck = #warehouse.dock > 0 and TruckRules.loadable(warehouse, t)
@@ -407,13 +596,8 @@ function JOBS.Loader(_player, data, st, entry, speed, index)
 		budget -= 1
 		local crate = table.remove(warehouse.dock, 1)
 		TruckRules.load(warehouse, crate, t)
-		st.trucksChanged = true
 		st.holdChanged = true
-		local folder = PlotService.model(index):FindFirstChild("Warehouse")
-		local spot = folder and folder.Docks:FindFirstChild(`LoadSpot{truck}`)
-		if spot and st.spots[entry.uid] then
-			walk(index, entry.uid, st.spots[entry.uid], spot.Position, crate.crop)
-		end
+		carryToTruck(player, data, st, entry.uid, speed, index, truck, crate.crop)
 	end
 	st.budgets[entry.uid] = budget
 	return true
@@ -432,7 +616,7 @@ function JOBS.Driver(player, data, st, entry, _speed, _index, nth)
 		return true -- (on the road)
 	end
 	local bed = warehouse.beds[nth] or {}
-	if #bed < info.truckCrates then
+	if #bed < info.truckCrates or (st.loading[nth] or 0) > 0 then -- (not with the last crate still on its way to it)
 		return false
 	end
 	local price = MarketService.priceAt()
@@ -448,23 +632,55 @@ function JOBS.Driver(player, data, st, entry, _speed, _index, nth)
 	return false
 end
 
--- Stockers fill the emptiest displays from the stockroom.
-function JOBS.Stocker(player, data, st, entry, speed, _index)
-	if #data.store.stockroom == 0 or StoreService.IsDecorating(player) then
-		rest(st, entry.uid)
-		return false
+-- A Stocker has reached the display: what they brought goes on it.
+local function reachDisplay(player: Player, st, uid: string)
+	st.trips[uid] = nil
+	if crews[player] ~= st then
+		return
 	end
-	local budget = charge(st, entry.uid, speed, 1)
-	local patches = math.floor(budget)
-	if patches < 1 then
+	local moved = StoreService.Restock(player, math.floor(st.budgets[uid] or 0)) -- (patches' worth)
+	st.budgets[uid] = (st.budgets[uid] or 0) - moved
+	if moved > 0 then
+		st.worked[uid] = { at = now() }
+	end
+end
+
+-- Stockers take crates from the stockroom to the emptiest displays, along
+-- the aisles, and go back to their spot when there's nothing left to do.
+function JOBS.Stocker(player, data, st, entry, speed, index, nth)
+	local uid = entry.uid
+	if st.trips[uid] then
+		charge(st, uid, speed, STOCK_ROUND)
 		return true
 	end
-	local moved = StoreService.Restock(player, patches) -- (patches' worth)
-	if moved == 0 then
-		rest(st, entry.uid)
+	local function route(from: Vector3, to: Vector3): { Vector3 }?
+		return aisle(index, data, from, to)
+	end
+	if #data.store.stockroom == 0 or StoreService.IsDecorating(player) then
+		rest(st, uid)
+		headHome(index, st, uid, route)
 		return false
 	end
-	st.budgets[entry.uid] = budget - moved
+	local budget = charge(st, uid, speed, STOCK_ROUND)
+	if budget < 1 then
+		return true
+	end
+	local taken = {}
+	for _, id in st.trips do
+		taken[id] = true
+	end
+	local id = ShopRules.nextDisplay(data.store, taken)
+	if not id then
+		rest(st, uid)
+		headHome(index, st, uid, route)
+		return false
+	end
+	local fronts = StoreLayout.fronts(data.store.layout[id])
+	local front = fronts[(nth - 1) % #fronts + 1] -- (not on top of each other)
+	local to = PlotLayout.storeWorld(index, front[1], front[2], PlotLayout.PLOT.store.floor)
+	local via = route(st.at[uid] or st.spots[uid] or to, to)
+	st.trips[uid] = id
+	task.delay(goTo(index, st, uid, to, data.store.stockroom[1].crop, nil, nil, via) + PULL, reachDisplay, player, st, uid)
 	return true
 end
 
@@ -820,7 +1036,7 @@ function actions.Hire(player, data, arg)
 	data.workers[uid] = {
 		type = typeName, level = candidate.level, xp = 0, trait = candidate.trait, name = candidate.name, look = candidate.look, hiredAt = os.time(),
 	}
-	Notice.send(player, `👋 {candidate.name} the {Workers.TYPES[typeName].name} starts now!{if free then " (Your first hire is on the house.)" else ""}`, "Good")
+	Notice.send(player, `👋 {candidate.name} the {Workers.TYPES[typeName].name} starts now!{if free then " (No fee on your first hire: you just pay their wage.)" else ""}`, "Good")
 	Analytics.step(player, data, "FirstHire")
 	GuideService.Record(player, "Hire")
 	showCrew(player)
@@ -1009,7 +1225,7 @@ function WorkerService.Start()
 	end
 
 	PlotService.OnAssigned(function(player, _index, data)
-		crews[player] = { budgets = {}, routeAcc = {}, wageAt = now() + 60, told = {}, spots = {} }
+		crews[player] = { budgets = {}, routeAcc = {}, wageAt = now() + 60, told = {}, spots = {}, at = {}, trips = {}, worked = {}, loading = {} }
 		welcome(player, data)
 		showCrew(player)
 	end)

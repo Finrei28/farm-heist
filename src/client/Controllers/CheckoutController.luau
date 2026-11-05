@@ -1,10 +1,10 @@
 -- Serving at your till (docs/GameDesign.md §4.8): a shopper who reaches a
 -- till you serve at (the Shop Counter, a Register with no Cashier) waits
--- there for you. Step in by the staff door, behind the counter, and the
--- big context stamp becomes SCAN (one press, E or a tap, for each thing in
--- their basket) and then TAKE (their coins); a paper receipt by the stamp
--- ticks each line off. The server checks it all (StoreService's Serve
--- action) and tells the owner what's waiting ("Till" on ShopperEvent).
+-- there for you. Step in by the staff door, behind the counter, and a prompt
+-- comes up on the counter: hold E (or the sign, on a phone) to check them out, and
+-- their coins are yours. A paper receipt by the stamp says what they're
+-- buying. The server checks it all (StoreService's Serve action) and tells
+-- the owner what's waiting ("Till" on ShopperEvent).
 --
 -- While someone waits and you're not behind the till, a 🛎️ bobs over it on
 -- your screen. Everyone near hears the bell ring and the scanner beep, and
@@ -25,7 +25,6 @@ local PlayerState = require(script.Parent.Parent.PlayerState)
 local Reasons = require(script.Parent.Parent.Reasons)
 local Sfx = require(script.Parent.Parent.Sfx)
 local UI = require(script.Parent.Parent.UI)
-local FieldController = require(script.Parent.FieldController)
 
 local C = UI.C
 local make = UI.make
@@ -35,7 +34,9 @@ local StoreAction = Remotes.func("StoreAction")
 local CheckoutController = {}
 
 local REACH = 0.8 -- cells from the spot behind a till (StoreService's SERVE_REACH)
-local tills = {} -- [checkoutId] = { id, lines = { { crop, units, coins } }, scanned }: my tills with a shopper waiting
+local HOLD = 0.8 -- seconds to hold the prompt
+local PROMPT_HEIGHT = 6 -- studs up from the floor: just over the till
+local tills = {} -- [checkoutId] = { id, lines = { { crop, units, coins } } }: my tills with a shopper waiting
 
 ------------------------------------------------------------------------
 -- Where things are
@@ -83,7 +84,7 @@ end
 
 ------------------------------------------------------------------------
 -- The receipt: a strip of till roll by the stamp, a line per thing in the
--- basket, ticked as you scan, the total at the bottom.
+-- basket, the total at the bottom.
 
 local ROLL = Color3.fromRGB(252, 250, 242)
 local receipt = make("Frame", {
@@ -118,7 +119,7 @@ end)
 
 local drawn = ""
 local function drawReceipt(till)
-	local key = `{till.id}|{till.scanned}|{#till.lines}`
+	local key = `{till.id}|{#till.lines}`
 	if key == drawn then
 		return
 	end
@@ -126,16 +127,14 @@ local function drawReceipt(till)
 	UI.clear(rows)
 	for i, line in till.lines do
 		local crop = Crops.ById[line.crop]
-		local done = i <= till.scanned
 		local row = make("Frame", { LayoutOrder = i, Size = UDim2.new(1, 0, 0, 22), BackgroundTransparency = 1, Parent = rows })
-		UI.fit(UI.label({ Size = UDim2.new(1, -62, 1, 0), Font = UI.HAND, TextSize = 19, TextColor3 = if done then C.ink else C.soil,
-			Text = `{if done then "✓" else "·"} {crop and crop.icon or ""} {crop and crop.name or line.crop} ×{line.units}`, Parent = row }), 12)
+		UI.fit(UI.label({ Size = UDim2.new(1, -62, 1, 0), Font = UI.HAND, TextSize = 19, TextColor3 = C.ink,
+			Text = `{crop and crop.icon or ""} {crop and crop.name or line.crop} ×{line.units}`, Parent = row }), 12)
 		UI.label({ AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(1, 0), Size = UDim2.new(0, 60, 1, 0), Font = UI.HAND, TextSize = 19,
-			TextColor3 = if done then C.ink else C.soil, TextXAlignment = Enum.TextXAlignment.Right, Text = if done then Format.number(line.coins) else "", Parent = row })
+			TextColor3 = C.ink, TextXAlignment = Enum.TextXAlignment.Right, Text = Format.number(line.coins), Parent = row })
 	end
-	local all = till.scanned >= #till.lines
-	totalLine.Text = if all then `TOTAL   {Format.number(total(till))} coins` else `Scanned {till.scanned} of {#till.lines}`
-	totalLine.TextColor3 = if all then C.green else C.ink
+	totalLine.Text = `TOTAL   {Format.number(total(till))} coins`
+	totalLine.TextColor3 = C.green
 end
 
 ------------------------------------------------------------------------
@@ -189,27 +188,64 @@ end
 local busy = false
 local function serve()
 	local checkout = behindWhich()
-	local till = checkout and tills[checkout]
-	if busy or not till then
+	if busy or not checkout or not tills[checkout] then
 		return
 	end
 	busy = true
 	local result = StoreAction:InvokeServer("Serve", checkout)
 	busy = false
 	if result.ok and result.result then
-		if result.result.paid then
-			Sfx.play("TillOpen")
-			local at = receipt.AbsolutePosition + Vector2.new(receipt.AbsoluteSize.X / 2, 0) - UI.screen.AbsolutePosition
-			UI.float(`+{Format.number(result.result.paid)}`, UDim2.fromOffset(at.X, at.Y - 10), C.gold)
-		elseif result.result.scanned then
-			till.scanned = math.max(till.scanned, result.result.scanned)
-		end
-	elseif result.reason ~= "Cooldown" then
+		Sfx.play("TillOpen")
+		local at = receipt.AbsolutePosition + Vector2.new(receipt.AbsoluteSize.X / 2, 0) - UI.screen.AbsolutePosition
+		UI.float(`+{Format.number(result.result.paid)}`, UDim2.fromOffset(at.X, at.Y - 10), C.gold)
+	else
 		local text = Reasons(result.reason)
 		if text then
 			UI.toast(text, "Error", 2.5)
 		end
 	end
+end
+
+-- The prompt on the counter you're behind, with a customer waiting to pay: on your screen
+-- only, drawn like every prompt (PromptController).
+local promptSpot: Attachment? = nil
+local promptFor: string? = nil -- "checkoutId|shopperId"
+local function dropPrompt()
+	if promptSpot then
+		promptSpot:Destroy()
+	end
+	promptSpot, promptFor = nil, nil
+end
+
+local function showPrompt(checkout: string, till)
+	local key = `{checkout}|{till.id}`
+	if promptFor == key and promptSpot and promptSpot.Parent then
+		return
+	end
+	dropPrompt()
+	local plot = myPlot()
+	local model = plot and itemModel(plot, checkout)
+	local part = model and (model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart"))
+	local entry = PlayerState.current.store.layout[checkout]
+	if not part or not entry then
+		return
+	end
+	-- (on the counter you're standing at, not over the customer: Roblox hides a
+	-- prompt that's off screen, and behind a counter the customer often is)
+	local glass = model:FindFirstChild("ScanGlass") or part
+	local floor = PlotLayout.storeWorld(plot, entry.x, entry.y, PROMPT_HEIGHT)
+	local over = Vector3.new(glass.Position.X, floor.Y, glass.Position.Z)
+	local spot = make("Attachment", { Name = "CheckoutSpot", Position = part.CFrame:PointToObjectSpace(over), Parent = part })
+	local count = #till.lines
+	local prompt = make("ProximityPrompt", {
+		Name = "CheckoutPrompt", ActionText = "Check out", ObjectText = `🧾 {count} {if count == 1 then "thing" else "things"} · {Format.number(total(till))} coins`,
+		HoldDuration = HOLD, MaxActivationDistance = 16, RequiresLineOfSight = false, Style = Enum.ProximityPromptStyle.Custom, Parent = spot,
+	})
+	prompt.PromptButtonHoldBegan:Connect(function()
+		Sfx.play("Scan", part, 0.97 + math.random() * 0.06)
+	end)
+	prompt.Triggered:Connect(serve)
+	promptSpot, promptFor = spot, key
 end
 
 local function update()
@@ -235,10 +271,10 @@ local function update()
 			board.Position = UDim2.fromScale(0.5, 0.5 + math.sin(os.clock() * 4) * 0.08)
 		end
 	end
-	-- the stamp and the receipt while you're behind a till with a shopper
+	-- the prompt and the receipt while you're behind a till with a shopper
 	local till = here and tills[here]
 	if not till then
-		FieldController.withdraw("Till")
+		dropPrompt()
 		receipt.Visible = false
 		quietFills(false)
 		return
@@ -246,16 +282,7 @@ local function update()
 	quietFills(true)
 	receipt.Visible = true
 	drawReceipt(till)
-	local n = #till.lines
-	if till.scanned < n then
-		local line = till.lines[till.scanned + 1]
-		local crop = Crops.ById[line.crop]
-		FieldController.offer("Till", { priority = 30, text = "SCAN\n ", sub = `{crop and crop.icon or ""} ×{line.units}`, kind = "green",
-			info = `🧾 Scan their basket: {till.scanned + 1} of {n}`, press = serve })
-	else
-		FieldController.offer("Till", { priority = 30, text = "TAKE\n ", sub = `{Format.number(total(till))} coins`, kind = "gold",
-			info = "🧾 All scanned: take their coins", press = serve })
-	end
+	showPrompt(here, till)
 end
 
 ------------------------------------------------------------------------
@@ -306,13 +333,7 @@ function CheckoutController.Start()
 			if event.done then
 				tills[event.checkout] = nil
 			else
-				local till = tills[event.checkout]
-				if till and till.id == event.id then
-					till.lines = event.lines
-					till.scanned = math.max(till.scanned, event.scanned)
-				else
-					tills[event.checkout] = { id = event.id, lines = event.lines, scanned = event.scanned }
-				end
+				tills[event.checkout] = { id = event.id, lines = event.lines }
 			end
 		elseif kind == "Bell" or kind == "Scan" or kind == "Paid" then
 			local model = event.checkout and itemModel(event.plot, event.checkout)
@@ -320,7 +341,7 @@ function CheckoutController.Start()
 				return
 			end
 			if kind == "Bell" then
-				Sfx.play("ShopBell", model:FindFirstChild("Bell") or model.PrimaryPart)
+				Sfx.play("CheckoutBell", model:FindFirstChild("Bell") or model.PrimaryPart)
 			elseif kind == "Scan" then
 				Sfx.play("Scan", model:FindFirstChild("ScanGlass") or model.PrimaryPart, 0.97 + math.random() * 0.06)
 				flash(model)

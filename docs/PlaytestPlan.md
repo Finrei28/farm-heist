@@ -138,7 +138,7 @@ If A3 is off by more than 0.7 s, or A4 fails, fix `PlotLayout` before week 1 and
 | D2 | Close the window with loot while the owner is within 30 studs | "Chased": fine ×1.5, loot back |
 | D3 | Close the window with loot, owner far away | loot back, no fine |
 | D4 | Esc → Reset while a Suspect / knocked out / carrying | reset is greyed out |
-| D5 | Home / Town / Visit while a Suspect / carrying | blocked; a channel already started stops if you start a steal |
+| D5 | Home / Town / Visit while a Suspect / carrying | blocked |
 | D6 | Teleport yourself (client command bar: move your character 100 studs) | sent back; the steal or deposit fails |
 | D7 | Bonk an innocent visitor again and again | 5 s down, then 6 s immune; the Leave farm button works; no arrest prompt |
 | D8 | Stop the server (Studio Stop) while someone is knocked out | nobody fined |

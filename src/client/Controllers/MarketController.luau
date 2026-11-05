@@ -361,7 +361,7 @@ end
 -- The ticker under the purse
 
 local tickerBoard, tickerLabel = UI.chalkboard({ name = "Ticker", size = UDim2.fromOffset(270, 26), anchor = Vector2.new(0.5, 0),
-	position = UDim2.new(0.5, -16, 0, 116), textSize = 18, parent = UI.screen })
+	position = UDim2.new(0.5, -16, 0, 124), textSize = 18, parent = UI.screen })
 local tickerIndex = 0
 
 local function updateTicker()

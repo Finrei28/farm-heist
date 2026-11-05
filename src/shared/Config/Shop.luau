@@ -40,8 +40,7 @@ return {
 	BROWSE = 2.5, -- seconds at each display
 	QUEUE_LENGTH = 4, -- shoppers waiting at a checkout, besides the one paying
 	PATIENCE = 20, -- seconds a shopper waits in a queue before putting their basket back
-	TILL_PATIENCE = 30, -- seconds a shopper waits at a till nobody's serving (once you start, they wait for you)
-	SCAN_GAP = 0.15, -- seconds between two presses at the till
+	TILL_PATIENCE = 30, -- seconds a shopper waits at a till nobody's serving 
 
 	-- What shoppers say in their bubble (StoreService picks one at random;
 	-- the clients colour the bubble by its mood: green good, red bad). When

@@ -33,6 +33,7 @@ local Workers = require(Shared.Config.Workers)
 
 local PlayerState = require(script.Parent.Parent.PlayerState)
 local Reasons = require(script.Parent.Parent.Reasons)
+local Bubbles = require(script.Parent.Parent.Bubbles)
 local UI = require(script.Parent.Parent.UI)
 local HudController = require(script.Parent.HudController)
 local PoseController = require(script.Parent.PoseController)
@@ -204,6 +205,10 @@ end
 
 local lastSnipe = 0
 local flashUntil = 0
+local TICK_FROM = 10 -- seconds left on a lot when the clock starts ticking
+local FAST_TICK = 3 -- ... and the last few, higher
+local lastTick = nil -- the second last ticked
+local leadingOn = nil -- "auction:lot" you're the top bid on
 
 local function updateCard()
 	local lot, k = current()
@@ -245,6 +250,11 @@ local function updateCard()
 	local t = now()
 	local left = math.max(0, (board:GetAttribute("EndsAt") or t) - t)
 	clockLabel.Text = tostring(math.ceil(left))
+	local second = math.ceil(left)
+	if left > 0 and left <= TICK_FROM and second ~= lastTick then
+		Sfx.play("AuctionTick", nil, if second <= FAST_TICK then 1.3 else 1)
+	end
+	lastTick = second
 	local snipe = board:GetAttribute("Snipe") or 0
 	if snipe ~= lastSnipe then
 		lastSnipe = snipe
@@ -257,6 +267,13 @@ local function updateCard()
 	local top = board:GetAttribute("Bid") or 0
 	local leaderId = board:GetAttribute("LeaderId") or 0
 	local leading = top > 0 and leaderId == player.UserId
+	local thisLot = `{board:GetAttribute("Index")}:{k}`
+	if leading then
+		leadingOn = thisLot
+	elseif leadingOn == thisLot and top > 0 then
+		leadingOn = nil
+		Sfx.play("Outbid")
+	end
 	bidLabel.Text = if top > 0 then `Top bid: {UI.formatNumber(top)}  ·  {if leading then "you!" else board:GetAttribute("Leader")}`
 		else `Opening bid: {UI.formatNumber(board:GetAttribute("Opening") or 0)}  ·  no bids yet`
 	local why = blocked(lot)
@@ -414,7 +431,7 @@ local function updateHall(t: number)
 	end
 	-- Goldie's call (AuctionService's: her patter, by paddle number)
 	local call = board:GetAttribute("Call") or ""
-	hall.bubble.Enabled = call ~= ""
+	Bubbles.set(hall.bubble, call ~= "")
 	hall.bubbleText.Text = call
 	-- the lot bobs over its pedestal
 	hall.over.WorldCFrame = hall.overAt + Vector3.new(0, if UI.calm then 0 else math.sin(os.clock() * 2) * 0.25, 0)
@@ -471,9 +488,10 @@ local function showCall(character: Model, amount: number)
 	-- and a bubble over the head hid it. StudsOffsetWorldSpace is in the
 	-- head's own frame, so it stays on that side whichever way they face.)
 	local gui = make("BillboardGui", {
-		Name = "BidCall", Size = UDim2.fromScale(4.6, 1.7), StudsOffsetWorldSpace = Vector3.new(-3.1, 1.6, 0), MaxDistance = 90, AlwaysOnTop = false,
+		Name = "BidCall", Size = UDim2.fromScale(4.6, 1.7), StudsOffsetWorldSpace = Vector3.new(-3.1, 1.6, 0), MaxDistance = 90, Enabled = false,
 		Adornee = head, Parent = head,
 	})
+	Bubbles.set(gui, true)
 	local group = make("CanvasGroup", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Parent = gui })
 	local scale = make("UIScale", { Scale = 0.2, Parent = group })
 	make("Frame", { -- (the bubble's tail, pointing down at the bidder)
@@ -574,7 +592,7 @@ function AuctionController.Start()
 		UI.toast(`🔔 The auction's on! {#icons} lots: {table.concat(icons, " ")}{starText}`, "Announce", 8, if inHall() then nil else {
 			text = "TOWN 🏘️",
 			press = function()
-				HudController.travel("Town", "Heading to town... (stand still)")
+				HudController.travel("Town")
 			end,
 		})
 	end)
@@ -585,6 +603,10 @@ function AuctionController.Start()
 				emitter:Emit(18)
 			end
 		end
+	end)
+	-- the lot is yours: a fanfare, just after the gavel
+	player:GetAttributeChangedSignal("AuctionWon"):Connect(function()
+		task.delay(0.3, Sfx.play, "BidWon")
 	end)
 	-- Goldie's gavel comes down ("Going once", "Going twice", SOLD), and she
 	-- nods with each new call
@@ -628,7 +650,7 @@ function AuctionController.Start()
 				UI.toast("🔨 The auction starts in 1 minute at the Auction House: rare seeds, rare workers, defences!", "Announce", 8, {
 					text = "TOWN 🏘️",
 					press = function()
-						HudController.travel("Town", "Heading to town... (stand still)")
+						HudController.travel("Town")
 					end,
 				})
 			end

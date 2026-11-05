@@ -54,7 +54,7 @@ return {
 	-- Hiring: the board (the Hiring Hall, the Workers window) has BOARD_SIZE
 	-- candidates per type, new every BOARD_SECONDS; each a level from
 	-- HIRE_LEVELS (weights) and a trait. The fee is HIRE_FEE minutes of their
-	-- wage; the first hire is free.
+	-- wage; the first hire has no fee (only the wage).
 	BOARD_SIZE = 3,
 	BOARD_SECONDS = 600,
 	HIRE_LEVELS = { 0.6, 0.3, 0.1 },

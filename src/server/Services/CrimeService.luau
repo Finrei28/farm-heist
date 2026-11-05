@@ -519,7 +519,6 @@ local function knockOut(owner: Player, target: Player, plot: number)
 	state.koToken += 1
 	state.ko = { plot = plot, token = state.koToken, loot = loot, charge = LootRules.summary(taken), by = owner.UserId, suspect = suspect }
 	dropLoot(target, state, plot, owner) -- (on the ground, for anyone to pick up)
-	TravelService.Cancel(target)
 	state.ko.facing = knockDown(target)
 	setKnockedOut(target, state.ko, visit)
 	local root = rootOf(target)
@@ -871,7 +870,6 @@ function actions.Steal(player, _data, arg)
 		part:SetAttribute("StealEnds", t + seconds)
 		CollectionService:AddTag(part, "Stealing")
 	end
-	TravelService.Cancel(player) -- (a Home channel under way stops: §4.11)
 	alarm(owner, player, state, { crop = cropId, plot = plot, tile = tile, ends = t + seconds })
 	DefenceService.OnSteal(owner, player, plot, tile) -- (the guard dog)
 	Analytics.event(player, "StealStarted", Rarities.ById[rarity].order)
@@ -977,7 +975,6 @@ function actions.PickUpStart(player, _data, arg)
 	if role == "Grab" then
 		CrimeRules.markSuspect(visitOf(state, drop.plot), t)
 		player:SetAttribute("SuspectOf", drop.plot)
-		TravelService.Cancel(player)
 		local farmOwner = PlotService.ownerOf(drop.plot)
 		if farmOwner then
 			alarm(farmOwner, player, state, { crop = drop.items[1].crop, grab = true, plot = drop.plot, ends = t + Crime.GRAB_HOLD, force = true })
@@ -1184,7 +1181,6 @@ function actions.Climb(player, _data, _arg)
 	if not root then
 		return "NoCharacter"
 	end
-	TravelService.Cancel(player)
 	local token = (state.climbToken or 0) + 1
 	state.climbToken = token
 	state.climb = { plot = plot, direction = direction, x = x, token = token, path = path }

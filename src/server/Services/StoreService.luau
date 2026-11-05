@@ -12,8 +12,8 @@
 -- shortest checkout queue; they pay when served, or put their basket back
 -- after Shop.PATIENCE seconds. A till (the Shop Counter, a Register) is a
 -- job: a shopper at it waits for you (the bell rings, and you're told if
--- you're out), and behind it you scan each thing in their basket and take
--- their coins (the Serve action; client CheckoutController), until a
+-- you're out), and behind it you hold the prompt over them to check them
+-- out (the Serve action; client CheckoutController), until a
 -- Cashier works it for you (Store Level 3 on); a Self-checkout serves
 -- itself. The coins come in when they pay. A Greeter brings more shoppers; Stockers fill the displays
 -- (WorkerService, through StoreService.crew and StoreService.Restock).
@@ -542,7 +542,7 @@ local function tellTill(st, checkout: string, shopper)
 	for _, line in shopper.basket do
 		table.insert(lines, { crop = line.crop, units = line.units, coins = line.coins })
 	end
-	ShopperEvent:FireClient(owner, "Till", { plot = st.index, checkout = checkout, id = shopper.id, lines = lines, scanned = shopper.scanned or 0 })
+	ShopperEvent:FireClient(owner, "Till", { plot = st.index, checkout = checkout, id = shopper.id, lines = lines or 0 })
 end
 
 local function pay(st, shopper, t: number)
@@ -666,7 +666,7 @@ local function tickShoppers(player: Player, st, t: number)
 	-- checkouts
 	for checkout, queue in st.queues do
 		local head = queue[1]
-		local waiting = head and head.spot == 1 and (head.stage == "queued" or (head.stage == "atTill" and (head.scanned or 0) == 0))
+		local waiting = head and head.spot == 1 and (head.stage == "queued" or head.stage == "atTill")
 		if waiting then
 			local mode, seconds, cashier = serveMode(st, store, checkout)
 			if mode then -- (it serves itself, or a Cashier does: even one who just started)
@@ -681,7 +681,6 @@ local function tickShoppers(player: Player, st, t: number)
 				-- a till you serve at: they wait for you there, and ring the bell
 				head.stage = "atTill"
 				head.tillAt = t
-				head.scanned = 0
 				tellTill(st, checkout, head)
 				ShopperEvent:FireAllClients("Bell", { plot = st.index, checkout = checkout })
 				if not behindTill(st, store, checkout) and (player:GetAttribute("InStore") or 0) ~= st.index
@@ -703,7 +702,7 @@ local function tickShoppers(player: Player, st, t: number)
 			local shopper = queue[i]
 			if shopper.stage == "queued" and t - shopper.joinedAt > Shop.PATIENCE then
 				giveUp(st, shopper, t, if unserved then "nobody" else "tooSlow")
-			elseif shopper.stage == "atTill" and t - (shopper.lastScan or shopper.tillAt) > Shop.TILL_PATIENCE then -- (also if you wander off halfway)
+			elseif shopper.stage == "atTill" and t - shopper.tillAt > Shop.TILL_PATIENCE then -- (also if you wander off halfway)
 				giveUp(st, shopper, t, if unserved then "nobody" else "tooSlow")
 			end
 		end
@@ -941,9 +940,9 @@ function actions.Stock(player, data, arg)
 	return nil, { moved = moved }
 end
 
--- "checkoutId": serving at your till (§4.8). Behind it, each press scans
--- the next thing in the waiting shopper's basket; once it's all scanned, the
--- next takes their coins. Returns { scanned, of } or { paid }.
+-- "checkoutId": serving at your till (§4.8). Behind it, holding the prompt
+-- over the waiting shopper checks them out: one beep, then their coins.
+-- Returns { paid }.
 function actions.Serve(player, data, checkout)
 	local st = stores[player]
 	local queue = st and checkout and st.queues[checkout]
@@ -955,20 +954,11 @@ function actions.Serve(player, data, checkout)
 		return "NotAtTill"
 	end
 	local t = now()
-	if t - (head.lastScan or -math.huge) < Shop.SCAN_GAP then
-		return "Cooldown"
-	end
-	head.lastScan = t
-	if head.scanned < #head.basket then
-		head.scanned += 1
-		tellTill(st, checkout, head)
-		ShopperEvent:FireAllClients("Scan", { plot = st.index, checkout = checkout, id = head.id, crop = head.basket[head.scanned].crop })
-		return nil, { scanned = head.scanned, of = #head.basket }
-	end
 	local coins = 0
 	for _, line in head.basket do
 		coins += line.coins
 	end
+	ShopperEvent:FireAllClients("Scan", { plot = st.index, checkout = checkout, id = head.id })
 	tellTill(st, checkout, nil)
 	pay(st, head, t)
 	GuideService.Record(player, "Serve")

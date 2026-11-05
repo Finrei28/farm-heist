@@ -382,6 +382,30 @@ def gavel():
     return out
 
 
+def horn(freq, seconds, decay, cutoff=2400.0):
+    """A soft brass note."""
+    t = t_axis(seconds)
+    saw = sum(np.sin(2 * math.pi * freq * k * t) / k for k in range(1, 8))
+    return lowpass(saw, cutoff) * env(seconds, 0.015, decay, 0.2, 0.12)
+
+
+def auction_tick():
+    """The last ten seconds of a lot: a dry wooden tick (the game pitches it
+    up for the last three)."""
+    out = silence(0.16)
+    place(out, knock(1150, 0.12, 0.7), 0.0)
+    return out
+
+
+def outbid():
+    """Someone's topped your bid: two falling notes, a comic wah-wah."""
+    out = silence(0.9)
+    place(out, horn(note("E4"), 0.3, 0.2, 1500) * 0.6, 0.0)
+    fall = sweep(note("C4"), note("A3"), 0.55, 1.6)
+    place(out, lowpass(fall + 0.5 * np.sign(fall), 1300) * env(0.55, 0.02, 0.3, 0.1, 0.15) * 0.6, 0.28)
+    return out
+
+
 # ---------------------------------------------------------------------------
 # Ambience and music (loops)
 
@@ -517,6 +541,8 @@ SOUNDS = {
     "Rustle": (rustle, False),
     "AlarmBell": (alarm_bell, False),
     "Gavel": (gavel, False),
+    "AuctionTick": (auction_tick, False),
+    "Outbid": (outbid, False),
     "Rain": (rain, True),
     "Birds": (birds, True),
     "Crickets": (crickets, True),

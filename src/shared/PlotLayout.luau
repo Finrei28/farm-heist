@@ -147,6 +147,17 @@ end
 function PlotLayout.loadLocal(across: number): Vector3
 	return Vector3.new(across, 0, PlotLayout.PLOT.dock.z + 1)
 end
+-- Where the nth worker stands on strike: on the lawn between the farmhouse
+-- door (your spawn) and the field, filling out from the middle, facing the
+-- door so you read their banners as you walk out.
+local PICKET_ACROSS = { -12, -8, -16, -4, -20, 0 }
+local PICKET_DEPTH = { 118, 122.5, 113.5, 127, 109 }
+function PlotLayout.picketLocal(n: number): Vector3
+	local column = (n - 1) % #PICKET_ACROSS + 1
+	local row = ((n - 1) // #PICKET_ACROSS) % #PICKET_DEPTH + 1
+	return Vector3.new(PICKET_ACROSS[column], 0.2, PICKET_DEPTH[row])
+end
+
 function PlotLayout.rackLocal(): Vector3
 	return Vector3.new(PlotLayout.WAREHOUSES[1].docks[1] - 8, 0, 44.5)
 end

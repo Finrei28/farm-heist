@@ -116,15 +116,15 @@ All eleven were made on 2026-11-05, and their ids are in those files.
 
 Check after: buy one of each in a published test server (each item's price is spent on your account; the purchase comes back as a receipt in the game's Output), that a pass shows as Owned after a rejoin, and that Monetization > Shop has the passes in sensible categories and the products Not Listed.
 
-## Sounds (`tools/sound_art/generate.py` → `art/sounds/`)
+## Sounds (`tools/sound_art/` → `art/sounds/`)
 
-Upload each `.wav` (Studio: Window > Asset Manager > Import, or Creator Dashboard > Development Items > Audio), then paste its id as `"rbxassetid://..."` next to the same name in `src/shared/Config/Sounds.luau`. They're silent until then.
+Upload each `.wav` as the community (Studio: Assets > Import, or Creator Dashboard > Development Items > Audio), then paste its id as `"rbxassetid://..."` next to the same name in `src/shared/Config/Sounds.luau`. They're silent until then.
 
-Error · Plant · Water · Harvest · CashRegister · Scan · ShopBell · LevelUp · Tape · TruckHorn · Siren · Bonk · Whistle · Rustle · AlarmBell · Gavel · Rain · Birds · Crickets · FarmTheme
+**Uploaded 2026-11-05, ids in the config:** from `art/sounds/stock/` (`stock.py`, cut from downloaded effects the user picked; kept out of git, as this repository is public: run it again to make them from the downloads): Bonk · CashRegister (also `TillOpen`) · Harvest · Plant · LevelUp · ShopBell · CheckoutBell · Siren · DogAlert · Gavel · BidWon (the cheer: the applause and the yay the user picked, mixed). From `art/sounds/` (`generate.py`, our own): AuctionTick · Outbid.
 
-(`TillOpen` uses the CashRegister file: paste CashRegister's id into both.)
+**Still to upload**, from `art/sounds/` (`generate.py`, our own):
 
-Still to pick from the Creator Store (Toolbox > Audio, one Roblox uploaded so anyone may use it): **Bark**, the guard dog.
+Error · Water · Scan · Tape · TruckHorn · Whistle · Rustle · AlarmBell · Rain · Birds · Crickets · FarmTheme
 
 ## Before launch (PlaytestPlan Stage F)
 

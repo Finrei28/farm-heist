@@ -621,7 +621,7 @@ local nearTitle = UI.label({ Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.
 	TextColor3 = Color3.fromRGB(176, 104, 16), TextXAlignment = Enum.TextXAlignment.Center, Text = "", LayoutOrder = 1, ZIndex = 36, Parent = nearCard })
 local nearLine = UI.label({ Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, TextWrapped = true, Font = UI.HAND, TextSize = 19,
 	TextXAlignment = Enum.TextXAlignment.Center, Text = "", LayoutOrder = 2, ZIndex = 36, Parent = nearCard })
-local nearHome, nearHomeButton = UI.button({ text = "🏠 Go home (3 s)", kind = "blue", size = UDim2.fromOffset(190, 40), order = 3, zIndex = 36, parent = nearCard })
+local nearHome, nearHomeButton = UI.button({ text = "🏠 Go home", kind = "blue", size = UDim2.fromOffset(190, 40), order = 3, zIndex = 36, parent = nearCard })
 UI.onLayout(function()
 	nearCard.Position = UDim2.new(0.5, 0, 0, if UI.compact then 108 else 124)
 	nearCard.Size = UDim2.fromOffset(math.min(380, UI.screen.AbsoluteSize.X - 300), 0)
@@ -635,7 +635,6 @@ nearHomeButton.Activated:Connect(function()
 		end
 	else
 		nearHome.Visible = false
-		nearLine.Text = "Heading home... stand still!"
 	end
 end)
 

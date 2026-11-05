@@ -15,7 +15,7 @@
 -- The game's own teleports (Home, Town, Visit, the police porch, respawns)
 -- happen on the server through MovementService.Teleport (or after
 -- MovementService.Allow), so they never count as cheating. The Travel
--- buttons' rules (3 s channel, cooldowns) are in shared/TravelRules.
+-- buttons' rules are in shared/TravelRules.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")

@@ -19,7 +19,6 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local PlotLayout = require(Shared.PlotLayout)
 local ProgressionRules = require(Shared.ProgressionRules)
 local Remotes = require(Shared.Remotes)
-local TravelRules = require(Shared.TravelRules)
 
 local PlayerState = require(script.Parent.Parent.PlayerState)
 local Reasons = require(script.Parent.Parent.Reasons)
@@ -41,7 +40,7 @@ local topLeft = make("Frame", {
 	Name = "Purse",
 	AnchorPoint = Vector2.new(0.5, 0),
 	Position = UDim2.new(0.5, -16, 0, 10),
-	Size = UDim2.fromOffset(224, 110),
+	Size = UDim2.fromOffset(224, 118),
 	BackgroundTransparency = 1,
 	Parent = UI.screen,
 })
@@ -95,8 +94,15 @@ local rail = make("Frame", {
 }, { UI.corner(5), UI.stroke(UI.SEAM, 2) })
 local railFill = make("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = C.green, Parent = rail }, { UI.corner(5) })
 
+-- Under the rosette's ribbons, in the middle of the purse; a long name slides
+-- right so the sky clock's tag on its left never covers its start.
+local CHIP_Y, CHIP_MIDDLE, CHIP_LEFT = 78, 95, 2
 local chip, chipLabel = UI.tag({ name = "Location", text = "Cloverdale", autoWidth = true, size = UDim2.fromOffset(0, 30),
-	anchor = Vector2.new(0.5, 0), position = UDim2.new(0, 95, 0, 70), parent = topLeft })
+	anchor = Vector2.new(0.5, 0), position = UDim2.new(0, CHIP_MIDDLE, 0, CHIP_Y), parent = topLeft })
+chip:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+	local scale = math.max(topLeft.AbsoluteSize.X / topLeft.Size.X.Offset, 0.01)
+	chip.Position = UDim2.new(0, math.max(CHIP_MIDDLE, CHIP_LEFT + chip.AbsoluteSize.X / scale / 2), 0, CHIP_Y)
+end)
 
 local function updateState(state)
 	coinsLabel.Text = UI.formatShort(state.coins)
@@ -296,26 +302,8 @@ local function signpost(text: string, left: boolean)
 	return holder, board, label
 end
 
-local channelBar = make("Frame", {
-	Name = "Channel",
-	AnchorPoint = Vector2.new(0.5, 1),
-	Size = UDim2.fromOffset(250, 30),
-	BackgroundColor3 = C.cream,
-	Visible = false,
-	Parent = UI.screen,
-}, { UI.corner(4), UI.stroke(UI.SEAM, 2) })
-local channelFill = make("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = C.sky, Parent = channelBar }, { UI.corner(4) })
-local channelLabel = UI.label({
-	Size = UDim2.fromScale(1, 1), Font = UI.HAND, TextSize = 21, TextXAlignment = Enum.TextXAlignment.Center,
-	Text = "", ZIndex = 2, Parent = channelBar,
-})
-UI.onLayout(function()
-	channelBar.Position = UDim2.new(0.5, 0, 1, -(HudController.HOTBAR_HEIGHT + 68))
-end)
-
 local TravelAction = Remotes.func("TravelAction")
 local signs = {}
-local channelToken = 0
 
 -- on arriving, turn the camera the way you now face (the town's spawn faces
 -- the Exchange's board; Roblox's camera would keep its old angle)
@@ -327,7 +315,7 @@ local function faceArrival()
 	local started, last = os.clock(), root.Position
 	local connection
 	connection = RunService.Heartbeat:Connect(function()
-		if os.clock() - started > TravelRules.CHANNEL + 3 or not root.Parent then
+		if os.clock() - started > 3 or not root.Parent then
 			connection:Disconnect()
 			return
 		end
@@ -343,39 +331,27 @@ local function faceArrival()
 	end)
 end
 
-local function travel(kind: string, label: string)
+local function travel(kind: string)
+	faceArrival()
 	local result = TravelAction:InvokeServer(kind)
 	if not result.ok then
 		local text = Reasons(result.reason)
 		if text then
 			UI.toast(text, "Error")
 		end
-		return
 	end
-	faceArrival()
-	channelToken += 1
-	local token = channelToken
-	channelBar.Visible = true
-	channelLabel.Text = label
-	channelFill.Size = UDim2.fromScale(0, 1)
-	TweenService:Create(channelFill, TweenInfo.new(TravelRules.CHANNEL, Enum.EasingStyle.Linear), { Size = UDim2.fromScale(1, 1) }):Play()
-	task.delay(TravelRules.CHANNEL + 0.3, function()
-		if channelToken == token then
-			channelBar.Visible = false
-		end
-	end)
 end
 
 -- (other screens send you too: the auction's note has a Town button)
 HudController.travel = travel
 
-for _, entry in { { "Home", "🏠 HOME", "Heading home... (stand still)", true }, { "Town", "TOWN 🏘️", "Heading to town... (stand still)", false } } do
+for _, entry in { { "Home", "🏠 HOME", true }, { "Town", "TOWN 🏘️", false } } do
 	local kind = entry[1]
-	local holder, board, label = signpost(entry[2], entry[4])
+	local holder, board, label = signpost(entry[2], entry[3])
 	holder.Name = kind
 	signs[kind] = { label = label, text = entry[2] }
 	board.Activated:Connect(function()
-		travel(kind, entry[3])
+		travel(kind)
 	end)
 end
 
@@ -557,18 +533,6 @@ function HudController.Start()
 			return -- (Quiet mode: news for everyone isn't shown; Settings)
 		else
 			UI.toast(notice.text, notice.kind)
-		end
-	end)
-	-- Walking off cancels the travel channel (the server would anyway).
-	RunService.Heartbeat:Connect(function()
-		if channelBar.Visible then
-			local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-			if humanoid and humanoid.MoveDirection.Magnitude > 0.1 then
-				channelToken += 1
-				channelBar.Visible = false
-				task.spawn(TravelAction.InvokeServer, TravelAction, "Cancel")
-				UI.toast("Travel cancelled: you moved.")
-			end
 		end
 	end)
 end

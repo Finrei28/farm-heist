@@ -74,6 +74,11 @@ end
 
 -- "6 carrots", "1 pumpkin", "4 punnets of strawberries" (lower case, for
 -- sentences and tags); with a mutation, "6 Wet carrots".
+-- What `n` seeds of a crop are called: "Carrot seeds", "Bell Pepper seed".
+function Crops.seeds(cropId: string, n: number): string
+	return `{Crops.ById[cropId].name} {if n == 1 then "seed" else "seeds"}`
+end
+
 function Crops.count(cropId: string, n: number, mutation: string?): string
 	local entry = Crops.ById[cropId]
 	local before = if mutation then `{n} {mutation} ` else `{n} `

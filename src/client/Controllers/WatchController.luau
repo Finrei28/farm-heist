@@ -47,7 +47,7 @@ local function rootOf(who: Player?): BasePart?
 	return if root and root:IsA("BasePart") then root else nil
 end
 
--- A word popping up over a spot in the world (WOOF!, DING DING!).
+-- A word popping up over a spot in the world (DING DING!).
 local function popText(at: Vector3, text: string, color: Color3)
 	local anchor = UI.make("Part", {
 		Anchored = true, CanCollide = false, CanQuery = false, CanTouch = false, Transparency = 1, Size = Vector3.one, CFrame = CFrame.new(at),
@@ -70,6 +70,38 @@ end
 
 ------------------------------------------------------------------------
 -- The guard dog
+
+-- Its alert: a gold ! popping up over its head, going where the dog goes.
+-- (Gold, not the red ! that marks a Suspect: the dog's warning you, it isn't one.)
+local ALERT_SIZE = 52
+local ALERT_SPOT = CFrame.new(0, 3, -1.2) -- from its feet: over its head (it faces −Z)
+local function alertMark(dog: Model, state)
+	if state.mark then
+		state.mark:Destroy()
+	end
+	local body = dog.PrimaryPart or dog:FindFirstChildWhichIsA("BasePart", true)
+	if not body then
+		return
+	end
+	local spot = UI.make("Attachment", { Name = "DogAlert", Position = body.CFrame:PointToObjectSpace((state.pivot * ALERT_SPOT).Position), Parent = body })
+	local gui = UI.make("BillboardGui", {
+		Adornee = spot, Size = UDim2.fromOffset(ALERT_SIZE, ALERT_SIZE), MaxDistance = 200, LightInfluence = 0, Parent = spot,
+	})
+	local disc = UI.make("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.3, 0.3), BackgroundColor3 = C.gold, Parent = gui,
+	}, { UI.make("UICorner", { CornerRadius = UDim.new(0.5, 0) }), UI.stroke(C.cream, 3) })
+	UI.make("TextLabel", {
+		Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Font = UI.HEAD, TextScaled = true, Text = "!", TextColor3 = C.soilDark, Parent = disc,
+	})
+	state.mark = spot
+	TweenService:Create(disc, TweenInfo.new(0.2, Enum.EasingStyle.Back), { Size = UDim2.fromScale(0.92, 0.92) }):Play()
+	task.delay(1.1, function()
+		if state.mark == spot then
+			state.mark = nil
+		end
+		spot:Destroy()
+	end)
+end
 
 local dogs = {} -- [Model] = { home, pivot, ground, phase ("rest" · "run" · "hold" · "home"), reachedAt, chaseAt, lastBark, step }
 
@@ -159,7 +191,7 @@ local function updateDog(dog: Model, state, dt: number)
 			end
 			if t - state.lastBark > 0.9 then
 				state.lastBark = t
-				popText(pos + Vector3.new(0, 3.2, 0), "WOOF!", C.cream)
+				alertMark(dog, state)
 			end
 			if not goal then
 				-- at their heels, jumping and barking
@@ -349,8 +381,8 @@ function WatchController.Start()
 			for dog, state in dogs do
 				local model = plotModel(info.plot)
 				if model and dog:IsDescendantOf(model) then
-					popText(state.pivot.Position + Vector3.new(0, 3, 0), "WOOF!", C.cream)
-					Sfx.at("Bark", state.pivot.Position)
+					alertMark(dog, state)
+					Sfx.at("DogAlert", state.pivot.Position)
 				end
 			end
 		end

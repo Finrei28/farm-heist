@@ -19,6 +19,19 @@ local function climb(level: number): number
 	return (math.clamp(level, 1, Workers.MAX_LEVEL) - 1) / (Workers.MAX_LEVEL - 1)
 end
 
+-- Which of `keys` is closest: the index of the one `distanceTo` says is
+-- nearest (a Farmhand's next crop). The first of any tied.
+function WorkerRules.nearest(keys: { string }, distanceTo: (string) -> number): number
+	local best, bestDistance = 1, math.huge
+	for i, key in keys do
+		local distance = distanceTo(key)
+		if distance < bestDistance then
+			best, bestDistance = i, distance
+		end
+	end
+	return best
+end
+
 -- Share of the job's full speed (40% at Level 1, 100% at Level 10).
 function WorkerRules.efficiency(level: number): number
 	return Workers.EFFICIENCY_MIN + (1 - Workers.EFFICIENCY_MIN) * climb(level)

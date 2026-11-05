@@ -15,7 +15,7 @@ return {
 		{ id = "Dispatch", text = "Send your pickup to the City", hint = "Load the crate on the truck and pull the lever.", where = "lever" },
 		{ id = "Seeds", text = "Buy seeds from Barley in town", hint = "Press TOWN, then talk to Barley at the seed rack. HOME brings you back.", where = "barley" },
 		{ id = "Store", text = "Stock your store", hint = "Pack a crate for 🏪 Store, then press Stock at a display and pick your crop.", where = "display" },
-		{ id = "Serve", text = "Serve a shopper at your counter", hint = "Step in by the staff door, behind the counter: press Scan for each thing, then take the coins.", where = "till" },
+		{ id = "Serve", text = "Serve a shopper at your counter", hint = "Step in by the staff door, behind the counter, and hold E on the prompt on the counter to check them out.", where = "till" },
 		{ id = "Hire", text = "Hire your first worker", hint = "Patty's job board at the Hiring Hall, in town. The first one's free!", where = "jobboard" },
 	},
 }

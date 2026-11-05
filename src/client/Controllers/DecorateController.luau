@@ -3,13 +3,18 @@
 -- along the bottom (Displays · Checkouts · Decor · Wall · My items), and the
 -- layout as a draft you change freely: tap a card, then a cell; the item
 -- shows green where it fits and red where it doesn't, with why
--- (shared/StoreLayout, the same check the server makes). Turn (or R) turns
--- it, ✓ Place (or a second tap, or a click) places it. Pinch or the mouse
--- wheel zooms in; drag (or WASD) moves the view. Tap a placed item to move,
--- turn, put away (it stays yours) or sell it back for half. DONE sends the
+-- (shared/StoreLayout, the same check the server makes). Turn turns it,
+-- ✓ Place (or a second tap, or a click) places it. Pinch or the mouse wheel
+-- zooms in; drag (or WASD) moves the view. Tap a placed item to move, turn,
+-- put away (it stays yours) or sell it back for half; a double click moves
+-- it at once. On a keyboard each button shows its key: E moves (the item
+-- you've picked, or the one under the mouse) and places, R turns, F puts
+-- away, G sells, Q cancels. DONE sends the
 -- draft to the server, which buys what's new and saves it; Cancel leaves
 -- everything as it was. While you're in here your store hangs "Back soon"
 -- (StoreService).
+local ContextActionService = game:GetService("ContextActionService")
+local GuiService = game:GetService("GuiService")
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -94,17 +99,36 @@ local cards = make("ScrollingFrame", { Position = UDim2.fromOffset(10, 44), Size
 local tools = make("Frame", { Name = "Tools", AnchorPoint = Vector2.new(0, 1), Size = UDim2.fromOffset(130, 230), BackgroundTransparency = 1, ZIndex = 31, Parent = overlay },
 	{ make("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder, VerticalAlignment = Enum.VerticalAlignment.Bottom,
 		HorizontalAlignment = Enum.HorizontalAlignment.Left }) })
-local function tool(order: number, text: string, kind: string)
+local KEY_ROOM = 28 -- px of a button its key cap takes up
+local keyCaps = {} -- { cap, room }: shown on a keyboard only
+local function tool(order: number, text: string, kind: string, key: Enum.KeyCode)
 	local holder, button = UI.button({ text = text, kind = kind, size = UDim2.fromOffset(126, 40), textSize = 17, zIndex = 32, parent = tools })
 	holder.LayoutOrder = order
+	local room = make("UIPadding", { PaddingLeft = UDim.new(0, KEY_ROOM), Parent = button })
+	local cap = UI.keycap({ size = 24, anchor = Vector2.new(0, 0.5), position = UDim2.new(0, 6 - KEY_ROOM, 0.5, 0), zIndex = 33, parent = button })
+	UI.setKey(cap, "Keyboard", key)
+	table.insert(keyCaps, { cap = cap, room = room })
 	return holder, button
 end
-local moveHolder, moveButton = tool(1, "Move", "blue")
-local rotateHolder, rotateButton = tool(2, "Turn", "cream")
-local awayHolder, awayButton = tool(3, "Put away", "cream")
-local sellHolder, sellButton = tool(4, "Sell", "red")
-local placeHolder, placeButton = tool(5, "✓ Place", "green")
-local dropHolder, dropButton = tool(6, "Cancel", "cream")
+local moveHolder, moveButton = tool(1, "Move", "blue", Enum.KeyCode.E)
+local rotateHolder, rotateButton = tool(2, "Turn", "cream", Enum.KeyCode.R)
+local awayHolder, awayButton = tool(3, "Put away", "cream", Enum.KeyCode.F)
+local sellHolder, sellButton = tool(4, "Sell", "red", Enum.KeyCode.G)
+local placeHolder, placeButton = tool(5, "✓ Place", "green", Enum.KeyCode.E)
+local dropHolder, dropButton = tool(6, "Cancel", "cream", Enum.KeyCode.Q)
+
+local function showKeys()
+	local keyboard = UI.inputKind() == "Keyboard"
+	for _, entry in keyCaps do
+		entry.cap.Visible = keyboard
+		entry.room.PaddingLeft = UDim.new(0, if keyboard then KEY_ROOM else 0)
+	end
+end
+
+local function pickHint(): string
+	return if UI.inputKind() == "Keyboard" then "Pick something from the drawer, or double-click an item to move it"
+		else "Pick something from the drawer, or tap an item to move it"
+end
 
 UI.onLayout(function()
 	local compact = UI.compact
@@ -674,8 +698,25 @@ local function drop()
 	drawItems()
 	drawGhost()
 	refreshDrawer()
-	setHint("Pick something from the drawer, or tap an item to move it", C.cream)
+	setHint(pickHint(), C.cream)
 end
+
+-- Picks the selected item up: it follows the mouse (or your taps) until it's placed.
+local function startMove()
+	local entry = selected and draft[selected]
+	if not entry then
+		return
+	end
+	holding = { id = selected, item = entry.item, rot = entry.rot or 0, x = entry.x, y = entry.y, side = entry.side, at = entry.at, original = entry }
+	draft[selected] = nil
+	selected = nil
+	drawItems()
+	drawGhost()
+	refreshDrawer()
+end
+
+local DOUBLE_CLICK = 0.35 -- seconds
+local lastPressAt, lastPressed = 0, nil
 
 local function pressAt(screen: Vector2)
 	if holding then
@@ -687,31 +728,27 @@ local function pressAt(screen: Vector2)
 		return
 	end
 	selected = itemAt(screen)
+	local double = selected ~= nil and selected == lastPressed and os.clock() - lastPressAt < DOUBLE_CLICK
+	lastPressed, lastPressAt = selected, os.clock()
+	if double then
+		lastPressed = nil
+		startMove()
+		return
+	end
 	drawItems()
 	refreshDrawer()
 	if selected then
 		setHint(`{Store.ITEMS[draft[selected].item].name}: move, turn, put away or sell`, C.cream)
 	else
-		setHint("Pick something from the drawer, or tap an item to move it", C.cream)
+		setHint(pickHint(), C.cream)
 	end
 end
 
-moveButton.Activated:Connect(function()
-	local entry = selected and draft[selected]
-	if not entry then
-		return
-	end
-	holding = { id = selected, item = entry.item, rot = entry.rot or 0, x = entry.x, y = entry.y, side = entry.side, at = entry.at, original = entry }
-	draft[selected] = nil
-	selected = nil
-	drawItems()
-	drawGhost()
-	refreshDrawer()
-end)
+moveButton.Activated:Connect(startMove)
 rotateButton.Activated:Connect(turn)
 placeButton.Activated:Connect(place)
 dropButton.Activated:Connect(drop)
-awayButton.Activated:Connect(function()
+local function putAway()
 	if not selected then
 		return
 	end
@@ -727,8 +764,9 @@ awayButton.Activated:Connect(function()
 	drawItems()
 	refreshDrawer()
 	setHint("Put away: it's in My items", C.cream)
-end)
-sellButton.Activated:Connect(function()
+end
+awayButton.Activated:Connect(putAway)
+local function sell()
 	local entry = selected and draft[selected]
 	if not entry then
 		return
@@ -746,7 +784,65 @@ sellButton.Activated:Connect(function()
 	drawItems()
 	refreshDrawer()
 	setHint("Sold back when you press DONE", C.cream)
-end)
+end
+sellButton.Activated:Connect(sell)
+
+-- The keys, over everything else that wants them (E is the stamp's outside
+-- Decorate). Each does what its button does, and only while it's showing.
+local function mouseAt(): Vector2
+	local inset = GuiService:GetGuiInset()
+	return UserInputService:GetMouseLocation() - inset
+end
+
+local KEYS = {
+	[Enum.KeyCode.E] = function()
+		if holding then
+			place()
+			return
+		end
+		selected = selected or itemAt(mouseAt()) -- (or the item under the mouse)
+		startMove()
+	end,
+	[Enum.KeyCode.R] = function()
+		if rotateHolder.Visible then
+			turn()
+		end
+	end,
+	[Enum.KeyCode.F] = function()
+		if awayHolder.Visible then
+			putAway()
+		end
+	end,
+	[Enum.KeyCode.G] = function()
+		if sellHolder.Visible then
+			sell()
+		end
+	end,
+	[Enum.KeyCode.Q] = function()
+		if holding then
+			drop()
+		end
+	end,
+}
+
+local function keyPressed(_, state: Enum.UserInputState, input: InputObject)
+	if state == Enum.UserInputState.Begin then
+		KEYS[input.KeyCode]()
+	end
+	return Enum.ContextActionResult.Sink
+end
+
+local function bindKeys(on: boolean)
+	if not on then
+		ContextActionService:UnbindAction("DecorateKeys")
+		return
+	end
+	local keys = {}
+	for key in KEYS do
+		table.insert(keys, key)
+	end
+	ContextActionService:BindActionAtPriority("DecorateKeys", keyPressed, false, Enum.ContextActionPriority.High.Value + 50, table.unpack(keys))
+end
 
 ------------------------------------------------------------------------
 -- In and out
@@ -908,6 +1004,7 @@ local function exit(save: boolean)
 		task.spawn(StoreAction.InvokeServer, StoreAction, "Decorate", "Off")
 	end
 	active = false
+	bindKeys(false)
 	overlay.Visible = false
 	setHud(true)
 	showStore()
@@ -1007,7 +1104,9 @@ function DecorateController.enter()
 	end
 	refreshDrawer()
 	task.defer(frameCamera)
-	setHint("Pick something from the drawer, or tap an item to move it", C.cream)
+	showKeys()
+	bindKeys(true)
+	setHint(pickHint(), C.cream)
 end
 
 function DecorateController.isActive(): boolean
@@ -1015,6 +1114,11 @@ function DecorateController.isActive(): boolean
 end
 
 function DecorateController.Start()
+	UserInputService.LastInputTypeChanged:Connect(function()
+		if active then
+			showKeys()
+		end
+	end)
 	doneStamp.Activated:Connect(function()
 		exit(true)
 	end)
@@ -1033,8 +1137,6 @@ function DecorateController.Start()
 		elseif input.UserInputType == Enum.UserInputType.Touch then
 			touchStart = Vector2.new(input.Position.X, input.Position.Y)
 			touchLast, dragging = touchStart, false
-		elseif input.KeyCode == Enum.KeyCode.R then
-			turn()
 		elseif input.KeyCode == Enum.KeyCode.Escape then
 			if holding then
 				drop()

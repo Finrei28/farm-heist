@@ -314,6 +314,7 @@ local function closeLot(t: number)
 		local data = DataService.Get(winner)
 		if data and deliver(winner, data, lot, top.amount) then
 			Notice.send(winner, `🔨 SOLD to you! {what.icon} {what.name} for {coins(top.amount)}: {whereItGoes(lot)}.`, "Good")
+			winner:SetAttribute("AuctionWon", t) -- (their fanfare: AuctionController)
 			Analytics.event(winner, "AuctionWon", top.amount)
 			for _, callback in wonCallbacks do
 				task.spawn(callback, winner, data, lot, top.amount)

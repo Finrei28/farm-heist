@@ -63,6 +63,17 @@ return function(spec, harness)
 		end)
 	end)
 
+	describe("a Farmhand's next crop", function()
+		it("is the nearest, and the first of any tied", function()
+			local distances = { a = 30, b = 12, c = 12, d = 50 }
+			local function to(key: string): number
+				return distances[key]
+			end
+			expect(WorkerRules.nearest({ "a", "b", "c", "d" }, to)).toBe(2)
+			expect(WorkerRules.nearest({ "d" }, to)).toBe(1)
+		end)
+	end)
+
 	describe("experience and training", function()
 		it("an hour of work for Level 2, about 26 hours for Level 10, 75 in all", function()
 			expect(WorkerRules.xpToNext(1)).toBe(600)

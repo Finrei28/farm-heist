@@ -292,7 +292,8 @@ end
 
 -- A Stocker's round: fills the emptiest displays first, up to `limit`
 -- patches' worth. Returns the patches' worth moved.
-function ShopRules.restockDisplays(store, marketPrice, limit: number): number
+-- The displays the stockroom has something for, emptiest first.
+local function wanting(store)
 	local list = {}
 	for _, id in StoreLayout.ofKind(store.layout, "Display") do
 		local full, wanted = fullness(store, id)
@@ -306,6 +307,22 @@ function ShopRules.restockDisplays(store, marketPrice, limit: number): number
 		end
 		return a.id < b.id
 	end)
+	return list
+end
+
+-- The display a Stocker goes to next, or nil: the emptiest one no other
+-- Stocker's on the way to (`taken`: { [id] = true }).
+function ShopRules.nextDisplay(store, taken: { [string]: boolean }?): string?
+	for _, entry in wanting(store) do
+		if not (taken and taken[entry.id]) then
+			return entry.id
+		end
+	end
+	return nil
+end
+
+function ShopRules.restockDisplays(store, marketPrice, limit: number): number
+	local list = wanting(store)
 	local used = 0
 	for _, entry in list do
 		if used >= limit - 1e-9 then

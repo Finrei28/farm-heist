@@ -275,7 +275,7 @@ local function row(order: number, key: string, units: number, state)
 	UI.fit(UI.label({ Position = UDim2.fromOffset(58, 28), Size = UDim2.new(1, -330, 0, 20), Font = UI.HAND, TextSize = 18,
 		Text = `×{units} in the barn · {CrateRules.size(cropId)} a crate{if mutation then ` · ✨ ×{bonus} by truck` else ""}`, ZIndex = 23, Parent = frame }), 11)
 	local carrying = player:GetAttribute("Carrying") ~= nil
-	local truckHolder, truckButton = UI.button({ text = `🚚 Truck {truckPrice}`, kind = if carrying then "cream" else "blue", size = UDim2.fromOffset(122, 42),
+	local truckHolder, truckButton = UI.button({ text = `🚚 Truck\n{UI.formatNumber(truckPrice)} coins each`, kind = if carrying then "cream" else "blue", size = UDim2.fromOffset(122, 42),
 		anchor = Vector2.new(1, 0.5), position = UDim2.new(1, -140, 0.5, 2), textSize = 17, zIndex = 23, parent = frame })
 	truckHolder.Name = "Truck"
 	if not CrateRules.storeable(key) then
@@ -290,7 +290,7 @@ local function row(order: number, key: string, units: number, state)
 		end)
 		return
 	end
-	local storeText = if not holdable then `🏪 Store Lv {needs}` elseif full then "🏪 Full" else `🏪 Store {storePrice}`
+	local storeText = if not holdable then `🏪 Store Lv {needs}` elseif full then "🏪 Full" else `🏪 Store\n{UI.formatNumber(storePrice)} coins each`
 	local _, storeButton = UI.button({ text = storeText, kind = if holdable and not full then "green" else "cream", size = UDim2.fromOffset(122, 42),
 		anchor = Vector2.new(1, 0.5), position = UDim2.new(1, -10, 0.5, 2), textSize = 17, zIndex = 23, parent = frame })
 	truckButton.Activated:Connect(function()

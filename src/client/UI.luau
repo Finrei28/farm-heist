@@ -665,6 +665,7 @@ function UI.closePanels()
 	end
 	openPanel = nil
 	backdrop.Visible = false
+	UI.placeNotes()
 end
 backdrop.Activated:Connect(UI.closePanels)
 
@@ -850,6 +851,7 @@ function UI.panel(title: string, options)
 		openPanel = panel
 		backdrop.Visible = true
 		frame.Visible = true
+		UI.placeNotes()
 		if panel.onOpen then
 			task.spawn(panel.onOpen)
 		end
@@ -909,23 +911,51 @@ function UI.centreFreeIn(): number
 end
 
 ------------------------------------------------------------------------
--- Toasts: paper notes pinned with a tack, top right, in handwriting.
+-- Toasts: paper notes pinned with a tack, in handwriting, in the middle of
+-- the screen where you're looking (the top right was easy to miss): under
+-- the purse and the ticker, over your character. While a window or a big
+-- card is up they go to the very top instead, so they never sit on the row
+-- you're about to press. They have their own layer, over the prompts: a
+-- note's button mustn't end up under a sign.
 
+local TOASTS_FROM = 158 -- px down: under the ticker
+local TOASTS_RAISED = 8 -- px down with a window open
+local notesRaised = false
+local notesLayer = make("ScreenGui", {
+	Name = "Notes",
+	ResetOnSpawn = false,
+	DisplayOrder = 6, -- (the prompts are 5)
+	ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+	Parent = player:WaitForChild("PlayerGui"),
+})
 local toastStack = make("Frame", {
 	Name = "Toasts",
-	AnchorPoint = Vector2.new(1, 0),
-	Position = UDim2.new(1, -16, 0, 16),
-	Size = UDim2.fromOffset(320, 400),
+	AnchorPoint = Vector2.new(0.5, 0),
+	Position = UDim2.new(0.5, 0, 0, TOASTS_FROM),
+	Size = UDim2.fromOffset(360, 400),
 	BackgroundTransparency = 1,
 	ZIndex = 40,
-	Parent = UI.screen,
+	Parent = notesLayer,
 }, {
-	make("UIListLayout", { Padding = UDim.new(0, 10), HorizontalAlignment = Enum.HorizontalAlignment.Right, SortOrder = Enum.SortOrder.LayoutOrder }),
+	make("UIListLayout", { Padding = UDim.new(0, 10), HorizontalAlignment = Enum.HorizontalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder }),
 	make("UIScale", { Name = "TextScale" }),
 })
+
+function UI.placeNotes()
+	local top = if openPanel or notesRaised then TOASTS_RAISED else math.max(TOASTS_FROM, UI.screen.AbsoluteSize.Y * 0.2)
+	toastStack.Position = UDim2.new(0.5, 0, 0, top)
+end
+
+-- For a big card that isn't a window (the Welcome Back letter).
+function UI.raiseNotes(on: boolean)
+	notesRaised = on
+	UI.placeNotes()
+end
+
 UI.onLayout(function()
 	toastStack.TextScale.Scale = UI.textScale
-	toastStack.Size = UDim2.fromOffset((if UI.compact then 250 else 320) / UI.textScale, 400 / UI.textScale)
+	toastStack.Size = UDim2.fromOffset((if UI.compact then 300 else 360) / UI.textScale, 400 / UI.textScale)
+	UI.placeNotes()
 end)
 
 local TACKS = { Good = C.green, Error = C.alarm, Announce = C.sky }
