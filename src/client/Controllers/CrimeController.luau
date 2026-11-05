@@ -1372,6 +1372,23 @@ local function starBurst(at: Vector3)
 	end
 end
 
+-- The Golden Bat's bonk (looks only): gold sparkles on top of the stars.
+local function goldBurst(at: Vector3)
+	local anchor = make("Part", {
+		Anchored = true, CanCollide = false, CanQuery = false, CanTouch = false, Transparency = 1, Size = Vector3.one,
+		CFrame = CFrame.new(at + Vector3.new(0, 2, 0)), Parent = workspace.CurrentCamera,
+	})
+	local sparks = make("ParticleEmitter", {
+		Texture = "rbxasset://textures/particles/sparkles_main.dds", Color = ColorSequence.new(Color3.fromRGB(255, 220, 110)), Rate = 0,
+		Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 0) }), Lifetime = NumberRange.new(0.5, 0.9),
+		Speed = NumberRange.new(9, 15), SpreadAngle = Vector2.new(180, 180), Acceleration = Vector3.new(0, -16, 0), LightEmission = 0.7, Parent = anchor,
+	})
+	sparks:Emit(36)
+	task.delay(1.2, function()
+		anchor:Destroy()
+	end)
+end
+
 local function puff(at: Vector3)
 	for i = 1, 9 do
 		local offset = Vector3.new(math.cos(i * 0.7) * 1.6, (i % 3) * 0.8, math.sin(i * 0.7) * 1.6)
@@ -1410,8 +1427,12 @@ function CrimeController.Start()
 			showAlarm(info)
 		elseif kind == "Bonk" and info.at then
 			Sfx.at("Bonk", info.at, 0.95 + math.random() * 0.1)
-			popText(info.at, "BONK!", C.gold, 30)
+			local golden = info.skin == "GoldenBat"
+			popText(info.at, "BONK!", C.gold, if golden then 40 else 30)
 			starBurst(info.at)
+			if golden then
+				goldBurst(info.at)
+			end
 		elseif kind == "Nudge" and info.at then
 			popText(info.at, "boing!", C.cream, 18)
 		elseif kind == "Puff" and info.at then

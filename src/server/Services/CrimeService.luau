@@ -523,7 +523,8 @@ local function knockOut(owner: Player, target: Player, plot: number)
 	state.ko.facing = knockDown(target)
 	setKnockedOut(target, state.ko, visit)
 	local root = rootOf(target)
-	CrimeEvent:FireAllClients("Bonk", { userId = target.UserId, at = root and root.Position, suspect = suspect })
+	local bat = stateOf(owner).bat
+	CrimeEvent:FireAllClients("Bonk", { userId = target.UserId, at = root and root.Position, suspect = suspect, skin = bat and bat:GetAttribute("Skin") })
 	Analytics.event(owner, "Knockout", if suspect then 1 else 0)
 	local token = state.koToken
 	task.delay(Crime.KO_SECONDS, function()

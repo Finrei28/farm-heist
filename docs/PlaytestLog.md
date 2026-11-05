@@ -19,6 +19,22 @@ Follow-ups: <what to test next time>
 
 ## Sessions
 
+### 2026-11-05 · the bat skins remade · build: uncommitted, with the fixes below
+Testers: Claude, driving Studio (the published "Farm Heist" place) · Setup: solo Play; each skin built by `CrimeArt.bat` from the Server command bar and put in the character's hand, so the save wasn't touched; `Pose_slow` and a longer trail to catch the swing; Bonk events fired from the server to see the burst
+
+| Case | Result | Pass? | Notes |
+|---|---|---|---|
+| Found: the Golden Bat came out lemon yellow, flat and bleaching its neighbours | Neon brightens a colour a lot, the halo sat over the bat, and the light turned the grass and the bats beside it pale ([01](playtest/2026-11-05-bat-skins/01-first-try-lemon-and-washing-out-its-neighbours.jpg)) | ✓ | fixed: three golds tried side by side ([02](playtest/2026-11-05-bat-skins/02-three-golds-side-by-side.jpg)), the warm one kept: 205, 112, 22 reads as gold on screen; the halo goes behind the bat; the light 2 → 0.8, range 12 → 8; the rings plain, so its stages show |
+| Golden Bat in hand | gold over the shoulder, its crown past the head, the halo behind it, the ruby pommel at the chest ([03](playtest/2026-11-05-bat-skins/03-golden-bat-in-hand.jpg)) | ✓ | |
+| Baguette in hand | reads as a loaf at once, slashes showing from every side ([04](playtest/2026-11-05-bat-skins/04-baguette-in-hand.jpg)) | ✓ | |
+| Carrot Club in hand | held by the root, the fat end and its leaves over the shoulder ([05](playtest/2026-11-05-bat-skins/05-carrot-club-in-hand.jpg)) | ✓ | the crop's own meshes, already in the place |
+| The swing | a broad gold sweep behind the bat all the way round ([06](playtest/2026-11-05-bat-skins/06-golden-swing-trail-slowed.jpg): slowed, with a longer trail to catch it) | ✓ | |
+| The bonk | a bigger BONK! and gold sparkles out over the stars ([07](playtest/2026-11-05-bat-skins/07-golden-bonk-burst.jpg)) | ✓ | |
+| At night | the best it looks: a flare behind the crown, the character lit gold, no glare ([08](playtest/2026-11-05-bat-skins/08-golden-bat-at-night.jpg)) | ✓ | |
+| The Style tab | the new line fits the Golden Bat's card on two lines ([09](playtest/2026-11-05-bat-skins/09-style-tab.jpg)) | ✓ | |
+
+Flagged: the Style tab shows an emoji for each skin, so nobody sees a bat before paying: later, a picture on each card. Both passes show Owned on the user's account, and `UserOwnsGamePassAsync` says true for both: leave, it's Roblox's real answer; a real purchase on another account is still untested. "ContentId rbxassetid://203785492" at every Play: leave, as before.
+
 ### 2026-11-05 · Barley and Patty on the shared body, the shelf panel · build: uncommitted, with the fixes below
 Testers: Claude, driving Studio (the published "Farm Heist" place) · Setup: solo Play; `/tp barley`, Patty from the Hiring Hall's porch, close cameras from the command bar; a crate of carrots (72) and one of Bell Peppers (24, a Rare) put in the store's stockroom with `/crops` and the bench's own Wash and Pack; E at a Produce Crate and the Wooden Shelf (walked to with `Humanoid:MoveTo`); Studio's phone view (iPhone 17 Pro, landscape) for the panel · Lag: 0 (local) · Screenshots: [playtest/2026-11-05-shelf-panel/](docs/playtest/2026-11-05-shelf-panel/)
 

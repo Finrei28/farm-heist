@@ -69,6 +69,7 @@ lune run tests/run
 | `travel` | the Home / Town / Visit buttons: channels, no cooldowns, no escaping a raid |
 | `loot`, `produce` | a stolen crop in your hands (one at a time, where it goes back to, who takes back or grabs a dropped one, only one person getting it); every crop's carried model the size it says; trucks solid |
 | `meshes` | the meshes: every piece a layout names was drawn, every crop growing, ripe with any number on it, carried and on a shelf, every obstacle of wild land, built from the meshes once imported (part-built until then), never more shelf pieces than the balls they replace, nothing to bump into |
+| `bats` | the bat and its skins: each a Tool with its pieces welded on, about the plain bat's length, no bat under the skins with their own shape, the Golden Bat's effects, the Carrot Club's meshes |
 | `flicker` | no two faces fighting over one plane anywhere the server builds, at every level, every defence set out (`lune run tools/flicker` lists them) |
 | `defences`, `defenceart` | buying and setting out defences, what each does, the yard spots round the field, the gate (locked, shut by the Watchman, walking out), the Trusted list, the Sprout Shield, the raid cap's dome; every defence drawn on its spot (meshes or stand-ins), the gate swinging, the gatehouse, the domes |
 | `zone` | inside a farm or not: the edge, turned plots, climbing |

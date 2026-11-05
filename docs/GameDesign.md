@@ -756,7 +756,7 @@ Rule: **no paid power in the PvP**. Robux buys comfort, shared moments, space an
 - Nothing bought with Robux can be traded (so regional pricing can't be resold).
 - Receipts de-duplicated by PurchaseId and saved before granting (the Tide Market pattern).
 
-**Built in week 9** (`Config/Monetization`, `Config/Cosmetics`, `shared/RobuxRules`, `MonetizationService`, client `RobuxController`: the 💎 Robux sign in the top bar, tabs Passes · Weather · Boost · Style, every price on a green button with the Robux sign): VIP (+10% in `DataService.Earn`, so truck and store sales and offline store sales; a gold ⭐ VIP tag over the head and [VIP] in chat; VIP Gold truck paint; a gold store awning), Bigger Barn (×2.5, `BarnRules.capacityOf`), the four weathers, the Growth Boost, and two kinds of looks: bat skins (Golden Bat 149, Baguette 79, Carrot Club 79: drawn by `CrimeArt.bat`, the same size and swing) and truck paints (Cherry Red, Mint Green, Midnight Blue, 49 each; `YardArt.paintTrucks`). A bought weather goes into your barn and starts at once if it can, or from the Weather tab later (its card says so before you buy, naming the weather that's in the way): never over a better weather (Rain < Frost Night = Thunderstorm < Golden Hour < Harvest Moon), never while another bought one is on, never on or into the scheduled Harvest Moon; it's on every player's sky through the same `WeatherForce` attributes as `/weather`, with who bought it. The Growth Boost's 30 minutes count only while you play. A look bought twice gives 30 minutes of Growth Boost instead. Every id is 0 until the passes and products are made on the Creator Dashboard ([RobloxPage.md](RobloxPage.md)); in Studio, items with no id are granted without a purchase (`/pass`, `/buy` too). Not built yet: store decor sets and awnings for Robux, farmhouse styles, scarecrow skins and mugshot frames (sack skins went with the sack in the carry rework).
+**Built in week 9** (`Config/Monetization`, `Config/Cosmetics`, `shared/RobuxRules`, `MonetizationService`, client `RobuxController`: the 💎 Robux sign in the top bar, tabs Passes · Weather · Boost · Style, every price on a green button with the Robux sign): VIP (+10% in `DataService.Earn`, so truck and store sales and offline store sales; a gold ⭐ VIP tag over the head and [VIP] in chat; VIP Gold truck paint; a gold store awning), Bigger Barn (×2.5, `BarnRules.capacityOf`), the four weathers, the Growth Boost, and two kinds of looks: bat skins (Golden Bat 149, Baguette 79, Carrot Club 79: drawn by `CrimeArt.bat`, each its own shape, about the same length and the same swing) and truck paints (Cherry Red, Mint Green, Midnight Blue, 49 each; `YardArt.paintTrucks`). A bought weather goes into your barn and starts at once if it can, or from the Weather tab later (its card says so before you buy, naming the weather that's in the way): never over a better weather (Rain < Frost Night = Thunderstorm < Golden Hour < Harvest Moon), never while another bought one is on, never on or into the scheduled Harvest Moon; it's on every player's sky through the same `WeatherForce` attributes as `/weather`, with who bought it. The Growth Boost's 30 minutes count only while you play. A look bought twice gives 30 minutes of Growth Boost instead. Every id is 0 until the passes and products are made on the Creator Dashboard ([RobloxPage.md](RobloxPage.md)); in Studio, items with no id are granted without a purchase (`/pass`, `/buy` too). Not built yet: store decor sets and awnings for Robux, farmhouse styles, scarecrow skins and mugshot frames (sack skins went with the sack in the carry rework).
 
 ## 8. Technical architecture
 
@@ -1365,6 +1365,26 @@ Checked before Studio: 554 tests, no flicker; Barley and Patty rendered (`partdu
 
 **Checked in Studio the same day** (PlaytestLog, [playtest/2026-11-05-shelf-panel/](playtest/2026-11-05-shelf-panel/)): Barley and Patty close up; the panel at a Produce Crate and the Wooden Shelf with carrots and Bell Peppers in the stockroom (fill, out of stock, can't hold, the slot tabs), and on a phone. Fixed there: Barley's moustache sat on the face's smile (the real smile is higher than the renders' stand-in), so he has a beard under it and no moustache; the cards are shorter so two rows show on a short screen; "Empty. Pick a crop to fill it." on a one-slot display; the out-of-stock tip says "No carrots".
 
+### Change after review: every bat skin gets its own shape (2026-11-05)
+
+The user asked if the skins were made from scratch. They weren't: all three were the plain bat in new colours with small add-ons, so the Baguette and Carrot Club kept a bat's knob and handle. Then, on the Golden Bat: "the most expensive at R$149 and it looks like a rip off. Make it worth its price."
+
+| Skin | Now |
+|---|---|
+| Golden Bat (149) | A king's sceptre: a crimson grip bound in gold wire, a ruby in the pommel, a gold collar, a barrel turned in three widening stages with rubies round its head, a crown of gold points round a big ruby. It glows (the user: "make the golden bat glow or shine golden"): the gold is Neon, the darker rings aren't so its stages still show, a soft halo pulses behind its head and it lights what's near it. It sparkles, a swing leaves a gold trail, and its bonk is a bigger BONK! with a burst of gold sparkles (`skin` on the Bonk event, `CrimeController`). Sparkles, not coins: a bonk pays nothing, and coins would say it does |
+| Baguette (79) | A real loaf: a straight middle, long tapered ends browned at the tips, three rows of slanted slashes with pale crumb in them, so some show whichever way it's turned. No knob, no handle |
+| Carrot Club (79) | The crop's own `Carrot` and `CarrotTop` meshes (no new import), stretched to a bat's length, held by the root with the leaves at the swinging end. Rings narrowing to the root until the meshes are imported |
+
+Still looks only: every skin is within 0.8 studs of the plain bat's length and swings and bonks the same (the hit is the server's, by distance, and never reads the tool). The handle's hidden inside each shape. Truck paints stay paint: they're sold as that.
+
+Tests: 559 (`bats`: every skin with and without the meshes, every piece welded with nothing to bump into, about the plain bat's length, no bat under the shapes, the Golden Bat's effects).
+
+**Checked in Studio the same day** (PlaytestLog, [playtest/2026-11-05-bat-skins/](playtest/2026-11-05-bat-skins/)): all three in hand, the swing's trail, the bonk's burst, the Golden Bat by day and night, the Style tab.
+
+| Found | Change |
+|---|---|
+| The Golden Bat came out lemon yellow and flat, its halo washed over it, and its light bleached the grass and whatever stood beside it | Neon brightens a colour a lot: three golds tried side by side and 205, 112, 22 kept, which reads as gold on screen. The halo is behind the bat (`ZOffset`), the light down from 2 to 0.8 and range 12 to 8, the rings plain so its stages show |
+
 ### MVP week 9: settings, sounds, the Robux shop, analytics, the page art (built 2026-11-04)
 The user: "continue" (after week 8 was pushed). Built as §5.6, §7 and §8 describe (each in its section):
 
@@ -1399,7 +1419,7 @@ Checked: 525 tests (settings parsed and stepped, the catalogue only selling weat
 | The VIP tag's ⭐ vanished on its gold pill | A dark tag with gold letters, just above the Roblox name others see |
 | VIP Gold in Metal looked dull olive at noon | A warm gold on the plain finish |
 
-Not checked yet: hearing the sounds (they need uploading), a real purchase prompt on the published game (the passes and products need making), the Baguette and Carrot Club in Studio. (The store's thumbnail was made on 2026-11-05: [RobloxPage.md](RobloxPage.md).)
+Not checked yet: hearing the sounds (they need uploading), a real purchase prompt on the published game (the passes and products need making), the Baguette and Carrot Club in Studio. (Since done: the store's thumbnail on 2026-11-05, [RobloxPage.md](RobloxPage.md); the skins, remade and checked the same day.)
 
 ### MVP week 8: the Farm Guide, trading, the market's supply, leaderboards, the valley (built 2026-11-04)
 The user: "continue" (after the town's look was pushed). Built as §4.0, §4.7, §4.13, §4.15 and ArtDirection §5 and §11 step 4 describe:

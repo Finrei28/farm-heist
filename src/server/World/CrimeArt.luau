@@ -6,6 +6,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Cosmetics = require(ReplicatedStorage.Shared.Config.Cosmetics)
+local Meshes = require(script.Parent.Meshes)
 local Parts = require(script.Parent.Parts)
 local ProduceArt = require(script.Parent.ProduceArt)
 
@@ -33,16 +34,214 @@ local function weld(a: BasePart, b: BasePart)
 	w.Parent = b
 end
 
+-- An ellipsoid welded to the bat's handle (a block drawn as a sphere
+-- stretched to its size).
+local function egg(tool: Tool, handle: BasePart, name: string, at: CFrame, size: Vector3, color: Color3): BasePart
+	local p = loose({ Name = name, Size = size, CFrame = at, Color = color }, tool)
+	local mesh = Instance.new("SpecialMesh")
+	mesh.MeshType = Enum.MeshType.Sphere
+	mesh.Parent = p
+	weld(handle, p)
+	return p
+end
+
+-- A cylinder along the handle, its middle `y` up it.
+local function rod(tool: Tool, handle: BasePart, name: string, y: number, length: number, diameter: number, color: Color3, material: Enum.Material?): BasePart
+	local p = loose({ Name = name, Shape = Enum.PartType.Cylinder, Size = Vector3.new(length, diameter, diameter),
+		CFrame = handle.CFrame * CFrame.new(0, y, 0) * CFrame.Angles(0, 0, math.rad(90)), Color = color, Material = material }, tool)
+	weld(handle, p)
+	return p
+end
+
+-- The classic bat: a taped grip with a knob, a long wooden barrel with a
+-- rounded end.
+local function classicBat(tool: Tool, handle: BasePart)
+	handle.Color = TAPE
+	local base = handle.CFrame
+	local knob = loose({ Name = "Knob", Shape = Enum.PartType.Ball, Size = Vector3.new(0.6, 0.6, 0.6), CFrame = base * CFrame.new(0, -1.0, 0),
+		Color = WOOD_DARK }, tool)
+	weld(handle, knob)
+	rod(tool, handle, "Neck", 1.2, 0.6, 0.5, WOOD)
+	rod(tool, handle, "Barrel", 2.4, 1.9, 0.78, WOOD)
+	rod(tool, handle, "Band", 1.85, 0.12, 0.88, WOOD_DARK) -- (0.05 proud of the barrel: no flicker)
+	local tip = loose({ Name = "Tip", Shape = Enum.PartType.Ball, Size = Vector3.new(0.78, 0.78, 0.78), CFrame = base * CFrame.new(0, 3.35, 0),
+		Color = WOOD }, tool)
+	weld(handle, tip)
+end
+
+-- The Golden Bat, the dearest skin, made like a king's sceptre: a crimson
+-- grip bound in gold wire, a ruby in the pommel, a gold collar, a barrel
+-- turned in three widening stages with rubies set round its head, and a
+-- crown of gold points round a big ruby at the top. It glows: the gold is
+-- Neon (the darker rings aren't, so its stages still show), a soft halo
+-- pulses round its head, it lights what's near it and sparkles, and a swing
+-- leaves a gold trail (a bonk's burst of gold is CrimeController's). All of
+-- it is looks: it's the plain bat's length.
+local RUBY = Color3.fromRGB(196, 18, 44)
+local VELVET = Color3.fromRGB(150, 22, 44)
+local function goldenBat(tool: Tool, handle: BasePart, look)
+	local base = handle.CFrame
+	local shine, deep = look.wood, look.dark
+	local function gold(name: string, y: number, length: number, diameter: number, color: Color3): BasePart
+		local p = rod(tool, handle, name, y, length, diameter, color)
+		if color == shine then
+			p.Material = Enum.Material.Neon
+		end
+		return p
+	end
+	-- a jewel: a cube stood on its corner
+	local function ruby(name: string, at: CFrame, size: number)
+		local p = loose({ Name = name, Size = Vector3.new(size, size, size), Color = RUBY, Material = Enum.Material.Neon,
+			CFrame = at * CFrame.Angles(0, 0, math.rad(45)) * CFrame.Angles(math.rad(35.26), 0, 0) }, tool)
+		weld(handle, p)
+	end
+
+	rod(tool, handle, "Grip", 0, 1.9, 0.46, VELVET)
+	for _, y in { -0.62, -0.2, 0.22, 0.64 } do
+		gold("Wire", y, 0.08, 0.52, shine)
+	end
+	gold("Pommel", -1.02, 0.16, 0.68, deep)
+	ruby("PommelRuby", base * CFrame.new(0, -1.24, 0), 0.34)
+
+	gold("Collar", 1.02, 0.14, 1.0, shine)
+	gold("Shaft", 1.345, 0.51, 0.58, shine)
+	gold("Ring", 1.65, 0.1, 0.76, deep)
+	gold("Body", 1.975, 0.55, 0.72, shine)
+	gold("Ring", 2.3, 0.1, 0.92, deep)
+	local head = gold("BatHead", 2.725, 0.75, 0.9, shine)
+	gold("CrownBand", 3.16, 0.12, 1.06, deep)
+	for i = 0, 2 do
+		ruby("Ruby", base * CFrame.new(0, 2.72, 0) * CFrame.Angles(0, math.rad(i * 120), 0) * CFrame.new(0, 0, -0.43), 0.17)
+	end
+	local dome = loose({ Name = "Dome", Shape = Enum.PartType.Ball, Size = Vector3.new(0.86, 0.86, 0.86), CFrame = base * CFrame.new(0, 3.2, 0),
+		Color = shine, Material = Enum.Material.Neon }, tool)
+	weld(handle, dome)
+	for i = 0, 5 do
+		local round = base * CFrame.Angles(0, math.rad(i * 60), 0) * CFrame.new(0, 0, -0.44)
+		local point = loose({ Name = "CrownPoint", Size = Vector3.new(0.16, 0.36, 0.1), CFrame = round * CFrame.new(0, 3.36, 0), Color = shine, Material = Enum.Material.Neon }, tool)
+		weld(handle, point)
+		local bead = loose({ Name = "CrownBead", Shape = Enum.PartType.Ball, Size = Vector3.new(0.22, 0.22, 0.22), CFrame = round * CFrame.new(0, 3.56, 0),
+			Color = deep }, tool)
+		weld(handle, bead)
+	end
+	ruby("CrownRuby", base * CFrame.new(0, 3.62, 0), 0.36)
+
+	local sparkles = Instance.new("ParticleEmitter")
+	sparkles.Name = "Sparkles"
+	sparkles.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	sparkles.Color = ColorSequence.new(Color3.fromRGB(255, 226, 130))
+	sparkles.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.35), NumberSequenceKeypoint.new(1, 0) })
+	sparkles.Lifetime = NumberRange.new(0.5, 0.9)
+	sparkles.Rate = 14
+	sparkles.Speed = NumberRange.new(0.4, 1.1)
+	sparkles.SpreadAngle = Vector2.new(180, 180)
+	sparkles.LightEmission = 0.7
+	sparkles.Parent = head
+	local halo = Instance.new("ParticleEmitter")
+	halo.Name = "Halo"
+	halo.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	halo.Color = ColorSequence.new(Color3.fromRGB(255, 206, 90))
+	halo.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 2.4), NumberSequenceKeypoint.new(0.5, 3.6), NumberSequenceKeypoint.new(1, 2.4) })
+	halo.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0.55), NumberSequenceKeypoint.new(1, 1) })
+	halo.Lifetime = NumberRange.new(1.2, 1.2)
+	halo.Rate = 3
+	halo.Speed = NumberRange.new(0, 0)
+	halo.RotSpeed = NumberRange.new(-20, 20)
+	halo.Rotation = NumberRange.new(0, 360)
+	halo.LockedToPart = true
+	halo.LightEmission = 1
+	halo.LightInfluence = 0
+	halo.ZOffset = -1.5 -- (behind the bat: over it, it washes the gold out)
+	halo.Parent = head
+	local glow = Instance.new("PointLight")
+	glow.Name = "Glow"
+	glow.Color = Color3.fromRGB(255, 200, 90)
+	glow.Range = 8 -- (any more and it bleaches the grass and whatever's beside it)
+	glow.Brightness = 0.8
+	glow.Parent = head
+
+	local from, to = Instance.new("Attachment"), Instance.new("Attachment")
+	from.Name, to.Name = "TrailFrom", "TrailTo"
+	from.Position, to.Position = Vector3.new(0, 1.3, 0), Vector3.new(0, 3.9, 0)
+	from.Parent, to.Parent = handle, handle
+	local trail = Instance.new("Trail")
+	trail.Name = "GoldTrail"
+	trail.Attachment0, trail.Attachment1 = from, to
+	trail.Color = ColorSequence.new(Color3.fromRGB(255, 226, 120), Color3.fromRGB(240, 150, 40))
+	trail.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(1, 1) })
+	trail.Lifetime = 0.22
+	trail.MinLength = 0.15
+	trail.LightEmission = 0.6
+	trail.Parent = handle
+end
+
+-- The Baguette: a real loaf, no bat under it. A straight middle, a long
+-- tapered end either side browned at the very tip, and three rows of
+-- slanted slashes down it (a dark lip, the pale crumb in it), so some show
+-- whichever way it's turned. They sit just under the crust's curve: only
+-- their middles stand proud, so nothing sticks out of the loaf's outline.
+local LOAF = 0.86
+local LOAF_END = 2.7
+local CRUMB = Color3.fromRGB(244, 222, 170)
+local function baguette(tool: Tool, handle: BasePart, look)
+	local base = handle.CFrame
+	rod(tool, handle, "Loaf", 1.2, 2.4, LOAF, look.wood)
+	for _, y in { 0, 2.4 } do
+		egg(tool, handle, "LoafEnd", base * CFrame.new(0, y, 0), Vector3.new(LOAF, LOAF_END, LOAF), look.wood)
+	end
+	for _, y in { -0.96, 3.36 } do
+		egg(tool, handle, "LoafTip", base * CFrame.new(0, y, 0), Vector3.new(0.62, 0.84, 0.62), look.dark)
+	end
+	for row = 0, 2 do
+		for i, y in { 0.45, 1.1, 1.75, 2.4 } do
+			local at = base * CFrame.new(0, y + row * 0.2, 0) * CFrame.Angles(0, math.rad(row * 120), 0)
+				* CFrame.new(0, 0, -LOAF / 2 + 0.035) * CFrame.Angles(0, 0, math.rad(38))
+			egg(tool, handle, "Crust", at, Vector3.new(0.34, 0.86, 0.08), look.dark)
+			egg(tool, handle, "Score", at * CFrame.new(0, 0, -0.012), Vector3.new(0.22, 0.72, 0.08), CRUMB)
+		end
+	end
+end
+
+-- The Carrot Club: a giant carrot held by its root, the crop's own meshes
+-- (World/Meshes), stretched so it's the bat's length, its leaves at the
+-- swinging end. Until the meshes are imported, rings narrowing to the root.
+local CARROT_CROWN = 2.9 -- up the handle
+local CARROT_WIDTH, CARROT_LENGTH, CARROT_LEAVES = 1.3, 1.55, 0.52 -- × the crop's mesh
+local CARROT_RINGS = { 1.14, 1.08, 1.0, 0.92, 0.84, 0.76, 0.68, 0.6, 0.52, 0.44, 0.36 }
+local function carrot(tool: Tool, handle: BasePart, look)
+	local crown = handle.CFrame * CFrame.new(0, CARROT_CROWN, 0)
+	local root = Meshes.make("Carrot", crown, Vector3.new(CARROT_WIDTH, CARROT_LENGTH, CARROT_WIDTH), tool)
+	local leaves = Meshes.make("CarrotTop", crown, CARROT_LEAVES, tool)
+	if root and leaves then
+		for _, p in { root, leaves } do
+			p.Anchored = false
+			p.Massless = true
+			weld(handle, p)
+		end
+		return
+	end
+	local step = (CARROT_CROWN + 1.2) / #CARROT_RINGS
+	for i, d in CARROT_RINGS do
+		rod(tool, handle, "Root", CARROT_CROWN - (i - 0.5) * step, step + 0.02, d, if i % 2 == 0 then look.dark else look.wood)
+	end
+	for i = 1, 3 do
+		local leaf = loose({ Name = `Leaf{i}`, Size = Vector3.new(0.14, 0.95, 0.42), Color = Color3.fromRGB(78, 159, 61),
+			CFrame = crown * CFrame.new(0, 0.3, 0) * CFrame.Angles(0, math.rad(i * 120), math.rad(18)) * CFrame.new(0, 0.3, 0) }, tool)
+		weld(handle, leaf)
+	end
+end
+
+local SHAPES = { golden = goldenBat, baguette = baguette, carrot = carrot }
+
 -- The bat: a Tool (CrimeService gives it while you're in your own farm and
--- takes it away when you step out). A taped grip with a knob, a long wooden
--- barrel with a rounded end. The barrel points up the handle's +Y.
+-- takes it away when you step out), pointing up its handle's +Y.
 -- skin: a bat skin's id (Config/Cosmetics; nil: the plain bat). Every skin
--- is the same size and swings the same: only its look changes.
+-- is about the same length and swings the same: only its look changes. A
+-- skin with a shape of its own has no bat under it: the handle's hidden
+-- inside what it's drawn as.
 function CrimeArt.bat(skin: string?): Tool
 	local item = skin and Cosmetics.ById[skin]
 	local look = item and item.kind == "bat" and item.look or {}
-	local wood, dark = look.wood or WOOD, look.dark or WOOD_DARK
-	local material = look.material or Enum.Material.SmoothPlastic
 	local tool = Instance.new("Tool")
 	tool.Name = "Bat"
 	tool.CanBeDropped = false
@@ -50,43 +249,14 @@ function CrimeArt.bat(skin: string?): Tool
 	tool.ToolTip = if item then `{item.name}: bonk thieves in your farm` else "Bonk thieves in your farm"
 	tool.Grip = CFrame.new(0, -0.55, 0)
 	tool:SetAttribute("Skin", skin)
-	local handle = loose({ Name = "Handle", Size = Vector3.new(0.38, 1.9, 0.38), Color = look.grip or TAPE }, tool)
+	local handle = loose({ Name = "Handle", Size = Vector3.new(0.38, 1.9, 0.38) }, tool)
 	handle.Shape = Enum.PartType.Block
-	local base = handle.CFrame
-	local function rod(name: string, y: number, length: number, diameter: number, color: Color3)
-		local p = loose({ Name = name, Shape = Enum.PartType.Cylinder, Size = Vector3.new(length, diameter, diameter),
-			CFrame = base * CFrame.new(0, y, 0) * CFrame.Angles(0, 0, math.rad(90)), Color = color, Material = material }, tool)
-		weld(handle, p)
-		return p
-	end
-	local knob = loose({ Name = "Knob", Shape = Enum.PartType.Ball, Size = Vector3.new(0.6, 0.6, 0.6), CFrame = base * CFrame.new(0, -1.0, 0),
-		Color = dark, Material = material }, tool)
-	weld(handle, knob)
-	rod("Neck", 1.2, 0.6, 0.5, wood)
-	rod("Barrel", 2.4, 1.9, 0.78, wood)
-	if look.band ~= false then
-		rod("Band", 1.85, 0.12, 0.88, dark) -- (0.05 proud of the barrel: no flicker)
-	end
-	local tip = loose({ Name = "Tip", Shape = Enum.PartType.Ball, Size = Vector3.new(0.78, 0.78, 0.78), CFrame = base * CFrame.new(0, 3.35, 0),
-		Color = wood, Material = material }, tool)
-	weld(handle, tip)
-	if look.extra == "scores" then
-		-- a baguette's three slashes: pale crumb showing through the crust
-		for i, y in { 1.75, 2.4, 3.05 } do
-			local score = loose({ Name = `Score{i}`, Size = Vector3.new(0.5, 0.12, 0.18), Color = Color3.fromRGB(240, 214, 160), Material = material,
-				CFrame = base * CFrame.new(0, y, -0.36) * CFrame.Angles(0, 0, math.rad(32)) }, tool)
-			weld(handle, score)
-		end
-	elseif look.extra == "leaves" then
-		-- a carrot's rings and its leafy top, sprouting from the tip
-		for i, y in { 1.85, 2.45, 2.95 } do
-			rod(`Ring{i}`, y, 0.08, 0.9, dark)
-		end
-		for i = 1, 3 do
-			local leaf = loose({ Name = `Leaf{i}`, Size = Vector3.new(0.14, 0.95, 0.42), Color = Color3.fromRGB(78, 159, 61),
-				CFrame = base * CFrame.new(0, 3.75, 0) * CFrame.Angles(0, math.rad(i * 120), math.rad(18)) * CFrame.new(0, 0.3, 0) }, tool)
-			weld(handle, leaf)
-		end
+	local shape = SHAPES[look.shape]
+	if shape then
+		handle.Transparency = 1
+		shape(tool, handle, look)
+	else
+		classicBat(tool, handle)
 	end
 	return tool
 end

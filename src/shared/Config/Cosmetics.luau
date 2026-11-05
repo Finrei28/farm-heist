@@ -4,9 +4,8 @@
 -- (Config/Monetization); `vip` ones come with the VIP pass instead.
 --   kind     "bat" (CrimeArt.bat draws it) or "truck" (YardArt paints the
 --            farm's trucks with it)
---   look     the bat: barrel/neck/tip colour and material, the grip's tape,
---            the band (nil: none), extras ("scores" on a baguette, "leaves"
---            on a carrot)
+--   look     the bat: `shape`, what it's drawn as ("golden", "baguette",
+--            "carrot": CrimeArt) in its two colours, `wood` and `dark`
 --            a truck: body (the colour that was the farm's) and its material
 --            (a Material's name; nil keeps the truck's own)
 local Cosmetics = {}
@@ -19,20 +18,19 @@ Cosmetics.KINDS = {
 Cosmetics.LIST = {
 	{
 		id = "GoldenBat", kind = "bat", name = "Golden Bat", icon = "🏆", price = 149, productId = 0,
-		blurb = "Solid gold with a red grip. Same swing, same bonk: it just shines.",
-		look = { wood = Color3.fromRGB(240, 190, 60), dark = Color3.fromRGB(196, 140, 30), material = Enum.Material.Metal, grip = Color3.fromRGB(200, 69, 45) },
+		blurb = "Glowing gold, set with rubies. It sparkles, swings with a gold trail and bonks in a burst of gold.",
+		-- (Neon brightens its colour a lot: this reads as gold on screen, anything lighter as lemon)
+		look = { shape = "golden", wood = Color3.fromRGB(205, 112, 22), dark = Color3.fromRGB(150, 92, 18) },
 	},
 	{
 		id = "Baguette", kind = "bat", name = "Baguette", icon = "🥖", price = 79, productId = 0,
 		blurb = "A long French loaf, crusty and scored. Thieves won't know what hit them.",
-		look = { wood = Color3.fromRGB(205, 140, 70), dark = Color3.fromRGB(170, 105, 50), material = Enum.Material.Sand,
-			grip = Color3.fromRGB(217, 185, 138), band = false, extra = "scores" },
+		look = { shape = "baguette", wood = Color3.fromRGB(214, 150, 78), dark = Color3.fromRGB(164, 100, 46) },
 	},
 	{
 		id = "CarrotClub", kind = "bat", name = "Carrot Club", icon = "🥕", price = 79, productId = 0,
 		blurb = "A giant carrot, leafy top and all. Grown on your own farm, probably.",
-		look = { wood = Color3.fromRGB(240, 128, 40), dark = Color3.fromRGB(206, 100, 28), material = Enum.Material.SmoothPlastic,
-			grip = Color3.fromRGB(78, 159, 61), band = false, extra = "leaves" },
+		look = { shape = "carrot", wood = Color3.fromRGB(240, 128, 40), dark = Color3.fromRGB(206, 100, 28) },
 	},
 	{
 		id = "CherryPaint", kind = "truck", name = "Cherry Red", icon = "🍒", price = 49, productId = 0,
