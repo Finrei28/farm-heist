@@ -162,7 +162,7 @@ local function defencesTab(state)
 			TextYAlignment = Enum.TextYAlignment.Top, Text = def.blurb })
 		text(box, { Position = UDim2.fromOffset(72, 70), Size = UDim2.new(1, -84, 0, 16), Font = UI.BODY, TextSize = 13, Text = def.detail, TextTransparency = 0.25 })
 		-- the price tag, or what it needs
-		local tag = if locked then `🔒 Farm Level {def.level}` else `🪙 {UI.formatNumber(def.cost)}{if def.max > 1 then " each" else ""}`
+		local tag = if locked then `🔒 Farm Level {def.level}` else `{UI.formatNumber(def.cost)} coins{if def.max > 1 then " each" else ""}`
 		text(box, { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -12, 0, 10), Size = UDim2.fromOffset(150, 20), Font = UI.HEAD, TextSize = 16,
 			Text = tag, TextColor3 = if locked then LINE else C.gold, TextXAlignment = Enum.TextXAlignment.Right })
 		-- what you have, and the buttons
@@ -681,7 +681,7 @@ local function showRules()
 	local steps = {
 		{ "🧺🥕", "1. A thief grabs your ripe crops", "Your alarm goes off. Run home!" },
 		{ "🏏💫", "2. In your farm you hold a bat", "SWING to bonk them: they drop your crop." },
-		{ "🚔🪙", "3. Hold ARREST", "They're fined. Then TAKE BACK your crop!" },
+		{ "🚔💰", "3. Hold ARREST", "They're fined. Then TAKE BACK your crop!" },
 	}
 	local panels = {}
 	for i, step in steps do

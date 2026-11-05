@@ -1326,7 +1326,7 @@ local function arrestedPop(info)
 	UI.label({ Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, TextWrapped = true, Font = UI.HAND, TextSize = 21, Text = text,
 		TextXAlignment = Enum.TextXAlignment.Center, LayoutOrder = 2, ZIndex = 46, Parent = pop })
 	if info.paid > 0 then
-		UI.float(`+{paid}`, UDim2.fromScale(0.5, 0.2), C.gold)
+		UI.float(`+{paid} coins`, UDim2.fromScale(0.5, 0.2), C.gold)
 	end
 	UI.holdCentre(5)
 	task.delay(5, function()

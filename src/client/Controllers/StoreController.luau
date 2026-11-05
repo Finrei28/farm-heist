@@ -347,6 +347,16 @@ local function stockTab(state)
 	labelRow(order, 56, "📦", `Packed crates: {#store.stockroom} / {PackRules.size(state)}`,
 		if #stacks > 0 then `{UI.formatNumber(total)} crops waiting for a display or a truck.` else "None right now: pack some at the Packing Shed bench.", C.soil, true)
 	order += 1
+	-- crates for the store with nowhere to go yet: it's not that the crew's stopped
+	local forStore = PackRules.forStore(state.warehouse)
+	local waiting = false
+	for _, crate in store.stockroom do
+		waiting = waiting or forStore(crate)
+	end
+	if waiting and not ShopRules.nextDisplay(store, nil, forStore) then
+		labelRow(order, 56, "⏳", "Waiting for room on a display", "Your crates for the store go out when a shelf sells down, or a slot's free for them.", C.gold, true)
+		order += 1
+	end
 	for _, stack in stacks do
 		local crop = Crops.ById[stack.crop]
 		local _, mutation, giant = BarnRules.parse(stack.key)

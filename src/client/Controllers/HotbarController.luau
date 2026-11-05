@@ -37,6 +37,7 @@ local MAX_SLOTS = 9
 local SLOT = 54 -- a packet's width
 local PACKET = 66 -- and height
 local LIFT = 8 -- how far the picked packet stands up
+local THUMB_ROOM = 150 -- px a touch screen keeps clear for the thumbstick
 
 local selected: string? = nil -- the seed in hand (nil: none, until you pick one)
 local keyOrder = {} -- what keys 1–9 pick, in the bar's order: "Bat" or a crop id
@@ -134,6 +135,31 @@ end
 local pickerDone: ((string) -> ())? = nil -- what the open seed picker plants once you pick
 local picker -- (the seed picker's window: below)
 local rebuild: (any) -> () -- (below)
+
+-- On a touch screen the bar sits between the thumbstick and the context stamp,
+-- with as many packets as fit: over the stamp, its last packets couldn't be
+-- tapped (the stamp's size and place: FieldController).
+local function touchSpan(): (number, number)
+	local stamp = UI.touchRoom() + 4 + (if UI.compact then 92 else 104) + 8
+	return THUMB_ROOM, UI.screen.AbsoluteSize.X - stamp
+end
+
+local function slots(): number
+	if not UI.touch then
+		return MAX_SLOTS
+	end
+	local left, right = touchSpan()
+	return math.clamp(math.floor((right - left + 6) / (SLOT + 6)), 4, MAX_SLOTS)
+end
+
+local function placeBar()
+	if UI.touch then
+		local left, right = touchSpan()
+		bar.Position = UDim2.new(0, (left + right) / 2, 1, -10)
+	else
+		bar.Position = UDim2.new(0.5, 0, 1, -10)
+	end
+end
 
 local function select(cropId: string?)
 	if selected == cropId then
@@ -238,6 +264,7 @@ local function packet(id: string, layoutOrder: number, band: Color3, icon: strin
 end
 
 function rebuild(state)
+	placeBar()
 	local seeds = state.inventory.seeds
 	seedCounts = seeds
 	local ids = {}
@@ -258,7 +285,7 @@ function rebuild(state)
 		packet("Bat", 0, C.red, "🏏", "BAT", C.red, C.cream)
 	end
 	empty.Visible = #ids == 0 and not hasBat
-	local shown, more = HotbarRules.shown(ids, selected, MAX_SLOTS - #keyOrder)
+	local shown, more = HotbarRules.shown(ids, selected, slots() - #keyOrder)
 	for i, cropId in shown do
 		local crop = Crops.ById[cropId]
 		packet(cropId, i, Rarities.ById[crop.rarity].color, crop.icon or "🌱", `×{seeds[cropId]}`, C.kraft, C.ink)
@@ -393,7 +420,7 @@ function HotbarController.openPicker(onPick: ((string) -> ())?, planting: boolea
 	local perRow = math.max(1, math.floor((frame.Size.X.Offset - 46) / 106))
 	local rows = math.max(1, math.ceil(count / perRow))
 	local most = (UI.screen.AbsoluteSize.Y - (if UI.compact then 40 else 90)) / UI.textScale
-	frame.Size = UDim2.fromOffset(frame.Size.X.Offset, math.min(picker.top + rows * 134 + 20, 320, most))
+	frame.Size = UDim2.fromOffset(frame.Size.X.Offset, math.min(picker.top + rows * 134 + 20, 460, most))
 end
 
 function HotbarController.Start()
@@ -414,7 +441,11 @@ function HotbarController.Start()
 		return Enum.ContextActionResult.Pass
 	end, false, table.unpack(keys))
 	UI.onLayout(function()
-		bar.Position = UDim2.new(0.5, 0, 1, -10)
+		if PlayerState.current then
+			rebuild(PlayerState.current)
+		else
+			placeBar()
+		end
 	end)
 	HudController.HOTBAR_HEIGHT = PACKET + LIFT
 	UI.onLayout(function()

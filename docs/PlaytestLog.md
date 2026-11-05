@@ -19,6 +19,26 @@ Follow-ups: <what to test next time>
 
 ## Sessions
 
+### 2026-11-06 · the flags from the last play-tests · build: uncommitted, on 619eb53
+Testers: Claude, driving Studio · Setup: Server & Clients × 1 (Player1: test save, Level 20, Warehouse Level 5, Store Level 15), and the iPhone 17 Pro emulator · Lag: 0 · Shots: [playtest/2026-11-06-flags/](playtest/2026-11-06-flags/)
+
+| Case | Result | Pass? | Notes |
+|---|---|---|---|
+| Defend prices | `25,000 coins`, `80,000 coins` | ✓ | [shot](playtest/2026-11-06-flags/defend-prices.jpg) |
+| Shelf panel | `30 coins each`, fits the card | ✓ | [shot](playtest/2026-11-06-flags/shelf-coins.jpg) |
+| Routes wording | "crew stocks your store" | ✓ | |
+| Receipt | Shocked Tomato in orange, Potato plain | ✓ | [shot](playtest/2026-11-06-flags/receipt.jpg) |
+| Dock with an empty truck | Load crates shows, the lever's prompt doesn't. With a crate aboard, Send shows again | ✓ | [shot](playtest/2026-11-06-flags/load-crates-prompt.jpg) |
+| Crates for the store with no room | "Waiting for room on a display" on the Stock tab | ✓ | Every slot set to another crop, then corn. [shot](playtest/2026-11-06-flags/waiting-note.jpg) |
+| The Guide's first step | Potato leaves it at 0 of 5, a Carrot moves it to 1 of 5 | ✓ | |
+| A bid leaving less than a minute's wages | "That leaves 50 coins, and your crew's wages are 473 a minute. They'll strike if you can't pay!" | ✓ | Coins back in the wallet on leaving. [shot](playtest/2026-11-06-flags/bid-warning.jpg) |
+| Phone: hotbar | Bat, 4 seeds and ALL fit between the thumbstick and the stamp, and ALL takes a tap | ✓ | [shot](playtest/2026-11-06-flags/phone.jpg) |
+| Phone: chalkboard | First: its text ran behind the small stamp. Fixed: it shows the short part, "ripe in 0:43", clear of the Farm Guide | ✗ → ✓ | |
+
+Not run: the floats that now say coins (at a till, a quest's reward, a fine paid), the seed picker's new height on a tall screen, a real phone.
+
+Flags: the iPhone 17 Pro fits 6 packets, not the 7 worked out in the code review: the bar's count comes from the real jump button's place (leave).
+
 ### 2026-11-06 · digging up crops, switching seeds · build: uncommitted, on 2a1902b
 Testers: Claude, driving Studio · Setup: Server & Clients × 1 (Player1: test save, Level 20, a seed of every crop), and the iPhone 17 Pro emulator · Lag: 0 · Shots: [playtest/2026-11-06-dig-up-seeds/](playtest/2026-11-06-dig-up-seeds/)
 

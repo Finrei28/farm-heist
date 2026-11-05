@@ -40,9 +40,13 @@ function GuideService.Record(player: Player, stepId: string)
 	after(player, guide, GuideRules.record(guide, stepId))
 end
 
--- A Carrot planted (the first step counts them).
-function GuideService.Planted(player: Player, data)
-	after(player, data.guide, GuideRules.planted(data.guide, data.inventory.seeds.Carrot or 0))
+-- A seed planted: the first step counts Carrots. Another seed only counts once
+-- they're gone, so the step can't jam.
+function GuideService.Planted(player: Player, data, cropId: string)
+	local left = data.inventory.seeds.Carrot or 0
+	if cropId == "Carrot" or left <= 0 then
+		after(player, data.guide, GuideRules.planted(data.guide, left))
+	end
 end
 
 local ACTIONS = {}

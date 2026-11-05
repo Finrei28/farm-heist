@@ -398,7 +398,11 @@ function update()
 	current = { part = part, tile = tile, kind = kind, offer = nil, alt = alt }
 	showAlt(alt)
 	info.Visible = part ~= nil
-	infoLabel.Text = if digging then "Keep holding: the crop and its seed are lost" else line
+	-- (a phone: the small stamp leaves it less room, and the big stamp names the crop)
+	local short = alt ~= nil and UI.touch
+	infoLabel.Text = if digging then (if UI.touch then "The seed will be lost" else "Keep holding: the crop and its seed are lost")
+		elseif short then string.match(line, "· (.+)$") or line
+		else line
 	holder.Visible = kind ~= nil
 	if kind then
 		local look = ACTIONS[kind]

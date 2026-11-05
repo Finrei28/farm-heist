@@ -21,6 +21,7 @@ local ProgressionRules = require(Shared.ProgressionRules)
 local Remotes = require(Shared.Remotes)
 local TravelRules = require(Shared.TravelRules)
 
+local CropNames = require(script.Parent.Parent.CropNames)
 local PlayerState = require(script.Parent.Parent.PlayerState)
 local Reasons = require(script.Parent.Parent.Reasons)
 local UI = require(script.Parent.Parent.UI)
@@ -503,7 +504,7 @@ local receiptToken = 0
 local function receiptLine(order: number, left: string, right: string?, props)
 	local holder = make("Frame", { Size = UDim2.new(1, -28, 0, props.height or 22), BackgroundTransparency = 1, LayoutOrder = order, ZIndex = 33, Parent = receipt })
 	UI.fit(UI.label({ Size = UDim2.new(1, if right then -64 else 0, 1, 0), Font = props.font or UI.HAND, TextSize = props.size or 19,
-		TextXAlignment = props.align or Enum.TextXAlignment.Left, TextWrapped = props.wrap, Text = left, ZIndex = 33, Parent = holder }), 10)
+		TextXAlignment = props.align or Enum.TextXAlignment.Left, TextWrapped = props.wrap, TextColor3 = props.color, Text = left, ZIndex = 33, Parent = holder }), 10)
 	if right then
 		UI.label({ AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(1, 0), Size = UDim2.new(0, 64, 1, 0), Font = props.font or UI.HEAD,
 			TextSize = props.size or 17, TextXAlignment = Enum.TextXAlignment.Right, Text = right, ZIndex = 33, Parent = holder })
@@ -528,7 +529,7 @@ local function showReceipt(notice)
 	receiptLine(2, notice.text, nil, { size = 18, align = Enum.TextXAlignment.Center })
 	rule(3)
 	for i, line in notice.lines or {} do
-		receiptLine(3 + i, line.text, UI.formatNumber(line.coins), {})
+		receiptLine(3 + i, line.text, UI.formatNumber(line.coins), { color = if line.key then CropNames.color(line.key) else nil })
 	end
 	rule(50)
 	receiptLine(51, "TOTAL", UI.formatNumber(notice.total or 0), { font = UI.HEAD, size = 20, height = 26 })

@@ -197,7 +197,7 @@ local function serve()
 	if result.ok and result.result then
 		Sfx.play("TillOpen")
 		local at = receipt.AbsolutePosition + Vector2.new(receipt.AbsoluteSize.X / 2, 0) - UI.screen.AbsolutePosition
-		UI.float(`+{Format.number(result.result.paid)}`, UDim2.fromOffset(at.X, at.Y - 10), C.gold)
+		UI.float(`+{Format.number(result.result.paid)} coins`, UDim2.fromOffset(at.X, at.Y - 10), C.gold)
 	else
 		local text = Reasons(result.reason)
 		if text then

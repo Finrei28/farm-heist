@@ -40,7 +40,7 @@ local function send(action: string, arg: string?)
 		local result = QuestAction:InvokeServer(action, arg)
 		if result.ok then
 			Sfx.play("QuestReward")
-			UI.float(`+{UI.formatNumber(result.result.coins)} 🪙`, UDim2.fromScale(0.5, 0.45), C.gold)
+			UI.float(`+{UI.formatNumber(result.result.coins)} coins`, UDim2.fromScale(0.5, 0.45), C.gold)
 		else
 			local text = Reasons(result.reason)
 			if text then

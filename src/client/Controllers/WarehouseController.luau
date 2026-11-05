@@ -308,7 +308,7 @@ local function routesTab(state)
 		local crop = Crops.ById[cropId]
 		local route = warehouse.routes[cropId]
 		local share = if route == "Keep" then nil elseif type(route) == "number" then route else 1
-		local detail = if share == nil then "✋ left in the barn" elseif share >= 1 then "🚚 crew loads the trucks" elseif share <= 0 then "🏪 crew fills your store"
+		local detail = if share == nil then "✋ left in the barn" elseif share >= 1 then "🚚 crew loads the trucks" elseif share <= 0 then "🏪 crew stocks your store"
 			else `🚚 {math.floor(share * 100 + 0.5)}% · 🏪 {math.floor((1 - share) * 100 + 0.5)}%`
 		local frame = labelRow(i, 56, crop.icon or "🌱", crop.name, detail, C.kraft, if info.splits then 360 else 290)
 		local choices = { { "🚚 Truck", "Truck", share ~= nil and share >= 1 }, { "🏪 Store", "Store", share ~= nil and share <= 0 }, { "✋ Keep", "Keep", share == nil } }

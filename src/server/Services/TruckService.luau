@@ -98,6 +98,7 @@ function TruckService.Refresh(player: Player)
 			local lever = leverBase and leverBase:FindFirstChild("LeverPrompt")
 			if lever then
 				lever.ObjectText = if run then `{name}: on the road` else `{bed} crate{if bed == 1 then "" else "s"} · locks today's prices`
+				lever.Enabled = run ~= nil or bed > 0 -- (nothing to send: it only hid Load crates and Send to stockroom beside it)
 			end
 		end
 	end
@@ -154,6 +155,7 @@ function TruckService.Dispatch(player: Player, truck: number?, by: string?): str
 					table.insert(lines, {
 						text = `{crop.icon or ""} {if mutation then mutation .. " " else ""}{crop.name} ×{crate.units}{if crate.grade == "A" then " (A)" else ""}{if mutation then ` (×{CrateRules.mutationValue(crate)})` else ""} @ {Format.number(crate.price)}`,
 						coins = crate.coins,
+						key = crate.key,
 					})
 				end
 				local which = if info.trucks > 1 then ` {i}` else ""

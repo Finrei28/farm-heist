@@ -267,7 +267,7 @@ local function render()
 			card(i, {
 				name = crop.name, icon = crop.icon or "🌱", band = rarity.color, dim = not canHold, picked = slot.set == crop.id and not slot.off,
 				line1 = if count > 0 then `📦 {count} in stock` else "📦 none in stock",
-				line2 = `🪙 {UI.formatShort(price)} each`,
+				line2 = `{UI.formatShort(price)} coins each`,
 				tag = if not canHold then `Needs a {holder or "bigger display"}` elseif count > 0 then (if mine then "TOP UP" else "FILL") else "OUT OF STOCK",
 				tagColor = if not canHold then C.stitch elseif count > 0 then C.green else C.soil, tagInk = if not canHold then C.ink else nil,
 				press = function()

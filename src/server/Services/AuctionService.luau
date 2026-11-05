@@ -422,6 +422,11 @@ function actions.Bid(player, data, arg)
 		return reason
 	end
 	hold(player, data, amount)
+	-- (a lead's coins can't pay wages: the crew walks out if the wallet's empty)
+	local _, wages = WorkerRules.crew(data.workers)
+	if wages > 0 and data.coins < wages then
+		Notice.send(player, `🔨 That leaves {coins(data.coins)} coins, and your crew's wages are {coins(math.ceil(wages))} a minute. They'll strike if you can't pay!`, "Error")
+	end
 	Analytics.event(player, "AuctionBid", amount)
 	-- the paddle goes up and the bid's called out; Goldie takes it
 	paddleNumber(player)

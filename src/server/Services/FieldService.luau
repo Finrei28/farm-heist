@@ -203,7 +203,7 @@ function actions.Plant(player, data, arg)
 	FarmArt.setTileOpen(part, true, false)
 	FarmArt.showTile(part, data.field[key], now())
 	Analytics.step(player, data, "FirstPlant")
-	GuideService.Planted(player, data)
+	GuideService.Planted(player, data, cropId)
 	return nil
 end
 

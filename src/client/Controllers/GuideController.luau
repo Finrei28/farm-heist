@@ -102,7 +102,7 @@ UI.onLayout(function()
 	local width = if UI.compact then 230 else 272
 	card.Size = UDim2.fromOffset(width, if UI.compact then 112 else 124)
 	-- (on the right, under the alerts and over the context stamp)
-	card.Position = UDim2.new(1, -14, 0, if UI.compact then 64 else 150)
+	card.Position = UDim2.new(1, -14, 0, if UI.compact then 36 else 150) -- (a short screen: clear of the tile's chalkboard)
 	hintText.TextSize = if UI.compact then 13 else 14
 	stepText.UITextSizeConstraint.MaxTextSize = if UI.compact then 21 else 24
 end)
