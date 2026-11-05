@@ -1233,6 +1233,97 @@ def store_scene(size=(1920, 1080), ss=2):
     return img
 
 
+def lawn(scene, centre, size=20, count=12):
+    """Grass out to the horizon round `centre` (x, z)."""
+    ground = Mesh()
+    for i in range(-count, count):
+        for j in range(-count, count):
+            x0, z0 = centre[0] + i * size, centre[1] + j * size
+            ground.quad((x0, 0.0, z0), (x0 + size, 0.0, z0), (x0 + size, 0.0, z0 + size), (x0, 0.0, z0 + size), (118, 186, 84), out=(0, 1, 0))
+    scene.add_mesh(ground, np.eye(4))
+
+
+def pass_vip_scene(size=(1024, 1024), ss=2):
+    """The VIP pass: Hank with his arms out in front of his VIP Gold semi,
+    coins coming down round him (compose.py puts the gold VIP tag over his
+    head, as in the game). Roblox shows a pass as a circle: everything that
+    matters stays inside it."""
+    path = os.path.join(OUT, "warehouse.json")
+    if not os.path.exists(path):
+        subprocess.run(["lune", "run", "tools/partdump", path, "5", "16", "1", "warehouse"], cwd=ROOT, check=True)
+    fence = ("Picket", "PicketTip", "Rail", "Post", "PostCap", "GatePost", "Gate", "Lever", "Knob")
+    parts = [p for p in partview.clip(partview.load(path), (-60, -5, -30), (160, 80, 200)) if not (p["name"].startswith(fence) and p["cframe"][2] < 3) and p["name"] != "Stripe"]
+    farm_paint, vip_gold = np.array([232, 83, 63]) / 255, [236 / 255, 168 / 255, 36 / 255]  # (Cosmetics' VIPGold)
+    for p in parts:
+        if np.abs(np.array(p["color"]) - farm_paint).max() < 0.01:
+            p["color"] = vip_gold
+    scene = Scene()
+    tris, cols = partview.world_of(parts)
+    scene.add(tris, cols)
+    lawn(scene, (40, 20))
+    eye, target = np.array([20.5, 3.4, -10.5]), np.array([30.2, 5.8, 8.0])
+    hank_at = (26.3, 0.2, 0.6)
+    character(scene, "farmer", hank_at, yaw=-152, face=dict(look=(0.0, 0.0), mood="happy"), pose=dict(
+        lean=-3, head=(0, 3), arms=((-128, 26), (-128, 26)), legs=(0, 0)))
+    forward = unit(target - eye)
+    right = unit(np.cross(forward, [0, 1, 0]))
+    head = np.array([hank_at[0], 6.0, hank_at[2]])
+    for dx, dy, near, tilt, turn, r in ((-3.3, 0.8, 1.2, 66, -176, 0.52), (3.5, 1.0, 1.0, 58, -120, 0.54), (-3.0, -1.5, 2.0, 54, -130, 0.46), (3.2, -1.3, 2.0, 70, -168, 0.46)):
+        coin(scene, head + right * dx + np.array([0, dy, 0]) - forward * near, tilt, turn, radius=r, outline=True, rim=0.3, glow=0.12)
+    shot = render(scene, tuple(eye), tuple(target), size, fov=38, ss=ss, sun=(-0.34, 0.76, -0.55), sky=sky_gradient(clouds=((0.14, 0.26, 0.18),)),
+                  shadow_at=hank_at, shadow_radius=30, outline=4.0 * size[0] / 1024, dof=(17, 44, 3 * size[0] / 1024))
+    img = grade(shot.image, saturation=1.2, warm=0.05)
+    d = ImageDraw.Draw(img)
+    k = size[0] / 1024
+    for x, y, r in ((838, 300, 40), (196, 330, 32), (790, 430, 24)):  # (the paint's shine)
+        sparkle(d, x * k, y * k, r * k, edge=(200, 150, 40))
+    return img
+
+
+def pass_barn_scene(size=(1024, 1024), ss=2):
+    """The Bigger Barn pass: the barn's doors slid open on more crops than
+    it can hold, heaped out of the doorway and the hayloft. Roblox shows a
+    pass as a circle: everything that matters stays inside it."""
+    parts = partview.clip(farm_parts(), (-110, -5, 60), (-51.8, 80, 125))
+    parts = [p for p in parts if p["name"] not in ("LoftDoor", "HayBale", "Wheelbarrow", "SteppingStone")]
+    for p in parts:  # (the doors, slid along their track)
+        if p["name"] in ("DoorLeaf", "DoorBrace"):
+            p["cframe"][0] += 5.0 if p["cframe"][0] > -61 else -5.0
+    scene = Scene()
+    tris, cols = partview.world_of(parts)
+    scene.add(tris, cols)
+    lawn(scene, (-61, 130))
+    dark = (46, 30, 22)
+    scene.add_mesh(rounded_box((10.2, 7.9, 0.1), dark, 0.02, steps=1), T(-61.0, 4.75, 112.16))
+    scene.add_mesh(rounded_box((3.8, 3.4, 0.1), dark, 0.02, steps=1), T(-61.0, 12.7, 112.16))
+
+    rng = np.random.default_rng(11)
+    big = (("Pumpkin", 3.3), ("Watermelon", 3.5), ("Pumpkin", 3.0), ("Watermelon", 3.2), ("Pumpkin", 3.4))
+    kinds = big + (("CornCob", 2.6), ("Tomato", 1.9), ("BellPepper", 1.9), ("Lettuce", 2.6), ("Tomato", 2.0))
+    sticker = dict(outline=True, rim=0.2)
+    # a mound against the doors: each layer sits inside the one under it, and
+    # the top ones fill the doorway to the lintel
+    layers = ((0.0, 12.5, 10.5), (1.6, 10.0, 7.5), (3.2, 7.0, 5.0), (4.8, 5.2, 3.0), (6.2, 3.6, 1.6))
+    for y, half, depth in layers:
+        across = max(2, round(2 * half / 2.9))
+        out = max(1, round(depth / 2.9))
+        for i in range(across + 1):
+            for j in range(out):
+                t = i / across * 2 - 1
+                x = -61.0 + t * half + rng.uniform(-0.4, 0.4)
+                z = 112.7 + (j + rng.uniform(0.1, 0.7)) / out * depth * (1 - 0.55 * t * t)
+                some = kinds if y < 3 else big
+                name, longest = some[int(rng.integers(0, len(some)))]
+                piece(scene, name, mul(T(x, y, z), R("y", rng.uniform(0, 360))), longest, **sticker)
+    # the hayloft, full to its sill (half in the opening)
+    for x, y, name, longest in ((-62.3, 11.0, "Pumpkin", 2.3), (-59.7, 11.0, "Watermelon", 2.5), (-61.0, 11.0, "Tomato", 1.7), (-61.0, 12.7, "Pumpkin", 2.0)):
+        piece(scene, name, mul(T(x, y, 112.5), R("y", rng.uniform(0, 360))), longest, **sticker)
+    eye, target = (-61.0, 5.0, 150.0), (-61.0, 9.6, 104.0)
+    shot = render(scene, eye, target, size, fov=33, ss=ss, sun=(-0.4, 0.74, 0.54), sky=sky_gradient(clouds=((0.12, 0.2, 0.2), (0.86, 0.14, 0.17))),
+                  shadow_at=(-61.0, 4.0, 116.0), shadow_radius=30, outline=4.0 * size[0] / 1024, dof=None)
+    return grade(shot.image, saturation=1.2)
+
+
 SCENES = {
     # the icon: close and low, the two of them filling the square
     # (all inside one block of the field, so no frame beam crosses the front)
@@ -1247,6 +1338,9 @@ SCENES = {
     "store": store_scene,
     "auction": auction_scene,
     "trucks": trucks_scene,
+    # the game passes' pictures
+    "pass_vip": pass_vip_scene,
+    "pass_barn": pass_barn_scene,
 }
 
 

@@ -1,7 +1,8 @@
-"""Makes Farm Heist's Roblox page art: the game's icon (512 x 512) and its
-thumbnails (1920 x 1080) from the scenes stage.py renders, and the
-community's emblem (512 x 512, drawn) and cover photo (1440 x 456, from a
-Studio shot), in the Kraft & Crate look (docs/GameDesign.md §5.1): a
+"""Makes Farm Heist's Roblox page art: the game's icon (512 x 512), its
+thumbnails (1920 x 1080) and its passes' pictures (512 x 512) from the
+scenes stage.py renders, and the community's emblem (512 x 512, drawn) and
+cover photo (1440 x 456, from a Studio shot), in the Kraft & Crate look
+(docs/GameDesign.md §5.1): a
 painted wooden sign hung on two ropes for the title, wooden boards with
 cream lettering for each thumbnail's line, Fredoka One like the game's own
 headers.
@@ -427,6 +428,53 @@ def rendered_icon(src):
     return vignette(cover(src, (512, 512)), 0.22)
 
 
+def star(draw, cx, cy, r, fill, edge, edge_w):
+    pts = []
+    for k in range(10):
+        a = math.pi / 5 * k - math.pi / 2
+        rr = r if k % 2 == 0 else r * 0.46
+        pts.append((cx + rr * math.cos(a), cy + rr * math.sin(a)))
+    draw.polygon(pts, fill=fill)
+    draw.line(pts + pts[:2], fill=edge, width=edge_w, joint="curve")
+
+
+def vip_tag(width):
+    """The gold tag over a VIP's head, as in the game (MonetizationService):
+    a dark pill with a gold edge, a gold star and VIP."""
+    height = round(width * 0.36)
+    s = 3  # (drawn large, for smooth edges)
+    w, h = width * s, height * s
+    tag = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    d = ImageDraw.Draw(tag)
+    d.rounded_rectangle((0, 0, w - 1, h - 1), h // 2, fill=(74, 50, 32, 255), outline=GOLD + (255,), width=round(h * 0.075))
+    font = ImageFont.truetype(HEAD, round(h * 0.68))
+    tw, th, box = text_size(d, "VIP", font)
+    r = h * 0.3
+    gap = h * 0.08
+    left = (w - (2 * r + gap + tw)) / 2
+    star(d, left + r, h / 2, r, GOLD + (255,), shade(GOLD, 0.7) + (255,), max(3, round(h * 0.02)))
+    d.text((left + 2 * r + gap - box[0], (h - th) / 2 - box[1]), "VIP", font=font, fill=GOLD + (255,))
+    return tag.resize((width, height), Image.LANCZOS)
+
+
+def pass_vip(src):
+    """Roblox shows a pass as a circle (up to 512 x 512): the tag sits
+    inside it, over Hank's head."""
+    canvas = vignette(cover(src, (1024, 1024)), 0.16).convert("RGBA")
+    tag = vip_tag(560)
+    hang(canvas, tag, (512, 150), rope_up=False)
+    return canvas.convert("RGB").resize((512, 512), Image.LANCZOS)
+
+
+def pass_barn(src):
+    canvas = vignette(cover(src, (1024, 1024)), 0.16).convert("RGBA")
+    height = 190
+    board = wood_board((540, height), GOLD, planks=1, radius=height // 6, edge=max(5, height // 16))
+    lettered(board, "×2.5", HEAD, height)
+    hang(canvas, board, (512, 810), rope_up=False)
+    return canvas.convert("RGB").resize((512, 512), Image.LANCZOS)
+
+
 def thumb(line, tint=WOOD, title=False, top=False, title_w=820, board_w=1120):
     """top: the line's board hangs at the top (the shot's subject is low)."""
     def make(src):
@@ -453,6 +501,9 @@ PIECES = {
     "store": ("renders/store", thumb("BUILD YOUR OWN STORE", WOOD)),
     "auction": ("renders/auction", thumb("BID ON RARE SEEDS", GOLD)),
     "trucks": ("renders/trucks", thumb("SHIP TO THE CITY", WOOD)),
+    # the game passes' pictures
+    "pass_vip": ("renders/pass_vip", pass_vip),
+    "pass_barn": ("renders/pass_barn", pass_barn),
     # the community (Roblox's Communities > Configure > Information)
     "community_emblem": (None, emblem),
     "community_cover": ("farm", community_cover),
