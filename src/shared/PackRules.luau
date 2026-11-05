@@ -30,10 +30,10 @@ function PackRules.size(data): number
 	return WarehouseRules.level(data.warehouse.level).hold + StoreLayout.level(data.store.level).stockroom
 end
 
--- How many more fit (goods coming back from a display or a truck always do,
--- even past full).
+-- How many more fit, counting crates on their way (goods coming back from a
+-- display or a truck always do, even past full).
 function PackRules.room(data): number
-	return math.max(0, PackRules.size(data) - #data.store.stockroom)
+	return math.max(0, PackRules.size(data) - #data.store.stockroom - #(data.warehouse.carried or {}))
 end
 
 -- Whether the crew may pack a barn stack: its crop isn't kept, and if it's
@@ -157,6 +157,33 @@ end
 function PackRules.combine(data)
 	local crates = data.store.stockroom
 	data.store.stockroom = {}
+	for _, crate in crates do
+		PackRules.stow(data, crate)
+	end
+end
+
+-- A crate on its way to the stock, in a worker's hands or on the belt (the
+-- user, 2026-11-06: "bring the crates to their destination instead of just
+-- teleport the crates"). It's in the save (warehouse.carried), so a server
+-- closing can't lose it, and it has its place in the stock kept (room).
+function PackRules.pickUp(data, crate)
+	data.warehouse.carried = data.warehouse.carried or {}
+	table.insert(data.warehouse.carried, crate)
+end
+
+-- It's got there: into the stock.
+function PackRules.setDown(data, crate)
+	local at = table.find(data.warehouse.carried or {}, crate)
+	if at then
+		table.remove(data.warehouse.carried, at)
+		PackRules.stow(data, crate)
+	end
+end
+
+-- Everything still on its way when you left: into the stock as you're back.
+function PackRules.setAllDown(data)
+	local crates = data.warehouse.carried or {}
+	data.warehouse.carried = {}
 	for _, crate in crates do
 		PackRules.stow(data, crate)
 	end

@@ -288,6 +288,29 @@ local function onCrew(event)
 	end
 end
 
+-- Crates riding the conveyor to the Cold Room: the server builds each one and
+-- sets it down there, and every screen runs it along the belt.
+local belts = {}
+local function onBelt(event)
+	if event.model then -- (not streamed in on this screen: nothing to show)
+		table.insert(belts, { model = event.model, start = event.model:GetPivot(), points = event.points, at = event.at, seconds = event.seconds })
+	end
+end
+
+local function stepBelts()
+	local t = now()
+	for i = #belts, 1, -1 do
+		local belt = belts[i]
+		local share = (t - belt.at) / belt.seconds
+		if share >= 1 or not belt.model.Parent then
+			table.remove(belts, i)
+		else
+			local position = along(belt.points, math.max(share, 0), Vector3.zAxis)
+			belt.model:PivotTo(belt.start + (position - belt.points[1]))
+		end
+	end
+end
+
 local function onDo(event)
 	local worker = crews[event.plot] and crews[event.plot][event.id]
 	if worker then
@@ -317,11 +340,14 @@ function WorkerController.Start()
 			onCrew(event)
 		elseif kind == "Do" then
 			onDo(event)
+		elseif kind == "Belt" then
+			onBelt(event)
 		elseif kind == "Clear" then
 			clearPlot(event.plot)
 		end
 	end)
 	RunService.RenderStepped:Connect(step)
+	RunService.RenderStepped:Connect(stepBelts)
 end
 
 return WorkerController

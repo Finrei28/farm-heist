@@ -63,13 +63,15 @@ local PAUSE = 0.6 -- seconds at the far end of a walk out and back (client/Worke
 local PULL = 0.3 -- seconds a Farmhand bends over a crop before it comes up
 local STOCK_ROUND = 8 -- patches' worth a Stocker can take out in one go
 local HOME_AFTER = 4 -- seconds with nothing to do before a Farmhand walks back to their post
+local BELT_SPEED = 8 -- studs a second a crate rides the conveyor
 
 local WorkerEvent = Remotes.event("WorkerEvent")
 local rng = Random.new()
 
 -- [Player] = { budgets = { [uid] = n }, routeAcc = {}, wageAt, told = {}, spots = { [uid] = their post },
 --   at = { [uid] = where they went last }, trips = { [uid] = the tile they're on their way to },
---   worked = { [uid] = { at, crop }: their last harvest }, loading = { [truck] = crates being carried to it } }
+--   worked = { [uid] = { at, crop }: their last harvest }, loading = { [truck] = crates being carried to it },
+--   away = { [uid] = when they're back from carrying a crate to the stock } }
 local crews = {}
 
 local function now(): number
@@ -434,6 +436,97 @@ local function carryToTruck(player: Player, data, st, uid: string, speed: number
 	end)
 end
 
+-- Where a packed crate is carried to, and the way there: into the store's
+-- stockroom, by its side open to the yard, for one the crew will put out, or
+-- else to the Packing Shed's rack. nil in the warehouses: the belt takes those.
+local function stockStop(index: number, data, entry, crate, from: Vector3): (Vector3?, { Vector3 }?)
+	local P = PlotLayout.PLOT
+	local frame = PlotLayout.frame(index)
+	if PackRules.crewUse(data.warehouse, crate) == "Store" then
+		local deep = Store.BUILDINGS[StoreLayout.level(data.store.level).stage].cells[2] * Store.CELL
+		local x = P.store.right - 6 -- (in from the room's end wall)
+		local back = deep + P.store.wall + P.store.backRoom
+		local via = wayOut(index, data, entry, from)
+		table.insert(via, frame:PointToWorldSpace(Vector3.new(x, 0.2, back + P.store.wall + 3)))
+		return frame:PointToWorldSpace(Vector3.new(x, P.store.floor, back - 1)), via
+	elseif WarehouseRules.level(data.warehouse.level).stage == 1 then
+		return frame:PointToWorldSpace(Vector3.new(PlotLayout.rackLocal().X, 0.5, 50.8)), nil -- (the rack's shed side)
+	end
+	return nil, nil
+end
+
+-- A crate has got where it's going: it shows there now.
+local function landCrate(player: Player, st, crate)
+	local data = DataService.Get(player)
+	if crews[player] ~= st or not data then
+		return -- (they've left: it's in the save, for when they're back)
+	end
+	PackRules.setDown(data, crate)
+	WarehouseService.showHold(player)
+	DataService.NotifyState(player)
+end
+
+-- A crate rides the conveyor from the packing table to the Cold Room: the
+-- server builds it and each client runs it along (WorkerController).
+local function rideBelt(player: Player, data, st, index: number, crate)
+	local layout = PlotLayout.WAREHOUSES[WarehouseRules.level(data.warehouse.level).stage]
+	local stations, room = layout.stations, layout.coldRoom
+	local frame = PlotLayout.frame(index)
+	local height = PlotLayout.PLOT.dock.height + 3 -- (YardArt's belt)
+	local belt = stations.Sort.X + 6
+	local door = (room.min.Z + room.max.Z) / 2
+	local points, length = {}, 0
+	for _, at in { Vector3.new(stations.Pack.X + 2.6, height, stations.Pack.Z), Vector3.new(belt, height, stations.Pack.Z),
+		Vector3.new(belt, height, door), Vector3.new(room.min.X, height, door) } do
+		local point = frame:PointToWorldSpace(at)
+		length += if #points > 0 then (point - points[#points]).Magnitude else 0
+		table.insert(points, point)
+	end
+	local seconds = length / BELT_SPEED
+	local warehouse = PlotService.model(index):FindFirstChild("Warehouse")
+	local model = if warehouse then YardArt.crate(crate, frame.Rotation + points[1], warehouse) else nil
+	WorkerEvent:FireAllClients("Belt", { model = model, points = points, at = now(), seconds = seconds })
+	task.delay(seconds, function()
+		if model then
+			model:Destroy()
+		end
+		landCrate(player, st, crate)
+	end)
+end
+
+-- A packed crate goes where it's going in a worker's hands, or on the belt:
+-- it shows there as it arrives (the user, 2026-11-06: "bring the crates to their
+-- destination instead of just teleport the crates to their place"). A worker
+-- packs nothing more till they're back. A long way takes as long as it takes:
+-- what's in the barn by then all goes on the next trip.
+local function carryToStock(player: Player, data, st, entry, index: number, crate)
+	local uid = entry.uid
+	PackRules.pickUp(data, crate)
+	local from = st.spots[uid]
+	local to, via = nil, nil
+	if from then
+		to, via = stockStop(index, data, entry, crate, from)
+	end
+	if to and from then
+		local seconds = walk(index, uid, from, to, crate.crop, false, nil, via)
+		st.away[uid] = now() + seconds * 2 + PAUSE
+		task.delay(seconds, landCrate, player, st, crate)
+	elseif from and WarehouseRules.level(data.warehouse.level).stage > 1 then
+		rideBelt(player, data, st, index, crate)
+	else
+		landCrate(player, st, crate)
+	end
+end
+
+-- Whether a worker's still out with a crate (keeping up their work's budget).
+local function outWithCrate(st, uid: string, speed: number): boolean
+	if (st.away[uid] or 0) <= now() then
+		return false
+	end
+	charge(st, uid, speed, 1)
+	return true
+end
+
 -- A Farmhand walks at their own pace, quicker with each level
 -- (WorkerRules.walkSpeed): they used to hurry to keep up with their speed, and
 -- outran a thief to the crop (the user, 2026-11-05). A long way to the next
@@ -488,11 +581,15 @@ end
 
 -- The Shed Hand: loads the pickup when it's home with the crates routed to
 -- it, and packs what's ready in the barn while there's room in the stock. A
--- crate for the truck goes straight on if it can. With the stock full they
+-- crate for the truck goes straight on if it can, and any other they carry to
+-- the rack or the store's stockroom. With the stock full they
 -- stop packing, whatever the crop's route, until a crate leaves it (the user,
 -- 2026-11-05: "stop packing and wait for space ... and not just pack for the
 -- truck").
 function JOBS.ShedHand(player, data, st, entry, speed, index)
+	if outWithCrate(st, entry.uid, speed) then
+		return true
+	end
 	local warehouse = data.warehouse
 	local t = now()
 	local ready = if TruckRules.cannotLoad(warehouse, t) == nil then PackRules.nextForTruck(data) else nil
@@ -517,7 +614,7 @@ function JOBS.ShedHand(player, data, st, entry, speed, index)
 		TruckRules.load(warehouse, crate, t)
 		changed, carried = true, crate.crop
 	end
-	if budget >= 1 and key and cropId then
+	if budget >= 1 and key and cropId and not carried then
 		local lean, commit = leanOf(st, data, cropId)
 		commit()
 		budget -= 1
@@ -529,7 +626,7 @@ function JOBS.ShedHand(player, data, st, entry, speed, index)
 				TruckRules.load(warehouse, crate, t)
 				carried = crate.crop
 			else
-				PackRules.stow(data, crate)
+				carryToStock(player, data, st, entry, index, crate)
 			end
 			changed = true
 		end
@@ -566,8 +663,12 @@ function JOBS.Sorter(_player, data, st, entry, speed, _index)
 	return true
 end
 
--- Packers turn washed batches into crates, while there's room for them.
-function JOBS.Packer(player, data, st, entry, speed, _index)
+-- Packers turn washed batches into crates, while there's room for them: onto
+-- the belt to the Cold Room, or in their hands to the store's stockroom.
+function JOBS.Packer(player, data, st, entry, speed, index)
+	if outWithCrate(st, entry.uid, speed) then
+		return true
+	end
 	local batch = data.warehouse.sorted[1]
 	if not batch then
 		rest(st, entry.uid)
@@ -586,7 +687,7 @@ function JOBS.Packer(player, data, st, entry, speed, _index)
 		commit()
 		local crate = table.remove(data.warehouse.sorted, 1)
 		crate.lean = lean
-		PackRules.stow(data, crate)
+		carryToStock(player, data, st, entry, index, crate)
 		st.holdChanged = true
 	end
 	st.budgets[entry.uid] = budget
@@ -1294,7 +1395,8 @@ function WorkerService.Start()
 	end
 
 	PlotService.OnAssigned(function(player, _index, data)
-		crews[player] = { budgets = {}, routeAcc = {}, wageAt = now() + 60, told = {}, spots = {}, at = {}, trips = {}, worked = {}, loading = {}, tills = {}, arrives = {} }
+		crews[player] = { budgets = {}, routeAcc = {}, wageAt = now() + 60, told = {}, spots = {}, at = {}, trips = {}, worked = {}, loading = {}, tills = {}, arrives = {}, away = {} }
+		PackRules.setAllDown(data)
 		welcome(player, data)
 		showCrew(player)
 	end)

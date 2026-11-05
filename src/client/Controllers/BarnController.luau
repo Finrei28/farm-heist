@@ -11,6 +11,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local BarnRules = require(Shared.BarnRules)
+local CrateRules = require(Shared.CrateRules)
 local Crops = require(Shared.Config.Crops)
 local Land = require(Shared.Config.Land)
 local LandRules = require(Shared.LandRules)
@@ -80,7 +81,8 @@ local function cropsTab(state)
 		local cropId = BarnRules.parse(key)
 		local crop = Crops.ById[cropId]
 		if crop then
-			row(i, crop.icon or "🌱", CropNames.of(key), `{crop.rarity} · the truck pays {UI.formatNumber(MarketPrice.price(cropId, workspace:GetServerTimeNow()))} each now · pack it at the Packing Shed`,
+			local truckPays = math.floor(CrateRules.unitPrice({ key = key }, MarketPrice.price(cropId, workspace:GetServerTimeNow())) + 0.5) -- (with a mutation's bonus)
+			row(i, crop.icon or "🌱", CropNames.of(key), `{crop.rarity} · the truck pays {UI.formatNumber(truckPays)} each now · pack it at the Packing Shed`,
 				`×{inventory.crops[key]}`, Rarities.ById[crop.rarity].color, CropNames.color(key))
 		end
 	end

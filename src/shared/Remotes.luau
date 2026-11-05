@@ -17,7 +17,8 @@
 --                        -> { ok, reason? }   send the loaded trucks; choose what's on one at its dock (shared/TruckRules, shared/PackRules)
 --   WorkerAction   C→S  ("Hire" candidateId | "Train" uid | "Fire" uid | "Replant" "same"/"cheapest"/"none") -> { ok, reason?, result? }
 --                        your crew (server/Services/WorkerService, shared/WorkerRules)
---   WorkerEvent    S→C  ("Crew", { plot, workers = { { id, type, name, level, look, at, face, strike } } }) where each
+--   WorkerEvent    S→C  ("Belt", { model, points, at, seconds }) a crate rides the conveyor ·
+--                        ("Crew", { plot, workers = { { id, type, name, level, look, at, face, strike } } }) where each
 --                        worker stands · ("Do", { plot, id, at, to, carry?, back? }) a worker walks to `to` from
 --                        server time `at` (and back) · ("Clear", { plot })   drawn by the clients (WorkerController)
 --   StoreAction    C→S  ("Price" "cropId|coins" | "Fill" id or "all" | "SetSlot" "id|slot|cropId or Auto"

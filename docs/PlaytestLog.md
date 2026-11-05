@@ -19,6 +19,23 @@ Follow-ups: <what to test next time>
 
 ## Sessions
 
+### 2026-11-06 · workers carry crates, the Barn's price · build: uncommitted, on 0207db8
+Testers: Claude, driving Studio · Setup: Server & Clients × 1 (Player1: test save; Warehouse Level 1 then 5, Store Level 3 then 5, 10, 15) · Lag: 0 · Shots: [playtest/2026-11-06-workers-carry-crates/](playtest/2026-11-06-workers-carry-crates/)
+
+| Case | Result | Pass? | Notes |
+|---|---|---|---|
+| The Barn's truck price | Frosted Carrot 75, Golden 60, Wet 39, Rainbow Corn 2,012 | ✓ | [shot](playtest/2026-11-06-workers-carry-crates/barn-price.jpg) |
+| Shed Hand, crate for the store | Out of the shed's side, across the yard, into the stockroom and back in about 14 s. The crate shows as they arrive | ✓ | [in hands](playtest/2026-11-06-workers-carry-crates/crate-in-hands.jpg), [in the room](playtest/2026-11-06-workers-carry-crates/in-the-stockroom.jpg), [arrived](playtest/2026-11-06-workers-carry-crates/crate-arrived.jpg) |
+| Shed Hand, crate for the rack | A quick walk to the rack's shed side and back | ✓ | [shot](playtest/2026-11-06-workers-carry-crates/at-the-rack.jpg) |
+| Packer, crate for the Cold Room | Table to belt to branch to door in 3.3 s, level on the belt the whole way; the Cold Room's sign goes up by one | ✓ | [shot](playtest/2026-11-06-workers-carry-crates/on-the-belt.jpg), [log](playtest/2026-11-06-workers-carry-crates/belt-log.jpg) |
+| Packer, crate for the store | Out by the warehouse's side door to the stockroom and back in about 16 s | ✓ | [shot](playtest/2026-11-06-workers-carry-crates/packer-leaving.jpg) |
+| Stockroom walk at every store size | Corner Store, Farm Shop, Market Hall, Supermarket: walks in by the open side, every time | ✓ | [Farm Shop](playtest/2026-11-06-workers-carry-crates/farm-shop-stockroom.jpg), [Market Hall](playtest/2026-11-06-workers-carry-crates/market-hall-stockroom.jpg) |
+| Walking through anything | A raycast along every step of every walk at all sizes: no hits | ✓ | |
+
+Not run: a server closing with a crate in someone's hands (covered by tests/pack.test.luau); Warehouse stages 3 and 4 (their belt and doors are built by the same code); a Shed Hand with crops going both ways, to see how much the store walks slow the truck.
+
+Flags: my test deleted its own client's world: Ctrl+A and Backspace missed the faded chat box and went to Studio. Only that play client, and the edit place was fine, but `[CrimeController] World is not a valid member` in the Output came from that, not the game (leave). The Shed Hand can take a few seconds to set off after crops arrive: that's their packing speed (leave).
+
 ### 2026-11-06 · packing for the store, combining crates, mutated names, coins in Decorate · build: uncommitted, on ee37da9
 Testers: Claude, driving Studio · Setup: Server & Clients × 1 (Player1: test save, Level 2, Store Level 3, a Stocker, Shed Hand, Farmhand, Cashier) · Lag: 0 · Shots: [playtest/2026-11-06-store-packing-names/](playtest/2026-11-06-store-packing-names/)
 
