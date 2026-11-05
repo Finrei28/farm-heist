@@ -434,18 +434,20 @@ function PlotLayout.insideBuilding(id: string, position: Vector3, margin: number
 	return math.abs(p.X) <= building.size.X / 2 - m and p.Z <= -m and p.Z >= -building.size.Z + m and p.Y >= -2 and p.Y <= building.size.Y
 end
 
+-- Whether a point is inside any of the town's buildings.
+function PlotLayout.inTownBuilding(position: Vector3): boolean
+	for _, building in PlotLayout.TOWN.buildings do
+		if PlotLayout.insideBuilding(building.id, position, 0) then
+			return true
+		end
+	end
+	return false
+end
+
 -- In town (inside the ring road, where the location sign says Town) and out
 -- of doors: not inside any of its buildings.
 function PlotLayout.outdoorsInTown(position: Vector3): boolean
-	if Vector2.new(position.X, position.Z).Magnitude >= PlotLayout.RING_ROAD.radius then
-		return false
-	end
-	for _, building in PlotLayout.TOWN.buildings do
-		if PlotLayout.insideBuilding(building.id, position, 0) then
-			return false
-		end
-	end
-	return true
+	return Vector2.new(position.X, position.Z).Magnitude < PlotLayout.RING_ROAD.radius and not PlotLayout.inTownBuilding(position)
 end
 
 -- The spot `gap` studs in front of a town building, on the square's side

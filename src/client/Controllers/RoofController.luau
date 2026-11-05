@@ -135,6 +135,16 @@ local function step(dt: number)
 	end
 end
 
+-- Whether you're inside a building that has a room (a store, a warehouse).
+function RoofController.indoors(): boolean
+	for _, room in rooms do
+		if room.inside then
+			return true
+		end
+	end
+	return false
+end
+
 function RoofController.Start()
 	shades.Parent = workspace
 	local world = workspace:WaitForChild("World")

@@ -19,6 +19,18 @@ Follow-ups: <what to test next time>
 
 ## Sessions
 
+### 2026-11-05 · birds, crickets and rain, outdoors and in · build: uncommitted, on fd0ad93
+Testers: Claude, driving Studio · Setup: Server & Clients × 1 as Player1, `/weather Rain`, then `/weather Clear` and `/time noon` · Lag: 0
+
+| Case | Result | Pass? | Notes |
+|---|---|---|---|
+| Rain outdoors | Volume 0.30, no filter | ✓ | |
+| Rain in the Auction House, the warehouse and the store | Volume 0.17, 12 dB off the middle, 32 dB off the top, in each | ✓ | Eases in about a second at the door. Measured, not heard |
+| Birds outdoors | Two spells in 170 s: 38–58 s and 133–152 s, peak 0.25 | ✓ | About 20 s each with the fades |
+| Birds in the Auction House | Volume 0.00 for 115 s | ✓ | |
+
+Not run: crickets at night (the same code as the birds).
+
 ### 2026-11-05 · the wait for Home in a raid, and the last sounds · build: uncommitted, on f3bca82
 Testers: Claude, driving Studio · Setup: Server & Clients × 2 (Player1 the owner, Player2 the Suspect from `/tp field 1` and `/suspect`) · Lag: 0
 

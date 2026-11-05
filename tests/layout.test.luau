@@ -241,6 +241,17 @@ return function(spec, harness)
 		end)
 	end)
 
+	describe("indoors in town", function()
+		it("is inside each building, and not out on the square or by a counter", function()
+			for _, building in PlotLayout.TOWN.buildings do
+				local inside = PlotLayout.buildingFrame(building.id):PointToWorldSpace(Vector3.new(0, 3, -building.size.Z / 2))
+				expect(PlotLayout.inTownBuilding(inside)).toBe(true)
+			end
+			expect(PlotLayout.inTownBuilding(PlotLayout.TOWN.spawn)).toBe(false)
+			expect(PlotLayout.inTownBuilding(PlotLayout.frontOf("Seeds", 6))).toBe(false)
+		end)
+	end)
+
 	describe("a picket line", function()
 		it("gives 30 workers their own spots on the lawn between the door and the field", function()
 			local seen = {}

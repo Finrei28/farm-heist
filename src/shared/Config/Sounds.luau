@@ -52,11 +52,11 @@ return {
 
 	-- Weather
 	Thunder = { id = "rbxassetid://102164464566453", volume = 0.8 }, -- after a lightning flash (Toolbox: "thunderstorm 2")
-	Rain = { id = "rbxassetid://139353385715659", volume = 0.3, kind = "ambience", loop = true }, -- rain and storms
+	Rain = { id = "rbxassetid://139353385715659", volume = 0.3, kind = "ambience", loop = true }, -- rain and storms, muffled indoors
 
 	-- Ambience (AmbienceController: by the time of day)
-	Birds = { id = "rbxassetid://93154868192074", volume = 0.35, kind = "ambience", loop = true }, -- songbirds and a breeze by day
-	Crickets = { id = "rbxassetid://126041966128858", volume = 0.3, kind = "ambience", loop = true }, -- crickets at night
+	Birds = { id = "rbxassetid://93154868192074", volume = 0.25, kind = "ambience", loop = true }, -- songbirds and a breeze by day, a short spell now and then, out of doors
+	Crickets = { id = "rbxassetid://126041966128858", volume = 0.2, kind = "ambience", loop = true }, -- crickets at night, a short spell now and then, out of doors
 
 	-- Music
 	FarmTheme = { id = "rbxassetid://122857322293981", volume = 0.25, kind = "music", loop = true }, -- a banjo rolling through G, C and D, out of doors in town
